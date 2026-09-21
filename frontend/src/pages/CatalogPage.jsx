@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import AppShell from '../components/AppShell'
 import { useAuth } from '../context/AuthContext'
-import { createProduct, createProductVariant, deleteProduct, deleteProductVariant, getProducts, updateProduct } from '../lib/api'
+import { createProduct, createProductVariant, deleteProduct, deleteProductVariant, getProducts, updateProduct, uploadProductImage } from '../lib/api'
 
 const blankProduct = {
   sku: '', name: '', category: 'Furniture', price: '', unit: 'piece', material: '', description: '', image: '',
@@ -16,6 +16,7 @@ export default function CatalogPage() {
   const [editing, setEditing] = useState(null)
   const [form, setForm] = useState(blankProduct)
   const [error, setError] = useState('')
+  const [uploading, setUploading] = useState(false)
   const [variantForm, setVariantForm] = useState({ sku: '', finish: '', width_mm: '', height_mm: '', depth_mm: '', price_delta: '', stock_status: 'Made to order' })
 
   const canManage = user.role === 'admin'
@@ -44,6 +45,22 @@ export default function CatalogPage() {
     setEditing(product.id)
     setForm({ ...blankProduct, ...product, price: String(product.price) })
     setError('')
+  }
+
+  async function uploadImage(event) {
+    const file = event.target.files?.[0]
+    if (!file) return
+    setUploading(true)
+    setError('')
+    try {
+      const result = await uploadProductImage(file)
+      setForm((current) => ({ ...current, image: result.item.url }))
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setUploading(false)
+      event.target.value = ''
+    }
   }
 
   async function submit(event) {
@@ -99,6 +116,7 @@ export default function CatalogPage() {
             <label>Unit<input value={form.unit} onChange={(e) => setForm({ ...form, unit: e.target.value })} /></label>
             <label>Material<input value={form.material} onChange={(e) => setForm({ ...form, material: e.target.value })} /></label>
             <label className="form-span-3">Image URL<input value={form.image} onChange={(e) => setForm({ ...form, image: e.target.value })} placeholder="https://…" /></label>
+            <label className="form-span-3 upload-field">Upload image<input type="file" accept="image/png,image/jpeg,image/webp" onChange={uploadImage} disabled={uploading} /><span>{uploading ? 'Uploading…' : 'Uses Cloudinary when configured, otherwise local/demo storage.'}</span></label>
             <label className="form-span-3">Description<textarea rows="3" value={form.description || ''} onChange={(e) => setForm({ ...form, description: e.target.value })} /></label>
           </div>
           {error && <div className="form-error">{error}</div>}

@@ -255,3 +255,40 @@ export async function deleteProductVariant(productId, variantId) {
     return { ok: true, mode: 'demo' }
   }
 }
+
+export async function uploadProductImage(file) {
+  if (API_URL) {
+    try {
+      const token = localStorage.getItem('furnivo-token')
+      const body = new FormData()
+      body.append('file', file)
+      const response = await fetch(`${API_URL}/uploads/product-image`, {
+        method: 'POST',
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        body,
+      })
+      const data = await response.json().catch(() => ({}))
+      if (!response.ok) {
+        const error = new Error(data.message || 'Image upload failed')
+        error.status = response.status
+        throw error
+      }
+      if (data.item?.url?.startsWith('/')) {
+        const origin = API_URL.replace(/\/api$/, '')
+        data.item.url = `${origin}${data.item.url}`
+      }
+      return data
+    } catch (error) {
+      if (error.status) throw error
+    }
+  }
+
+  if (file.size > 1_500_000) throw new Error('Demo image must be under 1.5 MB.')
+  const url = await new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(reader.result)
+    reader.onerror = reject
+    reader.readAsDataURL(file)
+  })
+  return { item: { url, provider: 'browser-demo' }, mode: 'demo' }
+}
