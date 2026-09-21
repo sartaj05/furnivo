@@ -84,3 +84,62 @@ def delete_product(product_id):
     product.is_active = False
     db.session.commit()
     return jsonify({'item': product.to_dict(), 'mode': 'api'})
+
+@products_bp.post('/<int:product_id>/variants')
+@roles_required('admin')
+def create_variant(product_id):
+    from ..models import ProductVariant
+    product = db.get_or_404(Product, product_id)
+    payload = request.get_json(silent=True) or {}
+    sku = str(payload.get('sku', '')).strip().upper()
+    if not sku:
+        return jsonify({'message': 'Variant SKU is required.'}), 400
+    try:
+        variant = ProductVariant(
+            product=product,
+            sku=sku,
+            finish=str(payload.get('finish', 'Standard')).strip() or 'Standard',
+            width_mm=int(payload['width_mm']) if payload.get('width_mm') else None,
+            height_mm=int(payload['height_mm']) if payload.get('height_mm') else None,
+            depth_mm=int(payload['depth_mm']) if payload.get('depth_mm') else None,
+            price_delta=Decimal(str(payload.get('price_delta', 0) or 0)),
+            stock_status=str(payload.get('stock_status', 'Made to order')).strip(),
+        )
+        db.session.add(variant)
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        return jsonify({'message': 'Variant data is invalid or SKU already exists.'}), 400
+    return jsonify({'item': variant.to_dict(), 'mode': 'api'}), 201
+
+
+@products_bp.patch('/<int:product_id>/variants/<int:variant_id>')
+@roles_required('admin')
+def update_variant(product_id, variant_id):
+    from ..models import ProductVariant
+    variant = db.session.scalar(db.select(ProductVariant).where(ProductVariant.id == variant_id, ProductVariant.product_id == product_id))
+    if not variant:
+        return jsonify({'message': 'Variant not found.'}), 404
+    payload = request.get_json(silent=True) or {}
+    for field in ['sku', 'finish', 'stock_status']:
+        if field in payload:
+            setattr(variant, field, str(payload[field]).strip())
+    for field in ['width_mm', 'height_mm', 'depth_mm']:
+        if field in payload:
+            setattr(variant, field, int(payload[field]) if payload[field] else None)
+    if 'price_delta' in payload:
+        variant.price_delta = Decimal(str(payload['price_delta'] or 0))
+    db.session.commit()
+    return jsonify({'item': variant.to_dict(), 'mode': 'api'})
+
+
+@products_bp.delete('/<int:product_id>/variants/<int:variant_id>')
+@roles_required('admin')
+def delete_variant(product_id, variant_id):
+    from ..models import ProductVariant
+    variant = db.session.scalar(db.select(ProductVariant).where(ProductVariant.id == variant_id, ProductVariant.product_id == product_id))
+    if not variant:
+        return jsonify({'message': 'Variant not found.'}), 404
+    db.session.delete(variant)
+    db.session.commit()
+    return jsonify({'ok': True, 'mode': 'api'})

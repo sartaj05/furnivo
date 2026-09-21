@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import AppShell from '../components/AppShell'
 import { useAuth } from '../context/AuthContext'
-import { createProduct, deleteProduct, getProducts, updateProduct } from '../lib/api'
+import { createProduct, createProductVariant, deleteProduct, deleteProductVariant, getProducts, updateProduct } from '../lib/api'
 
 const blankProduct = {
   sku: '', name: '', category: 'Furniture', price: '', unit: 'piece', material: '', description: '', image: '',
@@ -16,6 +16,7 @@ export default function CatalogPage() {
   const [editing, setEditing] = useState(null)
   const [form, setForm] = useState(blankProduct)
   const [error, setError] = useState('')
+  const [variantForm, setVariantForm] = useState({ sku: '', finish: '', width_mm: '', height_mm: '', depth_mm: '', price_delta: '', stock_status: 'Made to order' })
 
   const canManage = user.role === 'admin'
 
@@ -59,6 +60,22 @@ export default function CatalogPage() {
     }
   }
 
+  async function addVariant(event) {
+    event.preventDefault()
+    if (editing === 'new') return
+    await createProductVariant(editing, variantForm)
+    setVariantForm({ sku: '', finish: '', width_mm: '', height_mm: '', depth_mm: '', price_delta: '', stock_status: 'Made to order' })
+    await load()
+    const refreshed = (await getProducts()).items.find((item) => Number(item.id) === Number(editing))
+    if (refreshed) setForm({ ...blankProduct, ...refreshed, price: String(refreshed.price) })
+  }
+
+  async function removeVariant(variantId) {
+    await deleteProductVariant(editing, variantId)
+    await load()
+    setForm((current) => ({ ...current, variants: (current.variants || []).filter((item) => item.id !== variantId) }))
+  }
+
   async function remove(product) {
     if (!window.confirm(`Archive ${product.name}?`)) return
     await deleteProduct(product.id)
@@ -86,6 +103,19 @@ export default function CatalogPage() {
           </div>
           {error && <div className="form-error">{error}</div>}
           <button className="button">{editing === 'new' ? 'Create product' : 'Save changes'}</button>
+          {editing !== 'new' && <div className="variant-manager">
+            <div><p className="eyebrow">Variants</p><h3>Finishes & dimensions</h3></div>
+            <div className="variant-list">{(form.variants || []).map((variant) => <div className="variant-row" key={variant.id}><div><strong>{variant.finish}</strong><small>{variant.sku} · {variant.dimensions || 'Custom dimensions'} · {variant.stock_status}</small></div><button type="button" className="button-link danger-link" onClick={() => removeVariant(variant.id)}>Remove</button></div>)}</div>
+            <div className="variant-form">
+              <input placeholder="Variant SKU" value={variantForm.sku} onChange={(e) => setVariantForm({ ...variantForm, sku: e.target.value })} />
+              <input placeholder="Finish" value={variantForm.finish} onChange={(e) => setVariantForm({ ...variantForm, finish: e.target.value })} />
+              <input type="number" placeholder="Width mm" value={variantForm.width_mm} onChange={(e) => setVariantForm({ ...variantForm, width_mm: e.target.value })} />
+              <input type="number" placeholder="Height mm" value={variantForm.height_mm} onChange={(e) => setVariantForm({ ...variantForm, height_mm: e.target.value })} />
+              <input type="number" placeholder="Depth mm" value={variantForm.depth_mm} onChange={(e) => setVariantForm({ ...variantForm, depth_mm: e.target.value })} />
+              <input type="number" placeholder="Price delta" value={variantForm.price_delta} onChange={(e) => setVariantForm({ ...variantForm, price_delta: e.target.value })} />
+              <button type="button" className="button button-small" onClick={addVariant}>Add variant</button>
+            </div>
+          </div>}
         </form>
       )}
 
@@ -106,6 +136,7 @@ export default function CatalogPage() {
             <div className="product-body">
               <small>{product.sku}</small><h3>{product.name}</h3><p>{product.material}</p>
               <div className="product-price"><strong>₹{Number(product.price).toLocaleString('en-IN')}</strong><span>/ {product.unit}</span></div>
+              {(product.variants || []).length > 0 && <div className="variant-chips">{product.variants.slice(0, 3).map((variant) => <span key={variant.id}>{variant.finish}</span>)}</div>}
               {canManage && <div className="card-actions"><button className="button-link" onClick={() => startEdit(product)}>Edit</button><button className="button-link danger-link" onClick={() => remove(product)}>Archive</button></div>}
             </div>
           </article>

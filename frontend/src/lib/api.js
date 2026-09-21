@@ -227,3 +227,31 @@ export async function deleteProduct(id) {
     return { ok: true, mode: 'demo' }
   }
 }
+
+export async function createProductVariant(productId, payload) {
+  try {
+    return await backendRequest(`/products/${productId}/variants`, { method: 'POST', body: JSON.stringify(payload) })
+  } catch (error) {
+    if (error.status) throw error
+    const db = getLocalDb()
+    const product = db.products.find((item) => Number(item.id) === Number(productId))
+    const variants = product.variants || []
+    const variant = { id: Date.now(), product_id: productId, ...payload, price_delta: Number(payload.price_delta || 0) }
+    product.variants = [...variants, variant]
+    saveLocalDb(db)
+    return { item: variant, mode: 'demo' }
+  }
+}
+
+export async function deleteProductVariant(productId, variantId) {
+  try {
+    return await backendRequest(`/products/${productId}/variants/${variantId}`, { method: 'DELETE' })
+  } catch (error) {
+    if (error.status) throw error
+    const db = getLocalDb()
+    const product = db.products.find((item) => Number(item.id) === Number(productId))
+    product.variants = (product.variants || []).filter((item) => Number(item.id) !== Number(variantId))
+    saveLocalDb(db)
+    return { ok: true, mode: 'demo' }
+  }
+}

@@ -15,6 +15,10 @@ export const demoProducts = [
     unit: 'set',
     material: 'Oak frame, performance fabric',
     image: 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?auto=format&fit=crop&w=900&q=80',
+    variants: [
+      { id: 101, sku: 'FUR-SOF-101-SAND', finish: 'Sand Boucle', dimensions: '2600 × 780 × 980 mm', price_delta: 0, stock_status: 'Made to order' },
+      { id: 102, sku: 'FUR-SOF-101-OLIVE', finish: 'Olive Performance', dimensions: '2600 × 780 × 980 mm', price_delta: 4500, stock_status: 'Made to order' },
+    ],
   },
   {
     id: 2,

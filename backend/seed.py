@@ -1,6 +1,6 @@
 from werkzeug.security import generate_password_hash
 from .extensions import db
-from .models import Product, User
+from .models import Product, ProductVariant, User
 
 
 DEMO_PRODUCTS = [
@@ -38,3 +38,11 @@ def seed_database():
             continue
         db.session.add(Product(**data))
     db.session.commit()
+
+    sofa = db.session.scalar(db.select(Product).where(Product.sku == "FUR-SOF-101"))
+    if sofa and not sofa.variants:
+        sofa.variants.extend([
+            ProductVariant(sku="FUR-SOF-101-SAND", finish="Sand Boucle", width_mm=2600, height_mm=780, depth_mm=980, price_delta=0),
+            ProductVariant(sku="FUR-SOF-101-OLIVE", finish="Olive Performance", width_mm=2600, height_mm=780, depth_mm=980, price_delta=4500),
+        ])
+        db.session.commit()

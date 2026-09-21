@@ -750,3 +750,14 @@ img { max-width: 100%; }
 .image-placeholder { height: 100%; display: grid; place-items: center; color: var(--muted); background: #e7e5de; font-size: 12px; }
 @media (max-width: 780px) { .form-grid-3 { grid-template-columns: 1fr 1fr; } .form-span-3 { grid-column: span 2; } }
 @media (max-width: 520px) { .form-grid-3 { grid-template-columns: 1fr; } .form-span-3 { grid-column: span 1; } }
+.variant-manager { margin-top: 26px; padding-top: 22px; border-top: 1px solid var(--line); }
+.variant-list { display: grid; gap: 8px; margin: 14px 0; }
+.variant-row { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 11px 12px; background: #f4f2eb; border-radius: 10px; }
+.variant-row strong, .variant-row small { display: block; }
+.variant-row small { color: var(--muted); margin-top: 3px; }
+.variant-form { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.variant-form input { width: 100%; border: 1px solid #d7dbd5; padding: 10px; border-radius: 9px; }
+.variant-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.variant-chips span { padding: 5px 7px; border-radius: 999px; background: #e8eee8; color: var(--green); font-size: 10px; font-weight: 700; }
+@media (max-width: 780px) { .variant-form { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 520px) { .variant-form { grid-template-columns: 1fr; } }
