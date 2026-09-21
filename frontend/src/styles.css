@@ -776,3 +776,11 @@ img { max-width: 100%; }
 .quote-builder-actions { display: flex; justify-content: space-between; gap: 12px; }
 @media (max-width: 1050px) { .quote-line { grid-template-columns: 1fr 1fr 1fr; } .quote-remove { padding: 8px 0; } }
 @media (max-width: 620px) { .quote-head-fields, .quote-line { grid-template-columns: 1fr; } .quote-builder-actions { flex-direction: column; } }
+.quote-commercials { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 10px 0 18px; }
+.quote-commercials label { display: grid; gap: 6px; font-size: 11px; font-weight: 800; color: var(--muted); }
+.quote-commercials input { border: 1px solid #d7dbd5; background: white; padding: 10px; border-radius: 9px; }
+.quote-total-box { width: min(430px, 100%); margin: 8px 0 18px auto; display: grid; gap: 7px; }
+.quote-total-box > div { display: flex; justify-content: space-between; gap: 20px; color: var(--muted); font-size: 12px; }
+.quote-total-box strong { color: var(--ink); }
+.quote-total-box .grand-total { margin-top: 5px; padding-top: 10px; border-top: 1px solid var(--line); font-size: 15px; color: var(--ink); }
+@media (max-width: 620px) { .quote-commercials { grid-template-columns: 1fr; } }

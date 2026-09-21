@@ -143,13 +143,24 @@ export async function createQuote(payload) {
     await delay()
     const db = getLocalDb()
     const subtotal = (payload.items || []).reduce((sum, item) => sum + Number(item.quantity || 0) * Number(item.unit_price || 0), 0)
+    const discountPercent = Number(payload.discount_percent || 0)
+    const discountAmount = subtotal * discountPercent / 100
+    const taxPercent = Number(payload.tax_percent || 0)
+    const taxAmount = (subtotal - discountAmount) * taxPercent / 100
+    const shippingAmount = Number(payload.shipping_amount || 0)
+    const total = subtotal - discountAmount + taxAmount + shippingAmount
     const quote = {
       id: `Q-${1043 + db.quotes.length}`,
       database_id: Date.now(),
       customer: payload.customer,
       items: payload.items || [],
       subtotal,
-      amount: subtotal,
+      discount_percent: discountPercent,
+      discount_amount: discountAmount,
+      tax_percent: taxPercent,
+      tax_amount: taxAmount,
+      shipping_amount: shippingAmount,
+      amount: total,
       status: 'Draft',
       date: new Date().toISOString().slice(0, 10),
       notes: payload.notes || '',

@@ -7,7 +7,7 @@ const emptyLine = () => ({ product_id: '', variant_id: '', description: '', sku:
 export default function QuotesPage() {
   const [quotes, setQuotes] = useState([])
   const [products, setProducts] = useState([])
-  const [form, setForm] = useState({ customer: '', notes: '', items: [emptyLine()] })
+  const [form, setForm] = useState({ customer: '', notes: '', discount_percent: 0, tax_percent: 18, shipping_amount: 0, items: [emptyLine()] })
   const [showForm, setShowForm] = useState(false)
   const [error, setError] = useState('')
 
@@ -19,7 +19,14 @@ export default function QuotesPage() {
 
   useEffect(() => { load() }, [])
 
-  const subtotal = useMemo(() => form.items.reduce((sum, item) => sum + Number(item.quantity || 0) * Number(item.unit_price || 0), 0), [form.items])
+  const totals = useMemo(() => {
+    const subtotal = form.items.reduce((sum, item) => sum + Number(item.quantity || 0) * Number(item.unit_price || 0), 0)
+    const discount = subtotal * Number(form.discount_percent || 0) / 100
+    const taxable = Math.max(subtotal - discount, 0)
+    const tax = taxable * Number(form.tax_percent || 0) / 100
+    const shipping = Number(form.shipping_amount || 0)
+    return { subtotal, discount, tax, shipping, total: taxable + tax + shipping }
+  }, [form])
 
   function setLine(index, patch) {
     setForm((current) => ({ ...current, items: current.items.map((item, i) => i === index ? { ...item, ...patch } : item) }))
@@ -46,7 +53,7 @@ export default function QuotesPage() {
     setError('')
     try {
       await createQuote(form)
-      setForm({ customer: '', notes: '', items: [emptyLine()] })
+      setForm({ customer: '', notes: '', discount_percent: 0, tax_percent: 18, shipping_amount: 0, items: [emptyLine()] })
       setShowForm(false)
       await load()
     } catch (err) { setError(err.message) }
@@ -56,10 +63,15 @@ export default function QuotesPage() {
     <AppShell title="Quotations" eyebrow="Commercial documents" actions={<button className="button button-small" onClick={() => setShowForm(!showForm)}>{showForm ? 'Close' : 'New quotation'}</button>}>
       {showForm && (
         <form className="quote-builder panel" onSubmit={submit}>
-          <div className="panel-heading"><div><p className="eyebrow">Quote builder</p><h3>Create a line-item quotation</h3></div><strong>₹{subtotal.toLocaleString('en-IN')}</strong></div>
+          <div className="panel-heading"><div><p className="eyebrow">Quote builder</p><h3>Create a line-item quotation</h3></div><strong>₹{totals.total.toLocaleString('en-IN')}</strong></div>
           <div className="form-grid quote-head-fields">
             <label>Customer / studio<input required value={form.customer} onChange={(e) => setForm({ ...form, customer: e.target.value })} placeholder="Northline Studio" /></label>
             <label>Internal / customer notes<input value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} placeholder="Delivery, scope, validity…" /></label>
+          </div>
+          <div className="quote-commercials">
+            <label>Discount %<input type="number" min="0" max="100" step="0.01" value={form.discount_percent} onChange={(e) => setForm({ ...form, discount_percent: e.target.value })} /></label>
+            <label>Tax / GST %<input type="number" min="0" max="100" step="0.01" value={form.tax_percent} onChange={(e) => setForm({ ...form, tax_percent: e.target.value })} /></label>
+            <label>Shipping / handling<input type="number" min="0" step="0.01" value={form.shipping_amount} onChange={(e) => setForm({ ...form, shipping_amount: e.target.value })} /></label>
           </div>
           <div className="quote-lines">
             {form.items.map((line, index) => {
@@ -74,6 +86,7 @@ export default function QuotesPage() {
               </div>
             })}
           </div>
+          <div className="quote-total-box"><div><span>Subtotal</span><strong>₹{totals.subtotal.toLocaleString('en-IN')}</strong></div><div><span>Discount</span><strong>- ₹{totals.discount.toLocaleString('en-IN')}</strong></div><div><span>Tax</span><strong>₹{totals.tax.toLocaleString('en-IN')}</strong></div><div><span>Shipping</span><strong>₹{totals.shipping.toLocaleString('en-IN')}</strong></div><div className="grand-total"><span>Grand total</span><strong>₹{totals.total.toLocaleString('en-IN')}</strong></div></div>
           <div className="quote-builder-actions"><button type="button" className="button button-ghost" onClick={addLine}>+ Add line</button><button className="button">Save draft</button></div>
           {error && <div className="form-error">{error}</div>}
         </form>

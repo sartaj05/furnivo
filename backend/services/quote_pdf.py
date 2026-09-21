@@ -51,6 +51,13 @@ def build_quote_pdf(quote):
             money(item.line_total),
         ])
     rows.append(['', '', '', 'Subtotal', money(quote.subtotal)])
+    if quote.discount_percent:
+        rows.append(['', '', '', f'Discount ({float(quote.discount_percent):g}%)', f'- {money(quote.discount_amount)}'])
+    if quote.tax_percent:
+        rows.append(['', '', '', f'Tax ({float(quote.tax_percent):g}%)', money(quote.tax_amount)])
+    if quote.shipping_amount:
+        rows.append(['', '', '', 'Shipping', money(quote.shipping_amount)])
+    rows.append(['', '', '', 'Grand total', money(quote.total)])
 
     table = Table(rows, colWidths=[62 * mm, 30 * mm, 24 * mm, 34 * mm, 34 * mm], repeatRows=1)
     table.setStyle(TableStyle([

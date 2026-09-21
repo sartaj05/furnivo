@@ -71,6 +71,9 @@ def create_quote():
             status='Draft',
             quote_date=date.today(),
             notes=str(payload.get('notes', '')).strip(),
+            discount_percent=Decimal(str(payload.get('discount_percent', 0) or 0)),
+            tax_percent=Decimal(str(payload.get('tax_percent', 18) or 0)),
+            shipping_amount=Decimal(str(payload.get('shipping_amount', 0) or 0)),
             created_by_id=current_user().id,
         )
         quote.items = [build_item(item) for item in line_items]

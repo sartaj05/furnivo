@@ -92,6 +92,9 @@ class Quote(TimestampMixin, db.Model):
     status = db.Column(db.String(40), nullable=False, default='Draft', index=True)
     quote_date = db.Column(db.Date, nullable=False)
     notes = db.Column(db.Text, nullable=False, default='')
+    discount_percent = db.Column(db.Numeric(6, 2), nullable=False, default=0)
+    tax_percent = db.Column(db.Numeric(6, 2), nullable=False, default=18)
+    shipping_amount = db.Column(db.Numeric(12, 2), nullable=False, default=0)
     created_by_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     items = db.relationship('QuoteItem', back_populates='quote', cascade='all, delete-orphan', lazy='selectin')
 
@@ -100,8 +103,20 @@ class Quote(TimestampMixin, db.Model):
         return sum((item.line_total for item in self.items), 0)
 
     @property
+    def discount_amount(self):
+        return self.subtotal * (self.discount_percent or 0) / 100
+
+    @property
+    def taxable_amount(self):
+        return max(self.subtotal - self.discount_amount, 0)
+
+    @property
+    def tax_amount(self):
+        return self.taxable_amount * (self.tax_percent or 0) / 100
+
+    @property
     def total(self):
-        return self.subtotal
+        return self.taxable_amount + self.tax_amount + (self.shipping_amount or 0)
 
     def to_dict(self):
         return {
@@ -113,6 +128,11 @@ class Quote(TimestampMixin, db.Model):
             'notes': self.notes,
             'items': [item.to_dict() for item in self.items],
             'subtotal': float(self.subtotal),
+            'discount_percent': float(self.discount_percent or 0),
+            'discount_amount': float(self.discount_amount),
+            'tax_percent': float(self.tax_percent or 0),
+            'tax_amount': float(self.tax_amount),
+            'shipping_amount': float(self.shipping_amount or 0),
             'amount': float(self.total),
         }
 
