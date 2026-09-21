@@ -178,3 +178,52 @@ export async function updateLeadStage(id, stage) {
     return { item: db.leads.find((lead) => Number(lead.id) === Number(id)), mode: 'demo' }
   }
 }
+
+export async function createProduct(payload) {
+  try {
+    return await backendRequest('/products', { method: 'POST', body: JSON.stringify(payload) })
+  } catch (error) {
+    if (error.status) throw error
+    await delay()
+    const db = getLocalDb()
+    if (db.products.some((item) => item.sku.toLowerCase() === payload.sku.toLowerCase())) {
+      throw new Error('SKU must be unique.')
+    }
+    const product = {
+      id: Math.max(0, ...db.products.map((item) => Number(item.id) || 0)) + 1,
+      description: '',
+      is_active: true,
+      ...payload,
+      price: Number(payload.price || 0),
+    }
+    db.products.push(product)
+    saveLocalDb(db)
+    return { item: product, mode: 'demo' }
+  }
+}
+
+export async function updateProduct(id, payload) {
+  try {
+    return await backendRequest(`/products/${id}`, { method: 'PATCH', body: JSON.stringify(payload) })
+  } catch (error) {
+    if (error.status) throw error
+    await delay()
+    const db = getLocalDb()
+    db.products = db.products.map((item) => Number(item.id) === Number(id) ? { ...item, ...payload, price: Number(payload.price ?? item.price) } : item)
+    saveLocalDb(db)
+    return { item: db.products.find((item) => Number(item.id) === Number(id)), mode: 'demo' }
+  }
+}
+
+export async function deleteProduct(id) {
+  try {
+    return await backendRequest(`/products/${id}`, { method: 'DELETE' })
+  } catch (error) {
+    if (error.status) throw error
+    await delay()
+    const db = getLocalDb()
+    db.products = db.products.filter((item) => Number(item.id) !== Number(id))
+    saveLocalDb(db)
+    return { ok: true, mode: 'demo' }
+  }
+}

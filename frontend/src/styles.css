@@ -735,3 +735,18 @@ img { max-width: 100%; }
   .product-body { padding: 15px; }
   .lead-card { padding: 16px; }
 }
+
+.catalog-editor { margin-bottom: 18px; }
+.panel-heading { display: flex; align-items: center; justify-content: space-between; gap: 18px; }
+.form-grid { display: grid; gap: 14px; margin: 20px 0; }
+.form-grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.form-grid label { display: grid; gap: 7px; font-size: 12px; font-weight: 700; }
+.form-grid input, .form-grid select, .form-grid textarea { width: 100%; border: 1px solid #d7dbd5; background: white; color: var(--ink); padding: 12px 13px; border-radius: 10px; outline: none; resize: vertical; }
+.form-span-3 { grid-column: span 3; }
+.dark-text-button { color: var(--muted); }
+.card-actions { display: flex; gap: 14px; margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--line); }
+.button-link { border: 0; padding: 0; background: none; color: var(--green); font-weight: 800; cursor: pointer; }
+.danger-link { color: #9b4f42; }
+.image-placeholder { height: 100%; display: grid; place-items: center; color: var(--muted); background: #e7e5de; font-size: 12px; }
+@media (max-width: 780px) { .form-grid-3 { grid-template-columns: 1fr 1fr; } .form-span-3 { grid-column: span 2; } }
+@media (max-width: 520px) { .form-grid-3 { grid-template-columns: 1fr; } .form-span-3 { grid-column: span 1; } }
