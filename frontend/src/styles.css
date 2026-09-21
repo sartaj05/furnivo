@@ -791,3 +791,26 @@ img { max-width: 100%; }
 .customer-card p { margin: 5px 0 0; color: var(--muted); }
 .customer-meta { display: grid; gap: 7px; margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--line); color: var(--muted); font-size: 12px; }
 @media (max-width: 780px) { .customer-grid { grid-template-columns: 1fr; } }
+.lead-workspace { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(320px, .85fr); gap: 14px; align-items: start; }
+.lead-workspace .lead-grid { grid-template-columns: 1fr 1fr; }
+.lead-card { cursor: pointer; }
+.lead-card.selected { border-color: #86a290; box-shadow: 0 0 0 2px rgba(35,75,60,.07); }
+.owner-line { display: block; color: var(--muted); margin-top: 12px; }
+.lead-detail { position: sticky; top: 24px; }
+.lead-detail > label { display: grid; gap: 7px; margin: 18px 0; font-size: 11px; font-weight: 800; color: var(--muted); }
+.lead-detail select, .mini-form input, .mini-form textarea { width: 100%; border: 1px solid #d7dbd5; background: white; padding: 10px; border-radius: 9px; color: var(--ink); }
+.lead-section { border-top: 1px solid var(--line); padding-top: 18px; margin-top: 18px; }
+.lead-section h4 { margin: 0 0 12px; }
+.mini-form { display: grid; grid-template-columns: 1fr auto auto; gap: 8px; align-items: end; }
+.note-form { grid-template-columns: 1fr auto; }
+.task-list, .note-list { display: grid; gap: 8px; margin-top: 12px; }
+.task-item { display: flex; gap: 10px; align-items: start; background: #f5f3ed; padding: 10px; border-radius: 9px; font-size: 12px; }
+.task-item span, .task-item strong, .task-item small { display: block; }
+.task-item small { color: var(--muted); margin-top: 3px; }
+.task-item.done { opacity: .55; text-decoration: line-through; }
+.note-list > div { background: #f5f3ed; padding: 10px; border-radius: 9px; }
+.note-list p { margin: 0 0 5px; font-size: 12px; line-height: 1.5; }
+.note-list small { color: var(--muted); }
+.status-lost { background: #f4e4e1; color: #8d4438; }
+@media (max-width: 1120px) { .lead-workspace { grid-template-columns: 1fr; } .lead-detail { position: static; } }
+@media (max-width: 780px) { .lead-workspace .lead-grid { grid-template-columns: 1fr; } .mini-form, .note-form { grid-template-columns: 1fr; } }

@@ -9,8 +9,13 @@ quotes_bp = Blueprint('quotes', __name__)
 
 
 def next_quote_number():
-    last_id = db.session.scalar(db.select(db.func.max(Quote.id))) or 0
-    return f'Q-{1042 + last_id + 1}'
+    numbers = []
+    for value in db.session.scalars(db.select(Quote.quote_number)).all():
+        try:
+            numbers.append(int(str(value).split('-')[-1]))
+        except ValueError:
+            continue
+    return f"Q-{max(numbers, default=1041) + 1}"
 
 
 def build_item(payload):

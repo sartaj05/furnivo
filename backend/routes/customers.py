@@ -18,7 +18,7 @@ def apply_payload(customer, payload):
 
 
 @customers_bp.get('')
-@roles_required('admin', 'sales')
+@roles_required('admin', 'sales', 'designer')
 def list_customers():
     items = db.session.scalars(db.select(Customer).where(Customer.is_active.is_(True)).order_by(Customer.company)).all()
     return jsonify({'items': [item.to_dict() for item in items], 'mode': 'api'})

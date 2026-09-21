@@ -195,3 +195,62 @@ class Customer(TimestampMixin, db.Model):
             'project_address': self.project_address, 'gstin': self.gstin, 'notes': self.notes,
             'is_active': self.is_active,
         }
+
+class Lead(TimestampMixin, db.Model):
+    __tablename__ = 'leads'
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(160), nullable=False)
+    company = db.Column(db.String(180), nullable=False, default='')
+    email = db.Column(db.String(255), nullable=False, default='')
+    phone = db.Column(db.String(60), nullable=False, default='')
+    source = db.Column(db.String(80), nullable=False, default='Website')
+    stage = db.Column(db.String(40), nullable=False, default='New', index=True)
+    value = db.Column(db.Numeric(12, 2), nullable=False, default=0)
+    owner_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True, index=True)
+    owner = db.relationship('User')
+    notes = db.relationship('LeadNote', back_populates='lead', cascade='all, delete-orphan', lazy='selectin')
+    tasks = db.relationship('LeadTask', back_populates='lead', cascade='all, delete-orphan', lazy='selectin')
+
+    def to_dict(self):
+        return {
+            'id': self.id, 'name': self.name, 'company': self.company, 'email': self.email,
+            'phone': self.phone, 'source': self.source, 'stage': self.stage, 'value': float(self.value or 0),
+            'owner_id': self.owner_id, 'owner': self.owner.public_dict() if self.owner else None,
+            'notes': [note.to_dict() for note in sorted(self.notes, key=lambda x: x.created_at, reverse=True)],
+            'tasks': [task.to_dict() for task in sorted(self.tasks, key=lambda x: (x.is_done, x.due_date or __import__('datetime').date.max))],
+        }
+
+
+class LeadNote(TimestampMixin, db.Model):
+    __tablename__ = 'lead_notes'
+
+    id = db.Column(db.Integer, primary_key=True)
+    lead_id = db.Column(db.Integer, db.ForeignKey('leads.id', ondelete='CASCADE'), nullable=False, index=True)
+    author_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    body = db.Column(db.Text, nullable=False)
+    lead = db.relationship('Lead', back_populates='notes')
+    author = db.relationship('User')
+
+    def to_dict(self):
+        return {'id': self.id, 'body': self.body, 'author': self.author.name if self.author else 'Team', 'created_at': self.created_at.isoformat()}
+
+
+class LeadTask(TimestampMixin, db.Model):
+    __tablename__ = 'lead_tasks'
+
+    id = db.Column(db.Integer, primary_key=True)
+    lead_id = db.Column(db.Integer, db.ForeignKey('leads.id', ondelete='CASCADE'), nullable=False, index=True)
+    title = db.Column(db.String(200), nullable=False)
+    due_date = db.Column(db.Date, nullable=True)
+    is_done = db.Column(db.Boolean, nullable=False, default=False)
+    assigned_to_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    lead = db.relationship('Lead', back_populates='tasks')
+    assigned_to = db.relationship('User')
+
+    def to_dict(self):
+        return {
+            'id': self.id, 'title': self.title, 'due_date': self.due_date.isoformat() if self.due_date else None,
+            'is_done': self.is_done, 'assigned_to_id': self.assigned_to_id,
+            'assigned_to': self.assigned_to.name if self.assigned_to else None,
+        }

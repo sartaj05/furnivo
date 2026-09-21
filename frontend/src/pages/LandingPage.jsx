@@ -157,7 +157,7 @@ export default function LandingPage() {
           </div>
           <div className="showcase-copy">
             <p className="eyebrow">Built for trust</p>
-            <h2>Quiet design. Clear information. No dashboard carnival.</h2>
+            <h2>Quiet design. Clear information. Focused workflows.</h2>
             <p>
               Customers see a composed catalog. Sales teams see pricing and pipeline.
               Designers see products and quotations. Admins get the complete operational view.

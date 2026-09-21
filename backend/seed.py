@@ -1,6 +1,6 @@
 from werkzeug.security import generate_password_hash
 from .extensions import db
-from .models import Customer, Product, ProductVariant, Quote, QuoteItem, User
+from .models import Customer, Lead, LeadNote, LeadTask, Product, ProductVariant, Quote, QuoteItem, User
 
 
 DEMO_PRODUCTS = [
@@ -47,6 +47,10 @@ def seed_database():
         ])
         db.session.commit()
 
+    seed_customers()
+    seed_quotes()
+    seed_leads()
+
 
 def seed_quotes():
     if db.session.scalar(db.select(Quote).limit(1)):
@@ -56,7 +60,8 @@ def seed_quotes():
     light = db.session.scalar(db.select(Product).where(Product.sku == "INT-LGT-204"))
     if not admin or not sofa:
         return
-    quote = Quote(quote_number="Q-1042", customer_name="Northline Studio", status="Sent", quote_date=__import__('datetime').date(2026, 9, 18), created_by_id=admin.id)
+    customer = db.session.scalar(db.select(Customer).where(Customer.company == "Northline Studio"))
+    quote = Quote(quote_number="Q-1042", customer_name="Northline Studio", customer_id=customer.id if customer else None, status="Sent", quote_date=__import__('datetime').date(2026, 9, 18), created_by_id=admin.id)
     quote.items = [QuoteItem(product_id=sofa.id, description=sofa.name, sku=sofa.sku, quantity=2, unit=sofa.unit, unit_price=sofa.price)]
     if light:
         quote.items.append(QuoteItem(product_id=light.id, description=light.name, sku=light.sku, quantity=2, unit=light.unit, unit_price=light.price))
@@ -73,4 +78,25 @@ def seed_customers():
     for data in demo:
         if not db.session.scalar(db.select(Customer).where(Customer.company == data["company"])):
             db.session.add(Customer(**data))
+    db.session.commit()
+
+
+def seed_leads():
+    if db.session.scalar(db.select(Lead).limit(1)):
+        return
+    sales = db.session.scalar(db.select(User).where(User.role == "sales"))
+    admin = db.session.scalar(db.select(User).where(User.role == "admin"))
+    demo = [
+        ("Sana Kapoor", "SK Atelier", "+91 98111 22334", "Website", "New", 240000, sales),
+        ("Arjun Mehta", "Mehta Homes", "+91 98770 11228", "Referral", "Qualified", 510000, sales),
+        ("Devika Rao", "Form & Field", "+91 98990 33001", "Instagram", "Proposal", 175000, admin),
+        ("Neil Thomas", "NTH Build", "+91 97110 81020", "Exhibition", "Won", 690000, sales),
+    ]
+    for name, company, phone, source, stage, value, owner in demo:
+        lead = Lead(name=name, company=company, phone=phone, source=source, stage=stage, value=value, owner_id=owner.id if owner else None)
+        db.session.add(lead)
+        db.session.flush()
+        if stage != "Won":
+            db.session.add(LeadTask(lead_id=lead.id, title="Follow up on material selection", due_date=__import__('datetime').date(2026, 9, 25), assigned_to_id=owner.id if owner else None))
+        db.session.add(LeadNote(lead_id=lead.id, author_id=(owner or admin).id, body="Initial enquiry captured and qualification started."))
     db.session.commit()

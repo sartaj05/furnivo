@@ -118,7 +118,8 @@ export async function register(name, email, password) {
 export async function getProducts() {
   try {
     return await backendRequest('/products')
-  } catch {
+  } catch (error) {
+    if (error.status) throw error
     await delay()
     return { items: getLocalDb().products, mode: 'demo' }
   }
@@ -174,30 +175,58 @@ export async function createQuote(payload) {
 }
 
 export async function getLeads() {
-  try {
-    return await backendRequest('/leads')
-  } catch {
-    await delay()
-    return { items: getLocalDb().leads, mode: 'demo' }
+  try { return await backendRequest('/leads') }
+  catch (error) {
+    if (error.status) throw error
+    const items = getLocalDb().leads.map((lead) => ({ notes: [], tasks: [], ...lead }))
+    return { items, team: getLocalDb().users.filter((user) => ['admin', 'sales'].includes(user.role)).map(({ password, ...user }) => user), mode: 'demo' }
   }
 }
 
 export async function updateLeadStage(id, stage) {
-  try {
-    return await backendRequest(`/leads/${id}`, {
-      method: 'PATCH',
-      body: JSON.stringify({ stage }),
-    })
-  } catch {
-    await delay()
+  try { return await backendRequest(`/leads/${id}`, { method: 'PATCH', body: JSON.stringify({ stage }) }) }
+  catch (error) {
+    if (error.status) throw error
     const db = getLocalDb()
-    db.leads = db.leads.map((lead) =>
-      Number(lead.id) === Number(id) ? { ...lead, stage } : lead,
-    )
+    db.leads = db.leads.map((lead) => Number(lead.id) === Number(id) ? { ...lead, stage } : lead)
     saveLocalDb(db)
     return { item: db.leads.find((lead) => Number(lead.id) === Number(id)), mode: 'demo' }
   }
 }
+
+export async function updateLead(id, payload) {
+  try { return await backendRequest(`/leads/${id}`, { method: 'PATCH', body: JSON.stringify(payload) }) }
+  catch (error) {
+    if (error.status) throw error
+    const db = getLocalDb(); db.leads = db.leads.map((lead) => Number(lead.id) === Number(id) ? { ...lead, ...payload } : lead); saveLocalDb(db)
+    return { item: db.leads.find((lead) => Number(lead.id) === Number(id)), mode: 'demo' }
+  }
+}
+
+export async function addLeadNote(id, body) {
+  try { return await backendRequest(`/leads/${id}/notes`, { method: 'POST', body: JSON.stringify({ body }) }) }
+  catch (error) {
+    if (error.status) throw error
+    const db = getLocalDb(); const lead = db.leads.find((item) => Number(item.id) === Number(id)); lead.notes = [{ id: Date.now(), body, author: 'Demo user', created_at: new Date().toISOString() }, ...(lead.notes || [])]; saveLocalDb(db); return { lead, mode: 'demo' }
+  }
+}
+
+export async function addLeadTask(id, payload) {
+  try { return await backendRequest(`/leads/${id}/tasks`, { method: 'POST', body: JSON.stringify(payload) }) }
+  catch (error) {
+    if (error.status) throw error
+    const db = getLocalDb(); const lead = db.leads.find((item) => Number(item.id) === Number(id)); const task = { id: Date.now(), is_done: false, ...payload }; lead.tasks = [...(lead.tasks || []), task]; saveLocalDb(db); return { item: task, lead, mode: 'demo' }
+  }
+}
+
+export async function updateLeadTask(leadId, taskId, payload) {
+  try { return await backendRequest(`/leads/${leadId}/tasks/${taskId}`, { method: 'PATCH', body: JSON.stringify(payload) }) }
+  catch (error) {
+    if (error.status) throw error
+    const db = getLocalDb(); const lead = db.leads.find((item) => Number(item.id) === Number(leadId)); lead.tasks = (lead.tasks || []).map((task) => Number(task.id) === Number(taskId) ? { ...task, ...payload } : task); saveLocalDb(db); return { mode: 'demo' }
+  }
+}
+
 
 export async function createProduct(payload) {
   try {

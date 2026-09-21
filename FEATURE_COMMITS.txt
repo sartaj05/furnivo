@@ -1,0 +1,11 @@
+chore: baseline responsive furnivo demo
+feat: add sqlalchemy database foundation and migrations
+feat: secure authentication with password hashing and jwt
+feat: add product catalog crud api and admin controls
+feat: add product variants finishes and dimensions
+feat: add local and cloud ready image upload workflow
+feat: build quotation line item workflow
+feat: add quotation pdf generation and download
+feat: add tax discount shipping and quote totals
+feat: add customer company and project address records
+feat: add lead notes tasks owners and activity timeline

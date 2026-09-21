@@ -19,7 +19,7 @@ export default function App() {
       <Route element={<ProtectedRoute />}>
         <Route path="/app" element={<DashboardPage />} />
         <Route path="/app/catalog" element={<CatalogPage />} />
-        <Route path="/app/quotes" element={<QuotesPage />} />
+        <Route path="/app/quotes" element={<ProtectedRoute allowedRoles={['admin', 'sales', 'designer']}><QuotesPage /></ProtectedRoute>} />
         <Route path="/app/customers" element={<ProtectedRoute allowedRoles={['admin', 'sales']}><CustomersPage /></ProtectedRoute>} />
         <Route
           path="/app/leads"

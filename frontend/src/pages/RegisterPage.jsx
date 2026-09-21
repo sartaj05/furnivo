@@ -13,8 +13,8 @@ export default function RegisterPage() {
     event.preventDefault()
     setError('')
 
-    if (form.password.length < 6) {
-      setError('Password must be at least 6 characters.')
+    if (form.password.length < 8) {
+      setError('Password must be at least 8 characters.')
       return
     }
 
@@ -99,7 +99,7 @@ export default function RegisterPage() {
                 autoComplete="new-password"
                 value={form.password}
                 onChange={(e) => setForm({ ...form, password: e.target.value })}
-                placeholder="Minimum 6 characters"
+                placeholder="Minimum 8 characters"
                 required
               />
             </label>
