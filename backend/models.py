@@ -82,3 +82,70 @@ class ProductVariant(TimestampMixin, db.Model):
             'dimensions': f'{dimensions} mm' if dimensions else '',
             'price_delta': float(self.price_delta or 0), 'stock_status': self.stock_status,
         }
+
+class Quote(TimestampMixin, db.Model):
+    __tablename__ = 'quotes'
+
+    id = db.Column(db.Integer, primary_key=True)
+    quote_number = db.Column(db.String(40), unique=True, nullable=False, index=True)
+    customer_name = db.Column(db.String(180), nullable=False)
+    status = db.Column(db.String(40), nullable=False, default='Draft', index=True)
+    quote_date = db.Column(db.Date, nullable=False)
+    notes = db.Column(db.Text, nullable=False, default='')
+    created_by_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    items = db.relationship('QuoteItem', back_populates='quote', cascade='all, delete-orphan', lazy='selectin')
+
+    @property
+    def subtotal(self):
+        return sum((item.line_total for item in self.items), 0)
+
+    @property
+    def total(self):
+        return self.subtotal
+
+    def to_dict(self):
+        return {
+            'id': self.quote_number,
+            'database_id': self.id,
+            'customer': self.customer_name,
+            'status': self.status,
+            'date': self.quote_date.isoformat(),
+            'notes': self.notes,
+            'items': [item.to_dict() for item in self.items],
+            'subtotal': float(self.subtotal),
+            'amount': float(self.total),
+        }
+
+
+class QuoteItem(TimestampMixin, db.Model):
+    __tablename__ = 'quote_items'
+
+    id = db.Column(db.Integer, primary_key=True)
+    quote_id = db.Column(db.Integer, db.ForeignKey('quotes.id', ondelete='CASCADE'), nullable=False, index=True)
+    product_id = db.Column(db.Integer, db.ForeignKey('products.id'), nullable=True)
+    variant_id = db.Column(db.Integer, db.ForeignKey('product_variants.id'), nullable=True)
+    description = db.Column(db.String(255), nullable=False)
+    sku = db.Column(db.String(100), nullable=False, default='')
+    quantity = db.Column(db.Numeric(12, 2), nullable=False, default=1)
+    unit = db.Column(db.String(40), nullable=False, default='piece')
+    unit_price = db.Column(db.Numeric(12, 2), nullable=False, default=0)
+    quote = db.relationship('Quote', back_populates='items')
+    product = db.relationship('Product')
+    variant = db.relationship('ProductVariant')
+
+    @property
+    def line_total(self):
+        return (self.quantity or 0) * (self.unit_price or 0)
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'product_id': self.product_id,
+            'variant_id': self.variant_id,
+            'description': self.description,
+            'sku': self.sku,
+            'quantity': float(self.quantity or 0),
+            'unit': self.unit,
+            'unit_price': float(self.unit_price or 0),
+            'line_total': float(self.line_total),
+        }

@@ -763,3 +763,16 @@ img { max-width: 100%; }
 @media (max-width: 520px) { .variant-form { grid-template-columns: 1fr; } }
 .upload-field input[type="file"] { padding: 10px; background: #f6f5ef; }
 .upload-field span { color: var(--muted); font-size: 10px; font-weight: 500; }
+.quote-builder { margin-bottom: 18px; }
+.quote-head-fields { grid-template-columns: 1fr 1fr; }
+.quote-lines { display: grid; gap: 10px; margin: 18px 0; }
+.quote-line { display: grid; grid-template-columns: 2fr 1.4fr .6fr 1fr 1fr auto; gap: 9px; align-items: end; padding: 14px; background: #f4f2eb; border-radius: 12px; }
+.quote-line label { display: grid; gap: 6px; font-size: 10px; font-weight: 800; text-transform: uppercase; color: var(--muted); }
+.quote-line input, .quote-line select { min-width: 0; width: 100%; border: 1px solid #d7dbd5; background: white; padding: 10px; border-radius: 9px; color: var(--ink); }
+.line-total { display: grid; gap: 5px; padding-bottom: 8px; }
+.line-total span { color: var(--muted); font-size: 10px; text-transform: uppercase; font-weight: 800; }
+.line-total strong { white-space: nowrap; }
+.quote-remove { padding-bottom: 12px; }
+.quote-builder-actions { display: flex; justify-content: space-between; gap: 12px; }
+@media (max-width: 1050px) { .quote-line { grid-template-columns: 1fr 1fr 1fr; } .quote-remove { padding: 8px 0; } }
+@media (max-width: 620px) { .quote-head-fields, .quote-line { grid-template-columns: 1fr; } .quote-builder-actions { flex-direction: column; } }

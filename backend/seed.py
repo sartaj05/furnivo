@@ -1,6 +1,6 @@
 from werkzeug.security import generate_password_hash
 from .extensions import db
-from .models import Product, ProductVariant, User
+from .models import Product, ProductVariant, Quote, QuoteItem, User
 
 
 DEMO_PRODUCTS = [
@@ -46,3 +46,19 @@ def seed_database():
             ProductVariant(sku="FUR-SOF-101-OLIVE", finish="Olive Performance", width_mm=2600, height_mm=780, depth_mm=980, price_delta=4500),
         ])
         db.session.commit()
+
+
+def seed_quotes():
+    if db.session.scalar(db.select(Quote).limit(1)):
+        return
+    admin = db.session.scalar(db.select(User).where(User.role == "admin"))
+    sofa = db.session.scalar(db.select(Product).where(Product.sku == "FUR-SOF-101"))
+    light = db.session.scalar(db.select(Product).where(Product.sku == "INT-LGT-204"))
+    if not admin or not sofa:
+        return
+    quote = Quote(quote_number="Q-1042", customer_name="Northline Studio", status="Sent", quote_date=__import__('datetime').date(2026, 9, 18), created_by_id=admin.id)
+    quote.items = [QuoteItem(product_id=sofa.id, description=sofa.name, sku=sofa.sku, quantity=2, unit=sofa.unit, unit_price=sofa.price)]
+    if light:
+        quote.items.append(QuoteItem(product_id=light.id, description=light.name, sku=light.sku, quantity=2, unit=light.unit, unit_price=light.price))
+    db.session.add(quote)
+    db.session.commit()

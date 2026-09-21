@@ -125,7 +125,8 @@ export async function getProducts() {
 export async function getQuotes() {
   try {
     return await backendRequest('/quotes')
-  } catch {
+  } catch (error) {
+    if (error.status) throw error
     await delay()
     return { items: getLocalDb().quotes, mode: 'demo' }
   }
@@ -137,15 +138,21 @@ export async function createQuote(payload) {
       method: 'POST',
       body: JSON.stringify(payload),
     })
-  } catch {
+  } catch (error) {
+    if (error.status) throw error
     await delay()
     const db = getLocalDb()
+    const subtotal = (payload.items || []).reduce((sum, item) => sum + Number(item.quantity || 0) * Number(item.unit_price || 0), 0)
     const quote = {
       id: `Q-${1043 + db.quotes.length}`,
+      database_id: Date.now(),
       customer: payload.customer,
-      amount: Number(payload.amount),
+      items: payload.items || [],
+      subtotal,
+      amount: subtotal,
       status: 'Draft',
       date: new Date().toISOString().slice(0, 10),
+      notes: payload.notes || '',
     }
     db.quotes = [quote, ...db.quotes]
     saveLocalDb(db)
