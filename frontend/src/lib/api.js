@@ -299,3 +299,48 @@ export async function uploadProductImage(file) {
   })
   return { item: { url, provider: 'browser-demo' }, mode: 'demo' }
 }
+
+export async function downloadQuotePdf(quote) {
+  if (API_URL && quote.database_id) {
+    try {
+      const token = localStorage.getItem('furnivo-token')
+      const response = await fetch(`${API_URL}/quotes/${quote.database_id}/pdf`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      })
+      if (!response.ok) {
+        const error = new Error('Could not generate quotation PDF.')
+        error.status = response.status
+        throw error
+      }
+      const blob = await response.blob()
+      const url = URL.createObjectURL(blob)
+      const anchor = document.createElement('a')
+      anchor.href = url
+      anchor.download = `${quote.id}.pdf`
+      anchor.click()
+      URL.revokeObjectURL(url)
+      return { mode: 'api' }
+    } catch (error) {
+      if (error.status) throw error
+    }
+  }
+
+  const { jsPDF } = await import('jspdf')
+  const doc = new jsPDF()
+  doc.setFontSize(20)
+  doc.text('FURNIVO', 16, 20)
+  doc.setFontSize(10)
+  doc.text(`Quotation: ${quote.id}`, 16, 30)
+  doc.text(`Customer: ${quote.customer}`, 16, 36)
+  doc.text(`Date: ${quote.date}`, 16, 42)
+  let y = 54
+  ;(quote.items || []).forEach((item, index) => {
+    const amount = Number(item.quantity || 0) * Number(item.unit_price || 0)
+    doc.text(`${index + 1}. ${item.description || item.sku || 'Item'} | ${item.quantity} x INR ${Number(item.unit_price || 0).toLocaleString('en-IN')} = INR ${amount.toLocaleString('en-IN')}`, 16, y)
+    y += 7
+  })
+  doc.setFontSize(12)
+  doc.text(`Total: INR ${Number(quote.amount || 0).toLocaleString('en-IN')}`, 16, y + 8)
+  doc.save(`${quote.id}.pdf`)
+  return { mode: 'demo' }
+}

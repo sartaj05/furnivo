@@ -92,3 +92,16 @@ def update_quote_status(quote_id):
     quote.status = status
     db.session.commit()
     return jsonify({'item': quote.to_dict(), 'mode': 'api'})
+
+@quotes_bp.get('/<int:quote_id>/pdf')
+@roles_required('admin', 'sales', 'designer')
+def quote_pdf(quote_id):
+    from flask import send_file
+    from ..services.quote_pdf import build_quote_pdf
+    quote = db.get_or_404(Quote, quote_id)
+    return send_file(
+        build_quote_pdf(quote),
+        mimetype='application/pdf',
+        as_attachment=True,
+        download_name=f'{quote.quote_number}.pdf',
+    )

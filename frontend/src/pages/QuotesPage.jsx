@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import AppShell from '../components/AppShell'
-import { createQuote, getProducts, getQuotes } from '../lib/api'
+import { createQuote, downloadQuotePdf, getProducts, getQuotes } from '../lib/api'
 
 const emptyLine = () => ({ product_id: '', variant_id: '', description: '', sku: '', quantity: 1, unit: 'piece', unit_price: 0 })
 
@@ -79,7 +79,7 @@ export default function QuotesPage() {
         </form>
       )}
 
-      <section className="panel table-panel"><div className="table-wrap"><table><thead><tr><th>Quote</th><th>Customer</th><th>Lines</th><th>Date</th><th>Status</th><th className="align-right">Amount</th></tr></thead><tbody>{quotes.map((quote) => <tr key={quote.id}><td data-label="Quote"><strong>{quote.id}</strong></td><td data-label="Customer">{quote.customer}</td><td data-label="Lines">{quote.items?.length || '—'}</td><td data-label="Date">{quote.date}</td><td data-label="Status"><span className={`status status-${quote.status.toLowerCase()}`}>{quote.status}</span></td><td data-label="Amount" className="align-right">₹{Number(quote.amount).toLocaleString('en-IN')}</td></tr>)}</tbody></table></div></section>
+      <section className="panel table-panel"><div className="table-wrap"><table><thead><tr><th>Quote</th><th>Customer</th><th>Lines</th><th>Date</th><th>Status</th><th className="align-right">Amount</th><th>PDF</th></tr></thead><tbody>{quotes.map((quote) => <tr key={quote.id}><td data-label="Quote"><strong>{quote.id}</strong></td><td data-label="Customer">{quote.customer}</td><td data-label="Lines">{quote.items?.length || '—'}</td><td data-label="Date">{quote.date}</td><td data-label="Status"><span className={`status status-${quote.status.toLowerCase()}`}>{quote.status}</span></td><td data-label="Amount" className="align-right">₹{Number(quote.amount).toLocaleString('en-IN')}</td><td data-label="PDF"><button className="button-link" onClick={() => downloadQuotePdf(quote)}>Download</button></td></tr>)}</tbody></table></div></section>
     </AppShell>
   )
 }
