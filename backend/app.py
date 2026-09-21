@@ -34,6 +34,11 @@ def create_app(config_object=Config):
     app.register_blueprint(leads_bp, url_prefix='/api/leads')
     app.register_blueprint(uploads_bp, url_prefix='/api/uploads')
 
+    if app.config.get('AUTO_SEED'):
+        with app.app_context():
+            from .seed import seed_database
+            seed_database()
+
     @app.get('/api/health')
     def health():
         return jsonify({'ok': True, 'service': 'furnivo-api'})

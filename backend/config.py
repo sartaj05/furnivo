@@ -26,3 +26,4 @@ class Config:
         if origin.strip()
     ]
     CLOUDINARY_URL = os.getenv('CLOUDINARY_URL', '')
+    AUTO_SEED = os.getenv('AUTO_SEED', 'true').lower() == 'true'
