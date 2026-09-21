@@ -134,3 +134,10 @@ export const demoLeads = [
     value: 690000,
   },
 ]
+
+
+export const demoCustomers = [
+  { id: 1, company: 'Northline Studio', contact_name: 'Ishita Arora', email: 'projects@northline.demo', phone: '+91 98100 21001', billing_address: 'New Delhi', project_address: 'Defence Colony, New Delhi', gstin: '07DEMO1234A1Z5', notes: '' },
+  { id: 2, company: 'The Green House', contact_name: 'Rohan Sen', email: 'hello@greenhouse.demo', phone: '+91 98100 21002', billing_address: 'Gurugram', project_address: 'Gurugram, Haryana', gstin: '', notes: '' },
+  { id: 3, company: 'Avenue Architects', contact_name: 'Neha Jain', email: 'studio@avenue.demo', phone: '+91 98100 21003', billing_address: 'Noida', project_address: 'Noida, Uttar Pradesh', gstin: '', notes: '' },
+]

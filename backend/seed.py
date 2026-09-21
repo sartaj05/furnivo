@@ -1,6 +1,6 @@
 from werkzeug.security import generate_password_hash
 from .extensions import db
-from .models import Product, ProductVariant, Quote, QuoteItem, User
+from .models import Customer, Product, ProductVariant, Quote, QuoteItem, User
 
 
 DEMO_PRODUCTS = [
@@ -61,4 +61,16 @@ def seed_quotes():
     if light:
         quote.items.append(QuoteItem(product_id=light.id, description=light.name, sku=light.sku, quantity=2, unit=light.unit, unit_price=light.price))
     db.session.add(quote)
+    db.session.commit()
+
+
+def seed_customers():
+    demo = [
+        {"company": "Northline Studio", "contact_name": "Ishita Arora", "email": "projects@northline.demo", "phone": "+91 98100 21001", "project_address": "Defence Colony, New Delhi", "gstin": "07DEMO1234A1Z5"},
+        {"company": "The Green House", "contact_name": "Rohan Sen", "email": "hello@greenhouse.demo", "phone": "+91 98100 21002", "project_address": "Gurugram, Haryana"},
+        {"company": "Avenue Architects", "contact_name": "Neha Jain", "email": "studio@avenue.demo", "phone": "+91 98100 21003", "project_address": "Noida, Uttar Pradesh"},
+    ]
+    for data in demo:
+        if not db.session.scalar(db.select(Customer).where(Customer.company == data["company"])):
+            db.session.add(Customer(**data))
     db.session.commit()

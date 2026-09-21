@@ -1,20 +1,22 @@
 import { useEffect, useMemo, useState } from 'react'
 import AppShell from '../components/AppShell'
-import { createQuote, downloadQuotePdf, getProducts, getQuotes } from '../lib/api'
+import { createQuote, downloadQuotePdf, getCustomers, getProducts, getQuotes } from '../lib/api'
 
 const emptyLine = () => ({ product_id: '', variant_id: '', description: '', sku: '', quantity: 1, unit: 'piece', unit_price: 0 })
 
 export default function QuotesPage() {
   const [quotes, setQuotes] = useState([])
   const [products, setProducts] = useState([])
-  const [form, setForm] = useState({ customer: '', notes: '', discount_percent: 0, tax_percent: 18, shipping_amount: 0, items: [emptyLine()] })
+  const [customers, setCustomers] = useState([])
+  const [form, setForm] = useState({ customer_id: '', customer: '', notes: '', discount_percent: 0, tax_percent: 18, shipping_amount: 0, items: [emptyLine()] })
   const [showForm, setShowForm] = useState(false)
   const [error, setError] = useState('')
 
   async function load() {
-    const [quoteResult, productResult] = await Promise.all([getQuotes(), getProducts()])
+    const [quoteResult, productResult, customerResult] = await Promise.all([getQuotes(), getProducts(), getCustomers().catch(() => ({ items: [] }))])
     setQuotes(quoteResult.items)
     setProducts(productResult.items)
+    setCustomers(customerResult.items)
   }
 
   useEffect(() => { load() }, [])
@@ -53,7 +55,7 @@ export default function QuotesPage() {
     setError('')
     try {
       await createQuote(form)
-      setForm({ customer: '', notes: '', discount_percent: 0, tax_percent: 18, shipping_amount: 0, items: [emptyLine()] })
+      setForm({ customer_id: '', customer: '', notes: '', discount_percent: 0, tax_percent: 18, shipping_amount: 0, items: [emptyLine()] })
       setShowForm(false)
       await load()
     } catch (err) { setError(err.message) }
@@ -65,7 +67,7 @@ export default function QuotesPage() {
         <form className="quote-builder panel" onSubmit={submit}>
           <div className="panel-heading"><div><p className="eyebrow">Quote builder</p><h3>Create a line-item quotation</h3></div><strong>₹{totals.total.toLocaleString('en-IN')}</strong></div>
           <div className="form-grid quote-head-fields">
-            <label>Customer / studio<input required value={form.customer} onChange={(e) => setForm({ ...form, customer: e.target.value })} placeholder="Northline Studio" /></label>
+            <label>Customer / studio<select required value={form.customer_id || form.customer} onChange={(e) => { const customer = customers.find((item) => String(item.id) === e.target.value); setForm({ ...form, customer_id: customer?.id || '', customer: customer?.company || e.target.value }) }}><option value="">Choose customer</option>{customers.map((customer) => <option value={customer.id} key={customer.id}>{customer.company}</option>)}</select></label>
             <label>Internal / customer notes<input value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} placeholder="Delivery, scope, validity…" /></label>
           </div>
           <div className="quote-commercials">

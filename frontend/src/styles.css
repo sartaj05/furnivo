@@ -784,3 +784,10 @@ img { max-width: 100%; }
 .quote-total-box strong { color: var(--ink); }
 .quote-total-box .grand-total { margin-top: 5px; padding-top: 10px; border-top: 1px solid var(--line); font-size: 15px; color: var(--ink); }
 @media (max-width: 620px) { .quote-commercials { grid-template-columns: 1fr; } }
+.customer-editor { margin-bottom: 18px; }
+.customer-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.customer-card { background: var(--paper-2); border: 1px solid var(--line); border-radius: 16px; padding: 20px; }
+.customer-card h3 { margin: 0; }
+.customer-card p { margin: 5px 0 0; color: var(--muted); }
+.customer-meta { display: grid; gap: 7px; margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--line); color: var(--muted); font-size: 12px; }
+@media (max-width: 780px) { .customer-grid { grid-template-columns: 1fr; } }

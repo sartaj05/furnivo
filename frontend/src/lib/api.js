@@ -1,4 +1,4 @@
-import { demoLeads, demoProducts, demoQuotes, demoUsers } from '../data/demoData'
+import { demoCustomers, demoLeads, demoProducts, demoQuotes, demoUsers } from '../data/demoData'
 
 const API_URL = import.meta.env.VITE_API_URL?.replace(/\/$/, '')
 const STORAGE_KEY = 'furnivo-demo-db'
@@ -14,6 +14,7 @@ function getLocalDb() {
       quotes: parsed.quotes || demoQuotes,
       leads: parsed.leads || demoLeads,
       users: parsed.users || demoUsers,
+      customers: parsed.customers || demoCustomers,
     }
     if (!parsed.users) localStorage.setItem(STORAGE_KEY, JSON.stringify(normalized))
     return normalized
@@ -24,6 +25,7 @@ function getLocalDb() {
     quotes: demoQuotes,
     leads: demoLeads,
     users: demoUsers,
+    customers: demoCustomers,
   }
   localStorage.setItem(STORAGE_KEY, JSON.stringify(initial))
   return initial
@@ -354,4 +356,29 @@ export async function downloadQuotePdf(quote) {
   doc.text(`Total: INR ${Number(quote.amount || 0).toLocaleString('en-IN')}`, 16, y + 8)
   doc.save(`${quote.id}.pdf`)
   return { mode: 'demo' }
+}
+
+
+export async function getCustomers() {
+  try { return await backendRequest('/customers') }
+  catch (error) { if (error.status) throw error; return { items: getLocalDb().customers, mode: 'demo' } }
+}
+
+export async function createCustomer(payload) {
+  try { return await backendRequest('/customers', { method: 'POST', body: JSON.stringify(payload) }) }
+  catch (error) {
+    if (error.status) throw error
+    const db = getLocalDb()
+    const item = { id: Math.max(0, ...db.customers.map((c) => Number(c.id) || 0)) + 1, ...payload }
+    db.customers.push(item); saveLocalDb(db); return { item, mode: 'demo' }
+  }
+}
+
+export async function updateCustomer(id, payload) {
+  try { return await backendRequest(`/customers/${id}`, { method: 'PATCH', body: JSON.stringify(payload) }) }
+  catch (error) {
+    if (error.status) throw error
+    const db = getLocalDb(); db.customers = db.customers.map((c) => Number(c.id) === Number(id) ? { ...c, ...payload } : c); saveLocalDb(db)
+    return { item: db.customers.find((c) => Number(c.id) === Number(id)), mode: 'demo' }
+  }
 }

@@ -2,7 +2,7 @@ from datetime import date
 from decimal import Decimal, InvalidOperation
 from flask import Blueprint, jsonify, request
 from ..extensions import db
-from ..models import Product, ProductVariant, Quote, QuoteItem
+from ..models import Customer, Product, ProductVariant, Quote, QuoteItem
 from ..utils import current_user, roles_required
 
 quotes_bp = Blueprint('quotes', __name__)
@@ -59,7 +59,9 @@ def get_quote(quote_id):
 @roles_required('admin', 'sales', 'designer')
 def create_quote():
     payload = request.get_json(silent=True) or {}
-    customer = str(payload.get('customer', '')).strip()
+    customer_id = payload.get('customer_id') or None
+    customer_record = db.session.get(Customer, int(customer_id)) if customer_id else None
+    customer = str(payload.get('customer') or (customer_record.company if customer_record else '')).strip()
     line_items = payload.get('items') or []
     if not customer or not line_items:
         return jsonify({'message': 'Customer and at least one quote line are required.'}), 400
@@ -68,6 +70,7 @@ def create_quote():
         quote = Quote(
             quote_number=next_quote_number(),
             customer_name=customer,
+            customer_id=customer_record.id if customer_record else None,
             status='Draft',
             quote_date=date.today(),
             notes=str(payload.get('notes', '')).strip(),

@@ -6,6 +6,7 @@ import DashboardPage from './pages/DashboardPage'
 import CatalogPage from './pages/CatalogPage'
 import QuotesPage from './pages/QuotesPage'
 import LeadsPage from './pages/LeadsPage'
+import CustomersPage from './pages/CustomersPage'
 import ProtectedRoute from './components/ProtectedRoute'
 
 export default function App() {
@@ -19,6 +20,7 @@ export default function App() {
         <Route path="/app" element={<DashboardPage />} />
         <Route path="/app/catalog" element={<CatalogPage />} />
         <Route path="/app/quotes" element={<QuotesPage />} />
+        <Route path="/app/customers" element={<ProtectedRoute allowedRoles={['admin', 'sales']}><CustomersPage /></ProtectedRoute>} />
         <Route
           path="/app/leads"
           element={

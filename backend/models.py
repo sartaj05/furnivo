@@ -89,6 +89,8 @@ class Quote(TimestampMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     quote_number = db.Column(db.String(40), unique=True, nullable=False, index=True)
     customer_name = db.Column(db.String(180), nullable=False)
+    customer_id = db.Column(db.Integer, db.ForeignKey('customers.id'), nullable=True, index=True)
+    customer = db.relationship('Customer')
     status = db.Column(db.String(40), nullable=False, default='Draft', index=True)
     quote_date = db.Column(db.Date, nullable=False)
     notes = db.Column(db.Text, nullable=False, default='')
@@ -123,6 +125,8 @@ class Quote(TimestampMixin, db.Model):
             'id': self.quote_number,
             'database_id': self.id,
             'customer': self.customer_name,
+            'customer_id': self.customer_id,
+            'customer_record': self.customer.to_dict() if self.customer else None,
             'status': self.status,
             'date': self.quote_date.isoformat(),
             'notes': self.notes,
@@ -168,4 +172,26 @@ class QuoteItem(TimestampMixin, db.Model):
             'unit': self.unit,
             'unit_price': float(self.unit_price or 0),
             'line_total': float(self.line_total),
+        }
+
+class Customer(TimestampMixin, db.Model):
+    __tablename__ = 'customers'
+
+    id = db.Column(db.Integer, primary_key=True)
+    company = db.Column(db.String(180), nullable=False, index=True)
+    contact_name = db.Column(db.String(160), nullable=False)
+    email = db.Column(db.String(255), nullable=False, default='')
+    phone = db.Column(db.String(60), nullable=False, default='')
+    billing_address = db.Column(db.Text, nullable=False, default='')
+    project_address = db.Column(db.Text, nullable=False, default='')
+    gstin = db.Column(db.String(40), nullable=False, default='')
+    notes = db.Column(db.Text, nullable=False, default='')
+    is_active = db.Column(db.Boolean, nullable=False, default=True)
+
+    def to_dict(self):
+        return {
+            'id': self.id, 'company': self.company, 'contact_name': self.contact_name,
+            'email': self.email, 'phone': self.phone, 'billing_address': self.billing_address,
+            'project_address': self.project_address, 'gstin': self.gstin, 'notes': self.notes,
+            'is_active': self.is_active,
         }

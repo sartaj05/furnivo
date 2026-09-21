@@ -5,6 +5,7 @@ const navItems = [
   { to: '/app', label: 'Overview', shortLabel: 'Home', roles: ['admin', 'sales', 'designer', 'client'], end: true },
   { to: '/app/catalog', label: 'Catalog', shortLabel: 'Catalog', roles: ['admin', 'sales', 'designer', 'client'] },
   { to: '/app/quotes', label: 'Quotations', shortLabel: 'Quotes', roles: ['admin', 'sales', 'designer'] },
+  { to: '/app/customers', label: 'Customers', shortLabel: 'Clients', roles: ['admin', 'sales'] },
   { to: '/app/leads', label: 'Lead CRM', shortLabel: 'Leads', roles: ['admin', 'sales'] },
 ]
 
