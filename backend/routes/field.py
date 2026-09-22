@@ -4,7 +4,7 @@ from flask import Blueprint, jsonify, request
 from ..extensions import db
 from ..models import FieldVisit, Order, User
 from ..services.audit import record_audit
-from ..utils import current_user, roles_required
+from ..utils import client_quote_ids, current_user, roles_required
 
 field_bp = Blueprint('field', __name__)
 
@@ -19,7 +19,11 @@ def visit_date(value):
 @field_bp.get('')
 @roles_required('admin', 'sales', 'designer', 'client')
 def list_field_visits():
-    items = db.session.scalars(db.select(FieldVisit).order_by(FieldVisit.scheduled_date, FieldVisit.id.desc())).all()
+    query = db.select(FieldVisit).order_by(FieldVisit.scheduled_date, FieldVisit.id.desc())
+    if current_user().role == 'client':
+        from ..models import Order
+        query = query.join(FieldVisit.order).where(Order.quote_id.in_(client_quote_ids() or [-1]))
+    items = db.session.scalars(query).unique().all()
     return jsonify({'items': [item.to_dict() for item in items], 'mode': 'api'})
 
 

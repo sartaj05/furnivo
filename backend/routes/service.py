@@ -3,7 +3,7 @@ from flask import Blueprint, jsonify, request
 from ..extensions import db
 from ..models import Customer, Order, ServiceTicket, User, Warranty
 from ..services.audit import record_audit
-from ..utils import current_user, roles_required
+from ..utils import client_can_access_order, current_user, client_quote_ids, roles_required
 
 service_bp = Blueprint('service', __name__)
 
@@ -20,7 +20,10 @@ def parse_date(value):
 @service_bp.get('/warranties')
 @roles_required('admin', 'sales', 'designer', 'client')
 def list_warranties():
-    items = db.session.scalars(db.select(Warranty).order_by(Warranty.end_date)).all()
+    query = db.select(Warranty).order_by(Warranty.end_date)
+    if current_user().role == 'client':
+        query = query.join(Warranty.order).where(Order.quote_id.in_(client_quote_ids() or [-1]))
+    items = db.session.scalars(query).unique().all()
     return jsonify({'items': [item.to_dict() for item in items], 'mode': 'api'})
 
 
@@ -41,6 +44,8 @@ def create_warranty():
 @roles_required('admin', 'sales', 'designer', 'client')
 def list_service_tickets():
     query = db.select(ServiceTicket).order_by(ServiceTicket.id.desc())
+    if current_user().role == 'client':
+        query = query.join(ServiceTicket.order).where(Order.quote_id.in_(client_quote_ids() or [-1]))
     items = db.session.scalars(query).all()
     return jsonify({'items': [item.to_dict() for item in items], 'mode': 'api'})
 
@@ -52,10 +57,8 @@ def create_service_ticket():
     subject = str(payload.get('subject', '')).strip(); description = str(payload.get('description', '')).strip()
     if not order or not subject or not description:
         return jsonify({'message': 'Project, subject, and description are required.'}), 400
-    if current_user().role == 'client':
-        customer_user = current_user()
-        if customer_user.email != 'client@furnivo.demo':
-            return jsonify({'message': 'Project access could not be verified.'}), 403
+    if current_user().role == 'client' and not client_can_access_order(order.id):
+        return jsonify({'message': 'You do not have access to this project.'}), 403
     item = ServiceTicket(ticket_number=f'SVC-{8000 + (db.session.scalar(db.select(db.func.count(ServiceTicket.id))) or 0) + 1}', warranty_id=payload.get('warranty_id'), order_id=order.id, customer_id=order.customer_id, subject=subject, description=description, priority=str(payload.get('priority', 'Normal')), sla_due=parse_date(payload.get('sla_due')), assigned_to_id=payload.get('assigned_to_id'))
     db.session.add(item); db.session.commit(); record_audit(current_user().id, 'Service ticket created', 'service_ticket', item.id, item.subject); db.session.commit()
     return jsonify({'item': item.to_dict(), 'mode': 'api'}), 201

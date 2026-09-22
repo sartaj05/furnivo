@@ -56,7 +56,7 @@ def create_department():
 
 
 @access_bp.get('/approvals')
-@roles_required('admin', 'sales', 'designer', 'client')
+@roles_required('admin', 'sales', 'designer')
 def list_approvals():
     query = db.select(ApprovalRequest).order_by(ApprovalRequest.id.desc())
     items = db.session.scalars(query.limit(200)).all()
