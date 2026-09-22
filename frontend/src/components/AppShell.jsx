@@ -29,6 +29,7 @@ const navItems = [
   { to: '/app/service', label: 'Warranty & service', shortLabel: 'Service', roles: ['admin', 'sales', 'designer', 'client'] },
   { to: '/app/analytics', label: 'Analytics & forecasting', shortLabel: 'Analytics', roles: ['admin', 'sales', 'designer'] },
   { to: '/app/integrations', label: 'Accounting integrations', shortLabel: 'ERP', roles: ['admin'] },
+  { to: '/app/field-operations', label: 'Field operations', shortLabel: 'Field', roles: ['admin', 'sales', 'designer', 'client'] },
   { to: '/app/schedules', label: 'Delivery & installation', shortLabel: 'Schedule', roles: ['admin', 'sales', 'designer', 'client'] },
   { to: '/app/warehouses', label: 'Warehouses', shortLabel: 'Stock map', roles: ['admin', 'sales', 'designer'] },
   { to: '/app/returns', label: 'Returns & refunds', shortLabel: 'Returns', roles: ['admin', 'sales', 'client'] },

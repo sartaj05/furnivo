@@ -1,6 +1,6 @@
 from werkzeug.security import generate_password_hash
 from .extensions import db
-from .models import AccessPermission, ApprovalRequest, AuditLog, BomItem, Contract, CreditNote, Customer, CustomerPricing, Department, DeliverySchedule, EInvoice, IntegrationConnection, InventoryItem, Invoice, Lead, LeadNote, LeadTask, Notification, Order, PaymentReconciliation, Product, ProductVariant, ProductionJob, ProjectOwnership, PurchaseOrder, PurchaseOrderItem, Quote, QuoteClientAccess, QuoteItem, QuotePreset, ProjectUpdate, ReturnRequest, ServiceTicket, StockMovement, Supplier, SyncRun, User, UserDepartment, Warehouse, WarehouseStock, Warranty
+from .models import AccessPermission, ApprovalRequest, AuditLog, BomItem, Contract, CreditNote, Customer, CustomerPricing, Department, DeliverySchedule, EInvoice, FieldVisit, IntegrationConnection, InventoryItem, Invoice, Lead, LeadNote, LeadTask, Notification, Order, PaymentReconciliation, Product, ProductVariant, ProductionJob, ProjectOwnership, PurchaseOrder, PurchaseOrderItem, Quote, QuoteClientAccess, QuoteItem, QuotePreset, ProjectUpdate, ReturnRequest, ServiceTicket, StockMovement, Supplier, SyncRun, User, UserDepartment, Warehouse, WarehouseStock, Warranty
 
 
 DEMO_PRODUCTS = [
@@ -68,6 +68,7 @@ def seed_database():
     seed_access_controls()
     seed_service_management()
     seed_integrations()
+    seed_field_operations()
 
 
 def seed_access_controls():
@@ -125,6 +126,18 @@ def seed_integrations():
     admin = db.session.scalar(db.select(User).where(User.role == 'admin'))
     if admin:
         db.session.add(IntegrationConnection(name='Demo accounting workspace', provider='Zoho Books', external_account='Furnivo Demo Books', credentials_ref='env:ZOHO_BOOKS_TOKEN', status='Connected'))
+        db.session.commit()
+
+
+def seed_field_operations():
+    if db.session.scalar(db.select(FieldVisit).limit(1)):
+        return
+    order = db.session.scalar(db.select(Order).where(Order.order_number == 'ORD-1001'))
+    schedule = db.session.scalar(db.select(DeliverySchedule).where(DeliverySchedule.order_id == order.id)) if order else None
+    admin = db.session.scalar(db.select(User).where(User.role == 'admin'))
+    sales = db.session.scalar(db.select(User).where(User.role == 'sales'))
+    if order and admin:
+        db.session.add(FieldVisit(order_id=order.id, schedule_id=schedule.id if schedule else None, visit_type='Installation', status='Scheduled', assigned_to_id=sales.id if sales else admin.id, scheduled_date=__import__('datetime').date(2026, 10, 20), qr_token='FURNIVO-DEMO1001', notes='Scan the project QR at arrival.', created_by_id=admin.id))
         db.session.commit()
 
 

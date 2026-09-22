@@ -954,6 +954,33 @@ class LeadTask(TimestampMixin, db.Model):
         }
 
 
+class FieldVisit(TimestampMixin, db.Model):
+    __tablename__ = 'field_visits'
+
+    id = db.Column(db.Integer, primary_key=True)
+    order_id = db.Column(db.Integer, db.ForeignKey('orders.id', ondelete='CASCADE'), nullable=False, index=True)
+    schedule_id = db.Column(db.Integer, db.ForeignKey('delivery_schedules.id'), nullable=True)
+    visit_type = db.Column(db.String(40), nullable=False, default='Installation')
+    status = db.Column(db.String(40), nullable=False, default='Scheduled', index=True)
+    assigned_to_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    scheduled_date = db.Column(db.Date, nullable=False)
+    qr_token = db.Column(db.String(80), unique=True, nullable=False, index=True)
+    proof_photo_url = db.Column(db.String(500), nullable=False, default='')
+    customer_signature = db.Column(db.String(255), nullable=False, default='')
+    gps_lat = db.Column(db.Numeric(10, 7))
+    gps_lng = db.Column(db.Numeric(10, 7))
+    notes = db.Column(db.Text, nullable=False, default='')
+    offline_synced = db.Column(db.Boolean, nullable=False, default=True)
+    created_by_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    order = db.relationship('Order')
+    schedule = db.relationship('DeliverySchedule')
+    assigned_to = db.relationship('User', foreign_keys=[assigned_to_id])
+    created_by = db.relationship('User', foreign_keys=[created_by_id])
+
+    def to_dict(self):
+        return {'id': self.id, 'order_id': self.order_id, 'order_number': self.order.order_number if self.order else None, 'customer': self.order.customer_name if self.order else None, 'schedule_id': self.schedule_id, 'visit_type': self.visit_type, 'status': self.status, 'assigned_to_id': self.assigned_to_id, 'assigned_to': self.assigned_to.public_dict() if self.assigned_to else None, 'scheduled_date': self.scheduled_date.isoformat(), 'qr_token': self.qr_token, 'proof_photo_url': self.proof_photo_url, 'customer_signature': self.customer_signature, 'gps_lat': float(self.gps_lat) if self.gps_lat is not None else None, 'gps_lng': float(self.gps_lng) if self.gps_lng is not None else None, 'notes': self.notes, 'offline_synced': self.offline_synced}
+
+
 class IntegrationConnection(TimestampMixin, db.Model):
     __tablename__ = 'integration_connections'
 

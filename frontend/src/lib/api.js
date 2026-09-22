@@ -1,4 +1,4 @@
-import { demoAccessUsers, demoAnalytics, demoApprovalRequests, demoAuditLogs, demoBackups, demoBackgroundJobs, demoContracts, demoCustomerPricing, demoCustomers, demoDepartments, demoEInvoices, demoIntegrations, demoInventory, demoInvoices, demoLeads, demoNotifications, demoOpsHealth, demoOrders, demoPaymentReconciliations, demoProducts, demoProductionJobs, demoProjectOwnership, demoPurchaseOrders, demoQuotePresets, demoQuotes, demoReturns, demoSchedules, demoServiceTickets, demoStockMovements, demoSupportTickets, demoSuppliers, demoSyncRuns, demoUsers, demoWarehouseStock, demoWarehouses, demoWarranties } from '../data/demoData'
+import { demoAccessUsers, demoAnalytics, demoApprovalRequests, demoAuditLogs, demoBackups, demoBackgroundJobs, demoContracts, demoCustomerPricing, demoCustomers, demoDepartments, demoEInvoices, demoFieldVisits, demoIntegrations, demoInventory, demoInvoices, demoLeads, demoNotifications, demoOpsHealth, demoOrders, demoPaymentReconciliations, demoProducts, demoProductionJobs, demoProjectOwnership, demoPurchaseOrders, demoQuotePresets, demoQuotes, demoReturns, demoSchedules, demoServiceTickets, demoStockMovements, demoSupportTickets, demoSuppliers, demoSyncRuns, demoUsers, demoWarehouseStock, demoWarehouses, demoWarranties } from '../data/demoData'
 
 const API_URL = import.meta.env.VITE_API_URL?.replace(/\/$/, '')
 const STORAGE_KEY = 'furnivo-demo-db'
@@ -80,6 +80,7 @@ function getLocalDb() {
       serviceTickets: parsed.serviceTickets || demoServiceTickets,
       integrations: parsed.integrations || demoIntegrations,
       syncRuns: parsed.syncRuns || demoSyncRuns,
+      fieldVisits: parsed.fieldVisits || demoFieldVisits,
     }
     if (!parsed.users) localStorage.setItem(STORAGE_KEY, JSON.stringify(normalized))
     return normalized
@@ -120,6 +121,7 @@ function getLocalDb() {
     serviceTickets: demoServiceTickets,
     integrations: demoIntegrations,
     syncRuns: demoSyncRuns,
+    fieldVisits: demoFieldVisits,
   }
   localStorage.setItem(STORAGE_KEY, JSON.stringify(initial))
   return initial
@@ -1133,4 +1135,42 @@ export async function updateIntegration(id, payload) {
 export async function syncIntegration(id, entity = 'invoices') {
   try { return await backendRequest(`/integrations/${id}/sync`, { method: 'POST', body: JSON.stringify({ entity }) }) }
   catch (error) { if (error.status) throw error; const db = getLocalDb(); const connection = db.integrations.find((item) => Number(item.id) === Number(id)); const run = { id: Date.now(), connection_id: id, provider: connection?.provider, entity, status: 'Complete', records_synced: entity === 'invoices' ? db.invoices.length : 0, error: '', started_at: new Date().toISOString(), completed_at: new Date().toISOString() }; connection.last_sync_at = run.completed_at; connection.status = 'Synced'; db.syncRuns = [run, ...db.syncRuns]; saveLocalDb(db); return { item: run, connection, mode: 'demo' } }
+}
+
+function getFieldQueue() {
+  try { return JSON.parse(localStorage.getItem('furnivo-field-queue') || '[]') } catch { return [] }
+}
+
+function saveFieldQueue(queue) { localStorage.setItem('furnivo-field-queue', JSON.stringify(queue)) }
+
+export async function getFieldVisits() {
+  try { return await backendRequest('/field') }
+  catch (error) { if (error.status) throw error; await delay(); return { items: getLocalDb().fieldVisits, mode: 'demo' } }
+}
+
+export async function createFieldVisit(payload) {
+  try { return await backendRequest('/field', { method: 'POST', body: JSON.stringify(payload) }) }
+  catch (error) {
+    if (error.status) throw error
+    const db = getLocalDb(); const order = db.orders.find((item) => Number(item.id) === Number(payload.order_id)); const item = { id: Date.now(), order_number: order?.order_number, customer: order?.customer, status: 'Scheduled', qr_token: `FURNIVO-${Date.now().toString(36).toUpperCase()}`, offline_synced: false, ...payload }; db.fieldVisits = [item, ...db.fieldVisits]; saveLocalDb(db); const queue = getFieldQueue(); queue.push({ operation: 'create', payload: item }); saveFieldQueue(queue); return { item, mode: 'offline' }
+  }
+}
+
+export async function updateFieldVisit(id, payload) {
+  try { return await backendRequest(`/field/${id}`, { method: 'PATCH', body: JSON.stringify(payload) }) }
+  catch (error) { if (error.status) throw error; const db = getLocalDb(); db.fieldVisits = db.fieldVisits.map((item) => Number(item.id) === Number(id) ? { ...item, ...payload, offline_synced: false } : item); saveLocalDb(db); const queue = getFieldQueue(); queue.push({ operation: 'update', id, payload }); saveFieldQueue(queue); return { item: db.fieldVisits.find((item) => Number(item.id) === Number(id)), mode: 'offline' } }
+}
+
+export async function saveFieldProof(id, payload) {
+  try { return await backendRequest(`/field/${id}/proof`, { method: 'POST', body: JSON.stringify(payload) }) }
+  catch (error) { if (error.status) throw error; const db = getLocalDb(); db.fieldVisits = db.fieldVisits.map((item) => Number(item.id) === Number(id) ? { ...item, ...payload, status: 'Completed', offline_synced: false } : item); saveLocalDb(db); const queue = getFieldQueue(); queue.push({ operation: 'proof', id, payload }); saveFieldQueue(queue); return { item: db.fieldVisits.find((item) => Number(item.id) === Number(id)), mode: 'offline' } }
+}
+
+export async function syncFieldQueue() {
+  const queue = getFieldQueue(); if (!queue.length) return { synced: 0, remaining: 0, mode: 'demo' }
+  let synced = 0
+  for (const entry of queue) {
+    try { if (entry.operation === 'create') await backendRequest('/field', { method: 'POST', body: JSON.stringify(entry.payload) }); else if (entry.operation === 'proof') await backendRequest(`/field/${entry.id}/proof`, { method: 'POST', body: JSON.stringify(entry.payload) }); else await backendRequest(`/field/${entry.id}`, { method: 'PATCH', body: JSON.stringify(entry.payload) }); synced += 1 } catch (error) { if (error.status) throw error; break }
+  }
+  const remaining = queue.slice(synced); saveFieldQueue(remaining); return { synced, remaining: remaining.length, mode: 'api' }
 }
