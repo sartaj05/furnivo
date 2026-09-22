@@ -633,6 +633,25 @@ class PaymentOperation(TimestampMixin, db.Model):
     def to_dict(self): return {'id': self.id, 'operation_key': self.operation_key, 'operation_type': self.operation_type, 'invoice_id': self.invoice_id, 'reconciliation_id': self.reconciliation_id, 'provider': self.provider, 'external_id': self.external_id, 'amount': float(self.amount or 0), 'status': self.status, 'message': self.message, 'created_at': self.created_at.isoformat()}
 
 
+class BackgroundJob(TimestampMixin, db.Model):
+    __tablename__ = 'background_jobs'
+
+    id = db.Column(db.Integer, primary_key=True)
+    job_type = db.Column(db.String(80), nullable=False)
+    status = db.Column(db.String(40), nullable=False, default='Queued')
+    payload_json = db.Column(db.Text, nullable=False, default='{}')
+    result_json = db.Column(db.Text, nullable=False, default='{}')
+    error = db.Column(db.Text, nullable=False, default='')
+    created_by_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    created_by = db.relationship('User')
+
+    def to_dict(self):
+        import json
+        try: payload = json.loads(self.payload_json or '{}'); result = json.loads(self.result_json or '{}')
+        except (TypeError, ValueError): payload, result = {}, {}
+        return {'id': self.id, 'job_type': self.job_type, 'status': self.status, 'payload': payload, 'result': result, 'error': self.error, 'created_at': self.created_at.isoformat(), 'updated_at': self.updated_at.isoformat()}
+
+
 class Contract(TimestampMixin, db.Model):
     __tablename__ = 'contracts'
 

@@ -19,6 +19,11 @@ A responsive furniture / interiors / building-material sales suite built with Re
 13. **Digital contracts and e-signatures** with locked signed versions and downloadable PDFs.
 14. **Customer project portal** with production progress, schedules, invoices, documents and support requests.
 15. **Operations tooling** with health checks, request IDs, rate limiting, database backups and admin deployment checks.
+16. **Automated test and CI pipeline** with backend API tests, frontend component tests, coverage output and GitHub Actions.
+17. **Secure session controls** with refresh rotation, logout/revocation, MFA challenges and secure cookies.
+18. **GST workflows** with CGST/SGST/IGST calculations, HSN/SAC data, e-invoice records and e-way bills.
+19. **Provider payment automation** with idempotency, dispute webhooks, live-ready refunds and payment receipts.
+20. **Scalable data administration** with pagination, search, archived records, CSV imports and asynchronous jobs.
 
 ## Existing experience
 

@@ -913,6 +913,17 @@ img { max-width: 100%; }
 .gst-tax-grid strong { display: block; margin-top: 4px; color: var(--ink); font-size: 14px; }
 .gst-irn { color: var(--muted); font-size: 11px; line-height: 1.7; word-break: break-all; }
 @media (max-width: 780px) { .gst-grid { grid-template-columns: 1fr; } }
+.data-search { margin-bottom: 14px; }
+.archive-toggle { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 12px; }
+.data-admin-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px; }
+.data-row { display: flex; justify-content: space-between; gap: 14px; padding: 11px 0; border-bottom: 1px solid var(--line); }
+.data-row span, .data-row small { display: block; }
+.data-row small { color: var(--muted); margin-top: 3px; }
+.data-row b { white-space: nowrap; color: var(--green); }
+.import-panel { margin-bottom: 14px; }
+.file-button { position: relative; overflow: hidden; }
+.file-button input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+@media (max-width: 780px) { .data-admin-grid { grid-template-columns: 1fr; } }
 .configurator-layout { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(300px, .65fr); gap: 14px; align-items: start; }
 .configurator-main { min-width: 0; }
 .configurator-fields { margin-bottom: 22px; }

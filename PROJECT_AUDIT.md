@@ -35,6 +35,11 @@ The application is a working React/Vite + Flask/SQLAlchemy sales workspace. The 
 - Digital contracts with terms, client e-signatures, locked versions and downloadable PDFs.
 - Customer project portal with progress, production, schedules, documents and support tickets.
 - Admin Operations screen with database health, request IDs, rate limiting, backup creation/history and deployment checklist.
+- Backend API tests and frontend component test coverage wired into GitHub Actions CI.
+- Refresh-token rotation, cookie-based access token support, session revocation and MFA challenge flow.
+- GST tax modes, HSN/SAC summaries, e-invoice IRN records and e-way bill records.
+- Payment idempotency, dispute webhook handling, provider-ready refunds and downloadable receipts.
+- Paginated searchable catalog/customer/lead APIs, CSV imports, archived-record filters and background jobs.
 
 ## Offline/demo behavior
 
@@ -53,14 +58,13 @@ Demo accounts:
 
 These are not implemented as production features yet:
 
-- Automated frontend/backend unit and integration tests.
-- Refresh tokens and server-side session revocation.
+- Broader automated frontend/backend unit and end-to-end coverage beyond the initial smoke suite.
 - Audit log for sensitive changes such as price, quote status and permissions.
 - Email/WhatsApp notifications and scheduled reminders.
-- CSV/Excel exports.
+- More advanced accounting exports beyond the current reports and CSV/Excel exports.
 - Provider-specific production templates, retry queues and delivery webhooks for email/WhatsApp notifications.
-- Provider-specific automated refund API calls and refund webhook reconciliation remain partial; internal reconciliation and refund records are implemented.
-- Server-side pagination/filtering for larger catalogs and CRM data.
+- Provider-specific refund calls require `PAYMENT_LIVE_REFUNDS=true` plus live Stripe/Razorpay credentials; demo mode remains the safe default.
+- External distributed job queue and worker scaling beyond the in-process background job runner.
 - Object-level authorization for client-owned records; current access is role-level.
 - Live analytics beyond the current dashboard counts and totals.
 - Secret rotation, external backup storage, centralized log shipping and full production deployment automation.

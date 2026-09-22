@@ -182,3 +182,4 @@ export const demoSupportTickets = [{ id: 1, order_id: 1, order_number: 'ORD-1001
 export const demoOpsHealth = { status: 'ok', version: 'furnivo-v3', environment: 'demo', database: 'demo-local', payment_provider: 'demo', auto_seed: true, rate_limit_per_minute: 120 }
 export const demoBackups = []
 export const demoEInvoices = [{ id: 1, invoice_id: 1, invoice_number: 'INV-2001', customer: 'Northline Studio', gstin: '07DEMO1234A1Z5', place_of_supply: 'Delhi', tax_mode: 'CGST/SGST', hsn_summary: [{ hsn: '9403', description: 'Furniture and interiors', taxable_value: 158000 }], cgst_amount: 14220, sgst_amount: 14220, igst_amount: 0, irn: 'DEMO-INV-2001-IRN', acknowledgement_number: 'ACK-DEMO-2001', status: 'Generated', eway_bill_number: '', created_at: '2026-09-18T12:00:00.000Z' }]
+export const demoBackgroundJobs = []

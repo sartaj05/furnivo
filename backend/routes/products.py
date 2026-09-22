@@ -3,7 +3,7 @@ from flask import Blueprint, jsonify, request
 from sqlalchemy import or_
 from ..extensions import db
 from ..models import Product
-from ..utils import roles_required
+from ..utils import current_user, roles_required
 
 products_bp = Blueprint('products', __name__)
 
@@ -31,7 +31,9 @@ def product_from_payload(product, payload):
 @products_bp.get('')
 @roles_required('admin', 'sales', 'designer', 'client')
 def list_products():
-    query = db.select(Product).where(Product.is_active.is_(True)).order_by(Product.name)
+    include_archived = request.args.get('include_archived', '').lower() == 'true' and current_user().role == 'admin'
+    query = db.select(Product).order_by(Product.name)
+    if not include_archived: query = query.where(Product.is_active.is_(True))
     search = request.args.get('q', '').strip()
     category = request.args.get('category', '').strip()
     if search:
@@ -39,8 +41,11 @@ def list_products():
         query = query.where(or_(Product.name.ilike(like), Product.sku.ilike(like), Product.material.ilike(like)))
     if category:
         query = query.where(Product.category == category)
-    items = db.session.scalars(query).all()
-    return jsonify({'items': [item.to_dict() for item in items], 'mode': 'api'})
+    try: page = max(int(request.args.get('page', 1)), 1); page_size = min(max(int(request.args.get('page_size', 50)), 1), 100)
+    except ValueError: return jsonify({'message': 'page and page_size must be valid numbers.'}), 400
+    total = db.session.scalar(db.select(db.func.count()).select_from(query.subquery())) or 0
+    items = db.session.scalars(query.offset((page - 1) * page_size).limit(page_size)).all()
+    return jsonify({'items': [item.to_dict() for item in items], 'pagination': {'page': page, 'page_size': page_size, 'total': total, 'pages': (total + page_size - 1) // page_size}, 'mode': 'api'})
 
 
 @products_bp.post('')

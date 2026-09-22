@@ -1,6 +1,7 @@
 from datetime import date
 from decimal import Decimal
 from flask import Blueprint, jsonify, request
+from sqlalchemy import or_
 from ..extensions import db
 from ..models import Lead, LeadNote, LeadTask, User
 from ..utils import current_user, roles_required
@@ -13,9 +14,14 @@ STAGES = {'New', 'Qualified', 'Proposal', 'Won', 'Lost'}
 @leads_bp.get('')
 @roles_required('admin', 'sales')
 def list_leads():
-    items = db.session.scalars(db.select(Lead).order_by(Lead.updated_at.desc())).unique().all()
+    query = db.select(Lead).order_by(Lead.updated_at.desc()); search = request.args.get('q', '').strip()
+    if search:
+        like = f'%{search}%'; query = query.where(or_(Lead.name.ilike(like), Lead.company.ilike(like), Lead.email.ilike(like), Lead.phone.ilike(like)))
+    try: page = max(int(request.args.get('page', 1)), 1); page_size = min(max(int(request.args.get('page_size', 50)), 1), 100)
+    except ValueError: return jsonify({'message': 'page and page_size must be valid numbers.'}), 400
+    total = db.session.scalar(db.select(db.func.count()).select_from(query.subquery())) or 0; items = db.session.scalars(query.offset((page - 1) * page_size).limit(page_size)).unique().all()
     team = db.session.scalars(db.select(User).where(User.role.in_(['admin', 'sales']), User.is_active.is_(True)).order_by(User.name)).all()
-    return jsonify({'items': [item.to_dict() for item in items], 'team': [member.public_dict() for member in team], 'mode': 'api'})
+    return jsonify({'items': [item.to_dict() for item in items], 'team': [member.public_dict() for member in team], 'pagination': {'page': page, 'page_size': page_size, 'total': total, 'pages': (total + page_size - 1) // page_size}, 'mode': 'api'})
 
 
 @leads_bp.post('')

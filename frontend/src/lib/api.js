@@ -1,4 +1,4 @@
-import { demoAuditLogs, demoBackups, demoContracts, demoCustomerPricing, demoCustomers, demoEInvoices, demoInventory, demoInvoices, demoLeads, demoNotifications, demoOpsHealth, demoOrders, demoPaymentReconciliations, demoProducts, demoProductionJobs, demoPurchaseOrders, demoQuotePresets, demoQuotes, demoReturns, demoSchedules, demoStockMovements, demoSupportTickets, demoSuppliers, demoUsers, demoWarehouseStock, demoWarehouses } from '../data/demoData'
+import { demoAuditLogs, demoBackups, demoBackgroundJobs, demoContracts, demoCustomerPricing, demoCustomers, demoEInvoices, demoInventory, demoInvoices, demoLeads, demoNotifications, demoOpsHealth, demoOrders, demoPaymentReconciliations, demoProducts, demoProductionJobs, demoPurchaseOrders, demoQuotePresets, demoQuotes, demoReturns, demoSchedules, demoStockMovements, demoSupportTickets, demoSuppliers, demoUsers, demoWarehouseStock, demoWarehouses } from '../data/demoData'
 
 const API_URL = import.meta.env.VITE_API_URL?.replace(/\/$/, '')
 const STORAGE_KEY = 'furnivo-demo-db'
@@ -71,6 +71,7 @@ function getLocalDb() {
       supportTickets: parsed.supportTickets || demoSupportTickets,
       backups: parsed.backups || demoBackups,
       eInvoices: parsed.eInvoices || demoEInvoices,
+      backgroundJobs: parsed.backgroundJobs || demoBackgroundJobs,
     }
     if (!parsed.users) localStorage.setItem(STORAGE_KEY, JSON.stringify(normalized))
     return normalized
@@ -102,6 +103,7 @@ function getLocalDb() {
     supportTickets: demoSupportTickets,
     backups: demoBackups,
     eInvoices: demoEInvoices,
+    backgroundJobs: demoBackgroundJobs,
   }
   localStorage.setItem(STORAGE_KEY, JSON.stringify(initial))
   return initial
@@ -238,13 +240,15 @@ export async function register(name, email, password) {
   }
 }
 
-export async function getProducts() {
+export async function getProducts(options = {}) {
+  const query = new URLSearchParams(Object.entries(options).filter(([, value]) => value !== undefined && value !== ''))
   try {
-    return await backendRequest('/products')
+    return await backendRequest(`/products${query.toString() ? `?${query}` : ''}`)
   } catch (error) {
     if (error.status) throw error
     await delay()
-    return { items: getLocalDb().products, mode: 'demo' }
+    const all = getLocalDb().products.filter((item) => options.include_archived === 'true' || item.is_active !== false).filter((item) => !options.q || `${item.name} ${item.sku} ${item.material}`.toLowerCase().includes(String(options.q).toLowerCase()))
+    return { items: all, pagination: { page: 1, page_size: all.length, total: all.length, pages: 1 }, mode: 'demo' }
   }
 }
 
@@ -811,6 +815,24 @@ export async function generateEwayBill(id) {
   catch (error) { if (error.status) throw error; const db = getLocalDb(); db.eInvoices = db.eInvoices.map((item) => Number(item.id) === Number(id) ? { ...item, eway_bill_number: `EWB-${Date.now()}`, status: 'E-way bill generated' } : item); saveLocalDb(db); return { item: db.eInvoices.find((item) => Number(item.id) === Number(id)), mode: 'demo' } }
 }
 
+export async function getBackgroundJobs() {
+  try { return await backendRequest('/data-admin/jobs') }
+  catch (error) { if (error.status) throw error; await delay(); return { items: getLocalDb().backgroundJobs, mode: 'demo' } }
+}
+
+export async function createBackgroundJob(job_type) {
+  try { return await backendRequest('/data-admin/jobs', { method: 'POST', body: JSON.stringify({ job_type }) }) }
+  catch (error) { if (error.status) throw error; const db = getLocalDb(); const item = { id: Date.now(), job_type, status: 'Complete', payload: {}, result: { demo: true }, error: '', created_at: new Date().toISOString(), updated_at: new Date().toISOString() }; db.backgroundJobs = [item, ...db.backgroundJobs]; saveLocalDb(db); return { item, mode: 'demo' } }
+}
+
+async function uploadCsv(path, file) {
+  if (API_URL) { const token = localStorage.getItem('furnivo-token'); const body = new FormData(); body.append('file', file); const response = await fetch(`${API_URL}${path}`, { method: 'POST', headers: token ? { Authorization: `Bearer ${token}` } : {}, body }); const data = await response.json().catch(() => ({})); if (!response.ok) { const error = new Error(data.message || 'CSV import failed.'); error.status = response.status; throw error } return data }
+  await delay(); return { created: 0, updated: 0, errors: 0, mode: 'demo', message: 'Demo mode does not persist CSV files.' }
+}
+
+export async function importProductsCsv(file) { return uploadCsv('/data-admin/products/import', file) }
+export async function importCustomersCsv(file) { return uploadCsv('/data-admin/customers/import', file) }
+
 
 export async function createProduct(payload) {
   try {
@@ -973,9 +995,10 @@ export async function downloadQuotePdf(quote) {
 }
 
 
-export async function getCustomers() {
-  try { return await backendRequest('/customers') }
-  catch (error) { if (error.status) throw error; return { items: getLocalDb().customers, mode: 'demo' } }
+export async function getCustomers(options = {}) {
+  const query = new URLSearchParams(Object.entries(options).filter(([, value]) => value !== undefined && value !== ''))
+  try { return await backendRequest(`/customers${query.toString() ? `?${query}` : ''}`) }
+  catch (error) { if (error.status) throw error; const all = getLocalDb().customers.filter((item) => options.include_archived === 'true' || item.is_active !== false).filter((item) => !options.q || `${item.company} ${item.contact_name} ${item.email}`.toLowerCase().includes(String(options.q).toLowerCase())); return { items: all, pagination: { page: 1, page_size: all.length, total: all.length, pages: 1 }, mode: 'demo' } }
 }
 
 export async function createCustomer(payload) {
