@@ -319,6 +319,38 @@ class InventoryItem(TimestampMixin, db.Model):
             'location': self.location,
         }
 
+
+class Notification(TimestampMixin, db.Model):
+    __tablename__ = 'notifications'
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='CASCADE'), nullable=False, index=True)
+    type = db.Column(db.String(40), nullable=False, default='info')
+    channel = db.Column(db.String(40), nullable=False, default='in_app')
+    title = db.Column(db.String(180), nullable=False)
+    body = db.Column(db.Text, nullable=False, default='')
+    related_type = db.Column(db.String(40), nullable=False, default='')
+    related_id = db.Column(db.String(80), nullable=False, default='')
+    is_read = db.Column(db.Boolean, nullable=False, default=False, index=True)
+    delivery_status = db.Column(db.String(30), nullable=False, default='delivered')
+    scheduled_for = db.Column(db.DateTime(timezone=True))
+    user = db.relationship('User')
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'type': self.type,
+            'channel': self.channel,
+            'title': self.title,
+            'body': self.body,
+            'related_type': self.related_type,
+            'related_id': self.related_id,
+            'is_read': self.is_read,
+            'delivery_status': self.delivery_status,
+            'scheduled_for': self.scheduled_for.isoformat() if self.scheduled_for else None,
+            'created_at': self.created_at.isoformat(),
+        }
+
 class Customer(TimestampMixin, db.Model):
     __tablename__ = 'customers'
 

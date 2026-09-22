@@ -1,5 +1,7 @@
+import { useEffect, useState } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import { getNotifications, markNotificationRead } from '../lib/api'
 
 const navItems = [
   { to: '/app', label: 'Overview', shortLabel: 'Home', roles: ['admin', 'sales', 'designer', 'client'], end: true },
@@ -15,7 +17,27 @@ const navItems = [
 export default function AppShell({ title, eyebrow, actions, children }) {
   const { user, signOut, mode } = useAuth()
   const navigate = useNavigate()
+  const [notifications, setNotifications] = useState([])
+  const [showNotifications, setShowNotifications] = useState(false)
   const allowedItems = navItems.filter((item) => item.roles.includes(user.role))
+
+  async function loadNotifications() {
+    const result = await getNotifications().catch(() => ({ items: [] }))
+    setNotifications(result.items || [])
+  }
+
+  useEffect(() => {
+    loadNotifications()
+    const timer = window.setInterval(loadNotifications, 30000)
+    return () => window.clearInterval(timer)
+  }, [user.id])
+
+  async function readNotification(item) {
+    if (!item.is_read) {
+      await markNotificationRead(item.id)
+      setNotifications((current) => current.map((notification) => notification.id === item.id ? { ...notification, is_read: true } : notification))
+    }
+  }
 
   function logout() {
     signOut()
@@ -58,6 +80,10 @@ export default function AppShell({ title, eyebrow, actions, children }) {
         </nav>
 
         <div className="sidebar-bottom">
+          <div className="notification-wrap">
+            <button className="text-button notification-button" onClick={() => setShowNotifications((value) => !value)}>Notifications {notifications.filter((item) => !item.is_read).length > 0 && <span className="notification-count">{notifications.filter((item) => !item.is_read).length}</span>}</button>
+            {showNotifications && <div className="notification-panel"><strong>Notifications</strong>{notifications.length ? notifications.map((item) => <button className={`notification-item ${item.is_read ? 'read' : ''}`} key={item.id} onClick={() => readNotification(item)}><b>{item.title}</b><span>{item.body}</span><small>{new Date(item.created_at).toLocaleString()}</small></button>) : <small>No new notifications.</small>}</div>}
+          </div>
           <span className={`mode-chip desktop-mode-chip ${mode === 'demo' ? 'demo' : ''}`}>
             {mode === 'demo' ? 'Demo data active' : 'Live API'}
           </span>

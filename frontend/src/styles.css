@@ -815,6 +815,13 @@ img { max-width: 100%; }
 .inventory-numbers span { color: var(--muted); font-size: 12px; }
 .inventory-numbers strong { font-size: 22px; margin-top: 4px; }
 .inventory-edit-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.notification-wrap { position: relative; }
+.notification-button { position: relative; }
+.notification-count { display: inline-grid; place-items: center; min-width: 18px; height: 18px; margin-left: 5px; padding: 0 4px; border-radius: 999px; background: var(--terracotta); color: white; font-size: 10px; }
+.notification-panel { position: absolute; left: 0; bottom: 34px; z-index: 10; width: 300px; max-height: 360px; overflow: auto; padding: 14px; background: var(--paper-2); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow); color: var(--ink); }
+.notification-item { display: grid; gap: 4px; width: 100%; margin-top: 10px; padding: 10px; border: 0; border-radius: 10px; background: var(--sage); color: var(--ink); text-align: left; cursor: pointer; }
+.notification-item.read { background: #f0efe9; opacity: .7; }
+.notification-item span, .notification-item small { color: var(--muted); font-size: 11px; }
 @media (max-width: 780px) { .customer-grid { grid-template-columns: 1fr; } }
 @media (max-width: 780px) { .client-quote-grid { grid-template-columns: 1fr; } }
 @media (max-width: 780px) { .order-grid, .order-status-grid { grid-template-columns: 1fr; } }

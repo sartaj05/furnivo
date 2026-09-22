@@ -4,6 +4,7 @@ from flask import Blueprint, jsonify, request
 from ..extensions import db
 from ..models import Lead, LeadNote, LeadTask, User
 from ..utils import current_user, roles_required
+from ..services.notifications import create_notification, notify_roles
 
 leads_bp = Blueprint('leads', __name__)
 STAGES = {'New', 'Qualified', 'Proposal', 'Won', 'Lost'}
@@ -35,6 +36,8 @@ def create_lead():
         owner_id=payload.get('owner_id') or current_user().id,
     )
     db.session.add(lead)
+    db.session.commit()
+    notify_roles(['admin', 'sales'], 'New lead captured', f'{lead.name} was added to the pipeline.', 'lead', current_user().id, 'lead', lead.id)
     db.session.commit()
     return jsonify({'item': lead.to_dict(), 'mode': 'api'}), 201
 
@@ -83,6 +86,8 @@ def add_task(lead_id):
     due = date.fromisoformat(payload['due_date']) if payload.get('due_date') else None
     task = LeadTask(lead=lead, title=title, due_date=due, assigned_to_id=payload.get('assigned_to_id') or lead.owner_id)
     db.session.add(task)
+    db.session.commit()
+    create_notification(task.assigned_to_id, 'Lead follow-up assigned', f'{task.title} for {lead.name}.', 'task', 'lead', lead.id)
     db.session.commit()
     return jsonify({'item': task.to_dict(), 'lead': lead.to_dict(), 'mode': 'api'}), 201
 

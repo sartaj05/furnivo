@@ -3,6 +3,7 @@ from flask import Blueprint, jsonify, request
 from ..extensions import db
 from ..models import Order, ProjectUpdate, Quote, QuoteClientAccess
 from ..utils import current_user, roles_required
+from ..services.notifications import create_notification, notify_quote_client
 
 orders_bp = Blueprint('orders', __name__)
 
@@ -51,6 +52,8 @@ def create_order():
     )
     db.session.add(order)
     db.session.commit()
+    notify_quote_client(quote, 'Order created', f'{order.order_number} has been created for {quote.quote_number}.', 'order')
+    db.session.commit()
     return jsonify({'item': order.to_dict(), 'mode': 'api'}), 201
 
 
@@ -65,6 +68,8 @@ def update_order(order_id):
     if 'delivery_date' in payload:
         order.delivery_date = date.fromisoformat(payload['delivery_date']) if payload['delivery_date'] else None
     db.session.commit()
+    notify_quote_client(order.quote, 'Project status updated', f'{order.order_number}: {order.production_status}, {order.installation_status}.', 'order')
+    db.session.commit()
     return jsonify({'item': order.to_dict(), 'mode': 'api'})
 
 
@@ -77,5 +82,7 @@ def add_update(order_id):
         return jsonify({'message': 'Project update cannot be empty.'}), 400
     update = ProjectUpdate(order_id=order.id, body=body, author_id=current_user().id)
     db.session.add(update)
+    db.session.commit()
+    notify_quote_client(order.quote, 'New project update', f'{order.order_number}: {body}', 'order')
     db.session.commit()
     return jsonify({'item': update.to_dict(), 'order': order.to_dict(), 'mode': 'api'}), 201

@@ -151,3 +151,8 @@ export const demoInventory = [
   { id: 2, product_id: 2, product: 'Halo Pendant Light', sku: 'INT-LGT-204', quantity: 24, reserved_quantity: 5, available_quantity: 19, reorder_level: 8, is_low_stock: false, supplier: 'Halo Lighting Works', location: 'Delhi warehouse' },
   { id: 3, product_id: 3, product: 'Terra Fluted Wall Panel', sku: 'BLD-PNL-310', quantity: 1200, reserved_quantity: 300, available_quantity: 900, reorder_level: 400, is_low_stock: false, supplier: 'Terra Surfaces', location: 'Gurugram warehouse' },
 ]
+
+export const demoNotifications = [
+  { id: 1, user_id: 1, type: 'task', title: 'Follow-up workspace ready', body: 'Review the active lead pipeline and open tasks.', related_type: 'lead', related_id: '', is_read: false, created_at: '2026-09-22T08:30:00.000Z' },
+  { id: 2, user_id: 4, type: 'quote', title: 'Quotation ready for review', body: 'Q-1042 is ready in your client portal.', related_type: 'quote', related_id: '1', is_read: false, created_at: '2026-09-22T08:30:00.000Z' },
+]

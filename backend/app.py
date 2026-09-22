@@ -28,6 +28,7 @@ def create_app(config_object=Config):
     from .routes.uploads import uploads_bp
     from .routes.orders import orders_bp
     from .routes.inventory import inventory_bp
+    from .routes.notifications import notifications_bp
 
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(products_bp, url_prefix='/api/products')
@@ -37,6 +38,7 @@ def create_app(config_object=Config):
     app.register_blueprint(uploads_bp, url_prefix='/api/uploads')
     app.register_blueprint(orders_bp, url_prefix='/api/orders')
     app.register_blueprint(inventory_bp, url_prefix='/api/inventory')
+    app.register_blueprint(notifications_bp, url_prefix='/api/notifications')
 
     if app.config.get('AUTO_SEED'):
         with app.app_context():

@@ -1,4 +1,4 @@
-import { demoCustomers, demoInventory, demoLeads, demoOrders, demoProducts, demoQuotes, demoUsers } from '../data/demoData'
+import { demoCustomers, demoInventory, demoLeads, demoNotifications, demoOrders, demoProducts, demoQuotes, demoUsers } from '../data/demoData'
 
 const API_URL = import.meta.env.VITE_API_URL?.replace(/\/$/, '')
 const STORAGE_KEY = 'furnivo-demo-db'
@@ -21,6 +21,10 @@ function addDemoQuoteRevision(quote, action, comment = '') {
       created_at: new Date().toISOString(),
     }, ...history],
   }
+}
+
+function addDemoNotification(db, userId, title, body, type = 'info', relatedType = '', relatedId = '') {
+  db.notifications = [{ id: Date.now(), user_id: userId, type, title, body, related_type: relatedType, related_id: String(relatedId || ''), is_read: false, created_at: new Date().toISOString() }, ...(db.notifications || [])]
 }
 
 function setDataMode(mode) {
@@ -49,6 +53,7 @@ function getLocalDb() {
       customers: parsed.customers || demoCustomers,
       orders: parsed.orders || demoOrders,
       inventory: parsed.inventory || demoInventory,
+      notifications: parsed.notifications || demoNotifications,
     }
     if (!parsed.users) localStorage.setItem(STORAGE_KEY, JSON.stringify(normalized))
     return normalized
@@ -62,6 +67,7 @@ function getLocalDb() {
     customers: demoCustomers,
     orders: demoOrders,
     inventory: demoInventory,
+    notifications: demoNotifications,
   }
   localStorage.setItem(STORAGE_KEY, JSON.stringify(initial))
   return initial
@@ -223,6 +229,7 @@ export async function respondToQuote(id, action, comment = '') {
     db.quotes = db.quotes.map((quote) => quote.database_id === id || quote.id === id
       ? addDemoQuoteRevision({ ...quote, status: action, client_access: { ...(quote.client_access || {}), last_action: action, response_comment: comment } }, `Client ${action}`, comment)
       : quote)
+    addDemoNotification(db, 1, 'Client response received', `${id}: ${action}.`, 'quote', 'quote', id)
     saveLocalDb(db)
     return { item: db.quotes.find((quote) => quote.database_id === id || quote.id === id), mode: 'demo' }
   }
@@ -282,6 +289,7 @@ export async function updateQuoteStatus(id, status) {
     db.quotes = db.quotes.map((quote) => quote.database_id === id || quote.id === id
       ? addDemoQuoteRevision({ ...quote, status }, `Status changed to ${status}`)
       : quote)
+    addDemoNotification(db, 4, 'Quotation updated', `${id} is now ${status}.`, 'quote', 'quote', id)
     saveLocalDb(db)
     return { item: db.quotes.find((quote) => quote.database_id === id || quote.id === id), mode: 'demo' }
   }
@@ -338,6 +346,7 @@ export async function createLead(payload) {
       value: Number(payload.value || 0),
     }
     db.leads = [lead, ...db.leads]
+    addDemoNotification(db, 1, 'New lead captured', `${lead.name} was added to the pipeline.`, 'lead', 'lead', lead.id)
     saveLocalDb(db)
     return { item: lead, mode: 'demo' }
   }
@@ -355,7 +364,7 @@ export async function addLeadTask(id, payload) {
   try { return await backendRequest(`/leads/${id}/tasks`, { method: 'POST', body: JSON.stringify(payload) }) }
   catch (error) {
     if (error.status) throw error
-    const db = getLocalDb(); const lead = db.leads.find((item) => Number(item.id) === Number(id)); const task = { id: Date.now(), is_done: false, ...payload }; lead.tasks = [...(lead.tasks || []), task]; saveLocalDb(db); return { item: task, lead, mode: 'demo' }
+    const db = getLocalDb(); const lead = db.leads.find((item) => Number(item.id) === Number(id)); const task = { id: Date.now(), is_done: false, ...payload }; lead.tasks = [...(lead.tasks || []), task]; addDemoNotification(db, 1, 'Lead follow-up assigned', `${task.title} for ${lead.name}.`, 'task', 'lead', lead.id); saveLocalDb(db); return { item: task, lead, mode: 'demo' }
   }
 }
 
@@ -422,6 +431,24 @@ export async function updateInventory(id, payload) {
   catch (error) {
     if (error.status) throw error
     const db = getLocalDb(); db.inventory = db.inventory.map((item) => { if (Number(item.id) !== Number(id)) return item; const next = { ...item, ...payload }; next.available_quantity = Math.max(Number(next.quantity || 0) - Number(next.reserved_quantity || 0), 0); next.is_low_stock = next.available_quantity <= Number(next.reorder_level || 0); return next }); saveLocalDb(db); return { item: db.inventory.find((item) => Number(item.id) === Number(id)), mode: 'demo' }
+  }
+}
+
+export async function getNotifications() {
+  try { return await backendRequest('/notifications') }
+  catch (error) {
+    if (error.status) throw error
+    await delay()
+    const user = JSON.parse(localStorage.getItem('furnivo-user') || 'null')
+    return { items: getLocalDb().notifications.filter((item) => !item.user_id || item.user_id === user?.id), mode: 'demo' }
+  }
+}
+
+export async function markNotificationRead(id) {
+  try { return await backendRequest(`/notifications/${id}/read`, { method: 'PATCH' }) }
+  catch (error) {
+    if (error.status) throw error
+    const db = getLocalDb(); db.notifications = db.notifications.map((item) => Number(item.id) === Number(id) ? { ...item, is_read: true } : item); saveLocalDb(db); return { mode: 'demo' }
   }
 }
 

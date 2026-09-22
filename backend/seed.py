@@ -1,6 +1,6 @@
 from werkzeug.security import generate_password_hash
 from .extensions import db
-from .models import Customer, InventoryItem, Lead, LeadNote, LeadTask, Order, Product, ProductVariant, Quote, QuoteClientAccess, QuoteItem, ProjectUpdate, User
+from .models import Customer, InventoryItem, Lead, LeadNote, LeadTask, Notification, Order, Product, ProductVariant, Quote, QuoteClientAccess, QuoteItem, ProjectUpdate, User
 
 
 DEMO_PRODUCTS = [
@@ -52,6 +52,7 @@ def seed_database():
     seed_client_quote_access()
     seed_orders()
     seed_inventory()
+    seed_notifications()
     seed_leads()
 
 
@@ -141,4 +142,16 @@ def seed_inventory():
     for product, values in zip(products, demo_stock):
         quantity, reserved, reorder, supplier, location = values
         db.session.add(InventoryItem(product_id=product.id, quantity=quantity, reserved_quantity=reserved, reorder_level=reorder, supplier=supplier, location=location))
+    db.session.commit()
+
+
+def seed_notifications():
+    if db.session.scalar(db.select(Notification).limit(1)):
+        return
+    admin = db.session.scalar(db.select(User).where(User.email == 'admin@furnivo.demo'))
+    client = db.session.scalar(db.select(User).where(User.email == 'client@furnivo.demo'))
+    if admin:
+        db.session.add(Notification(user_id=admin.id, type='task', title='Follow-up workspace ready', body='Review the active lead pipeline and open tasks.', related_type='lead', related_id=''))
+    if client:
+        db.session.add(Notification(user_id=client.id, type='quote', title='Quotation ready for review', body='Q-1042 is ready in your client portal.', related_type='quote', related_id='1'))
     db.session.commit()
