@@ -870,6 +870,21 @@ img { max-width: 100%; }
 .contract-signatures { padding: 10px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); color: var(--green); }
 .signature-input { min-width: 150px; border: 1px solid #d7dbd5; padding: 9px; border-radius: 9px; }
 @media (max-width: 780px) { .contract-grid { grid-template-columns: 1fr; } }
+.portal-project-grid { display: grid; gap: 14px; }
+.portal-project-card { display: grid; gap: 14px; }
+.portal-progress { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; padding: 14px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.portal-progress span, .portal-progress strong { display: block; }
+.portal-progress span { color: var(--muted); font-size: 11px; }
+.portal-progress strong { margin-top: 4px; font-size: 13px; }
+.portal-schedule, .portal-document { display: flex; justify-content: space-between; gap: 14px; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.portal-schedule span, .portal-schedule small, .portal-document span, .portal-document small { display: block; }
+.portal-schedule small, .portal-document small { color: var(--muted); margin-top: 3px; }
+.portal-update, .portal-ticket { display: grid; gap: 4px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.portal-update small, .portal-ticket small, .portal-ticket span { color: var(--muted); font-size: 11px; }
+.portal-lower-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 14px; }
+.portal-lower-grid .panel { min-width: 0; }
+.muted-copy { color: var(--muted); font-size: 13px; }
+@media (max-width: 780px) { .portal-progress { grid-template-columns: 1fr; } .portal-lower-grid { grid-template-columns: 1fr; } }
 .configurator-layout { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(300px, .65fr); gap: 14px; align-items: start; }
 .configurator-main { min-width: 0; }
 .configurator-fields { margin-bottom: 22px; }

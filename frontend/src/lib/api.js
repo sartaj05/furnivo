@@ -1,4 +1,4 @@
-import { demoAuditLogs, demoContracts, demoCustomerPricing, demoCustomers, demoInventory, demoInvoices, demoLeads, demoNotifications, demoOrders, demoPaymentReconciliations, demoProducts, demoProductionJobs, demoPurchaseOrders, demoQuotePresets, demoQuotes, demoReturns, demoSchedules, demoStockMovements, demoSuppliers, demoUsers, demoWarehouseStock, demoWarehouses } from '../data/demoData'
+import { demoAuditLogs, demoContracts, demoCustomerPricing, demoCustomers, demoInventory, demoInvoices, demoLeads, demoNotifications, demoOrders, demoPaymentReconciliations, demoProducts, demoProductionJobs, demoPurchaseOrders, demoQuotePresets, demoQuotes, demoReturns, demoSchedules, demoStockMovements, demoSupportTickets, demoSuppliers, demoUsers, demoWarehouseStock, demoWarehouses } from '../data/demoData'
 
 const API_URL = import.meta.env.VITE_API_URL?.replace(/\/$/, '')
 const STORAGE_KEY = 'furnivo-demo-db'
@@ -68,6 +68,7 @@ function getLocalDb() {
       productionJobs: parsed.productionJobs || demoProductionJobs,
       paymentReconciliations: parsed.paymentReconciliations || demoPaymentReconciliations,
       contracts: parsed.contracts || demoContracts,
+      supportTickets: parsed.supportTickets || demoSupportTickets,
     }
     if (!parsed.users) localStorage.setItem(STORAGE_KEY, JSON.stringify(normalized))
     return normalized
@@ -96,6 +97,7 @@ function getLocalDb() {
     productionJobs: demoProductionJobs,
     paymentReconciliations: demoPaymentReconciliations,
     contracts: demoContracts,
+    supportTickets: demoSupportTickets,
   }
   localStorage.setItem(STORAGE_KEY, JSON.stringify(initial))
   return initial
@@ -715,6 +717,22 @@ export async function downloadContractPdf(contract) {
     try { const token = localStorage.getItem('furnivo-token'); const response = await fetch(`${API_URL}/contracts/${contract.id}/pdf`, { headers: token ? { Authorization: `Bearer ${token}` } : {} }); if (!response.ok) throw new Error('Could not download contract.'); const blob = await response.blob(); const url = URL.createObjectURL(blob); const anchor = document.createElement('a'); anchor.href = url; anchor.download = `${contract.contract_number}.pdf`; anchor.click(); URL.revokeObjectURL(url); return { mode: 'api' } } catch (error) { if (error.status) throw error }
   }
   const body = `${contract.title}\n\n${contract.terms}\n\nStatus: ${contract.status}`; const url = URL.createObjectURL(new Blob([body], { type: 'text/plain' })); const anchor = document.createElement('a'); anchor.href = url; anchor.download = `${contract.contract_number}.txt`; anchor.click(); URL.revokeObjectURL(url); return { mode: 'demo' }
+}
+
+export async function getProjectPortal() {
+  try { return await backendRequest('/portal') }
+  catch (error) {
+    if (error.status) throw error
+    await delay()
+    const db = getLocalDb()
+    const projects = db.orders.map((order) => ({ order, production: db.productionJobs.find((job) => Number(job.order_id) === Number(order.id)), schedules: db.schedules.filter((schedule) => Number(schedule.order_id) === Number(order.id)), invoice: db.invoices.find((invoice) => Number(invoice.order_id) === Number(order.id)), contract: db.contracts.find((contract) => Number(contract.quote_id) === Number(order.quote_id || 1)) }))
+    return { projects, documents: db.contracts.map((contract) => ({ type: 'Contract', number: contract.contract_number, status: contract.status, id: contract.id })).concat(db.invoices.map((invoice) => ({ type: 'Invoice', number: invoice.invoice_number, status: invoice.status, amount: invoice.total }))), support_tickets: db.supportTickets, mode: 'demo' }
+  }
+}
+
+export async function createSupportTicket(payload) {
+  try { return await backendRequest('/portal/tickets', { method: 'POST', body: JSON.stringify(payload) }) }
+  catch (error) { if (error.status) throw error; const db = getLocalDb(); const order = db.orders.find((item) => Number(item.id) === Number(payload.order_id)); const item = { id: Date.now(), order_id: order?.id, order_number: order?.order_number, status: 'Open', response: '', created_at: new Date().toISOString(), updated_at: new Date().toISOString(), ...payload }; db.supportTickets = [item, ...db.supportTickets]; saveLocalDb(db); return { item, mode: 'demo' } }
 }
 
 

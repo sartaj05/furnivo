@@ -588,6 +588,22 @@ class ContractSignature(TimestampMixin, db.Model):
     def to_dict(self): return {'id': self.id, 'signer_name': self.signer_name, 'signer_email': self.signer_email, 'signer_role': self.signer_role, 'signature_text': self.signature_text, 'signed_at': self.signed_at.isoformat()}
 
 
+class ProjectSupportTicket(TimestampMixin, db.Model):
+    __tablename__ = 'project_support_tickets'
+
+    id = db.Column(db.Integer, primary_key=True)
+    order_id = db.Column(db.Integer, db.ForeignKey('orders.id', ondelete='CASCADE'), nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
+    subject = db.Column(db.String(180), nullable=False)
+    message = db.Column(db.Text, nullable=False)
+    status = db.Column(db.String(40), nullable=False, default='Open')
+    response = db.Column(db.Text, nullable=False, default='')
+    order = db.relationship('Order')
+    user = db.relationship('User')
+
+    def to_dict(self): return {'id': self.id, 'order_id': self.order_id, 'order_number': self.order.order_number if self.order else None, 'subject': self.subject, 'message': self.message, 'status': self.status, 'response': self.response, 'created_at': self.created_at.isoformat(), 'updated_at': self.updated_at.isoformat()}
+
+
 class DeliverySchedule(TimestampMixin, db.Model):
     __tablename__ = 'delivery_schedules'
 
