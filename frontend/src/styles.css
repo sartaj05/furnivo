@@ -905,6 +905,14 @@ img { max-width: 100%; }
 .session-row b { color: var(--green); }
 .field-hint { display: block; color: var(--muted); margin-top: 5px; font-size: 11px; }
 @media (max-width: 780px) { .security-grid { grid-template-columns: 1fr; } }
+.gst-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.gst-card { display: grid; gap: 14px; }
+.gst-meta { display: flex; justify-content: space-between; gap: 12px; padding: 12px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); color: var(--muted); font-size: 11px; }
+.gst-meta strong { display: block; margin-top: 4px; color: var(--ink); }
+.gst-tax-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; color: var(--muted); font-size: 11px; }
+.gst-tax-grid strong { display: block; margin-top: 4px; color: var(--ink); font-size: 14px; }
+.gst-irn { color: var(--muted); font-size: 11px; line-height: 1.7; word-break: break-all; }
+@media (max-width: 780px) { .gst-grid { grid-template-columns: 1fr; } }
 .configurator-layout { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(300px, .65fr); gap: 14px; align-items: start; }
 .configurator-main { min-width: 0; }
 .configurator-fields { margin-bottom: 22px; }

@@ -589,6 +589,31 @@ class PaymentReconciliation(TimestampMixin, db.Model):
         return {'id': self.id, 'invoice_id': self.invoice_id, 'invoice_number': self.invoice.invoice_number if self.invoice else None, 'customer': self.invoice.customer_name if self.invoice else None, 'provider': self.provider, 'external_id': self.external_id, 'amount': float(self.amount or 0), 'refunded_amount': float(self.refunded_amount or 0), 'refundable_amount': float(max((self.amount or 0) - (self.refunded_amount or 0), 0)), 'status': self.status, 'refund_status': self.refund_status, 'provider_refund_id': self.provider_refund_id, 'dispute_reason': self.dispute_reason, 'created_at': self.created_at.isoformat()}
 
 
+class EInvoice(TimestampMixin, db.Model):
+    __tablename__ = 'e_invoices'
+
+    id = db.Column(db.Integer, primary_key=True)
+    invoice_id = db.Column(db.Integer, db.ForeignKey('invoices.id', ondelete='CASCADE'), nullable=False, unique=True, index=True)
+    gstin = db.Column(db.String(40), nullable=False, default='')
+    place_of_supply = db.Column(db.String(100), nullable=False, default='')
+    tax_mode = db.Column(db.String(20), nullable=False, default='CGST/SGST')
+    hsn_summary_json = db.Column(db.Text, nullable=False, default='[]')
+    cgst_amount = db.Column(db.Numeric(12, 2), nullable=False, default=0)
+    sgst_amount = db.Column(db.Numeric(12, 2), nullable=False, default=0)
+    igst_amount = db.Column(db.Numeric(12, 2), nullable=False, default=0)
+    irn = db.Column(db.String(120), nullable=False, unique=True)
+    acknowledgement_number = db.Column(db.String(80), nullable=False, default='')
+    status = db.Column(db.String(40), nullable=False, default='Generated')
+    eway_bill_number = db.Column(db.String(80), nullable=False, default='')
+    invoice = db.relationship('Invoice')
+
+    def to_dict(self):
+        import json
+        try: hsn_summary = json.loads(self.hsn_summary_json or '[]')
+        except (TypeError, ValueError): hsn_summary = []
+        return {'id': self.id, 'invoice_id': self.invoice_id, 'invoice_number': self.invoice.invoice_number if self.invoice else None, 'customer': self.invoice.customer_name if self.invoice else None, 'gstin': self.gstin, 'place_of_supply': self.place_of_supply, 'tax_mode': self.tax_mode, 'hsn_summary': hsn_summary, 'cgst_amount': float(self.cgst_amount or 0), 'sgst_amount': float(self.sgst_amount or 0), 'igst_amount': float(self.igst_amount or 0), 'irn': self.irn, 'acknowledgement_number': self.acknowledgement_number, 'status': self.status, 'eway_bill_number': self.eway_bill_number, 'created_at': self.created_at.isoformat()}
+
+
 class Contract(TimestampMixin, db.Model):
     __tablename__ = 'contracts'
 

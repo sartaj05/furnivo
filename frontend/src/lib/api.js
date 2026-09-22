@@ -1,4 +1,4 @@
-import { demoAuditLogs, demoBackups, demoContracts, demoCustomerPricing, demoCustomers, demoInventory, demoInvoices, demoLeads, demoNotifications, demoOpsHealth, demoOrders, demoPaymentReconciliations, demoProducts, demoProductionJobs, demoPurchaseOrders, demoQuotePresets, demoQuotes, demoReturns, demoSchedules, demoStockMovements, demoSupportTickets, demoSuppliers, demoUsers, demoWarehouseStock, demoWarehouses } from '../data/demoData'
+import { demoAuditLogs, demoBackups, demoContracts, demoCustomerPricing, demoCustomers, demoEInvoices, demoInventory, demoInvoices, demoLeads, demoNotifications, demoOpsHealth, demoOrders, demoPaymentReconciliations, demoProducts, demoProductionJobs, demoPurchaseOrders, demoQuotePresets, demoQuotes, demoReturns, demoSchedules, demoStockMovements, demoSupportTickets, demoSuppliers, demoUsers, demoWarehouseStock, demoWarehouses } from '../data/demoData'
 
 const API_URL = import.meta.env.VITE_API_URL?.replace(/\/$/, '')
 const STORAGE_KEY = 'furnivo-demo-db'
@@ -70,6 +70,7 @@ function getLocalDb() {
       contracts: parsed.contracts || demoContracts,
       supportTickets: parsed.supportTickets || demoSupportTickets,
       backups: parsed.backups || demoBackups,
+      eInvoices: parsed.eInvoices || demoEInvoices,
     }
     if (!parsed.users) localStorage.setItem(STORAGE_KEY, JSON.stringify(normalized))
     return normalized
@@ -100,6 +101,7 @@ function getLocalDb() {
     contracts: demoContracts,
     supportTickets: demoSupportTickets,
     backups: demoBackups,
+    eInvoices: demoEInvoices,
   }
   localStorage.setItem(STORAGE_KEY, JSON.stringify(initial))
   return initial
@@ -787,6 +789,21 @@ export async function createBackup() {
     await delay()
     const db = getLocalDb(); const item = { filename: `furnivo-demo-${Date.now()}.json`, size_bytes: JSON.stringify(db).length, created_at: new Date().toISOString() }; db.backups = [item, ...db.backups]; saveLocalDb(db); return { item, mode: 'demo' }
   }
+}
+
+export async function getEInvoices() {
+  try { return await backendRequest('/gst') }
+  catch (error) { if (error.status) throw error; await delay(); return { items: getLocalDb().eInvoices, mode: 'demo' } }
+}
+
+export async function generateEInvoice(invoiceId, payload) {
+  try { return await backendRequest(`/gst/invoices/${invoiceId}/generate`, { method: 'POST', body: JSON.stringify(payload) }) }
+  catch (error) { if (error.status) throw error; const db = getLocalDb(); const invoice = db.invoices.find((item) => Number(item.id) === Number(invoiceId)); const tax = Number(invoice?.tax_amount || 0); const item = { id: Date.now(), invoice_id: invoiceId, invoice_number: invoice?.invoice_number, customer: invoice?.customer, gstin: payload.gstin || '', place_of_supply: payload.place_of_supply || '', tax_mode: payload.tax_mode || 'CGST/SGST', hsn_summary: payload.hsn_summary || [{ hsn: '9403', description: 'Furniture and interiors', taxable_value: invoice?.subtotal || 0 }], cgst_amount: payload.tax_mode === 'IGST' ? 0 : tax / 2, sgst_amount: payload.tax_mode === 'IGST' ? 0 : tax / 2, igst_amount: payload.tax_mode === 'IGST' ? tax : 0, irn: `DEMO-${invoice?.invoice_number}-${Date.now()}`, acknowledgement_number: `ACK-${Date.now()}`, status: 'Generated', eway_bill_number: '', created_at: new Date().toISOString() }; db.eInvoices = [item, ...db.eInvoices]; saveLocalDb(db); return { item, mode: 'demo' } }
+}
+
+export async function generateEwayBill(id) {
+  try { return await backendRequest(`/gst/${id}/eway-bill`, { method: 'POST', body: JSON.stringify({}) }) }
+  catch (error) { if (error.status) throw error; const db = getLocalDb(); db.eInvoices = db.eInvoices.map((item) => Number(item.id) === Number(id) ? { ...item, eway_bill_number: `EWB-${Date.now()}`, status: 'E-way bill generated' } : item); saveLocalDb(db); return { item: db.eInvoices.find((item) => Number(item.id) === Number(id)), mode: 'demo' } }
 }
 
 

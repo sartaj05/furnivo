@@ -24,6 +24,7 @@ import ContractsPage from './pages/ContractsPage'
 import ProjectPortalPage from './pages/ProjectPortalPage'
 import OpsPage from './pages/OpsPage'
 import SecurityPage from './pages/SecurityPage'
+import GstPage from './pages/GstPage'
 import ProtectedRoute from './components/ProtectedRoute'
 
 export default function App() {
@@ -44,6 +45,7 @@ export default function App() {
         <Route path="/app/project-portal" element={<ProtectedRoute allowedRoles={['client']}><ProjectPortalPage /></ProtectedRoute>} />
         <Route path="/app/operations" element={<ProtectedRoute allowedRoles={['admin']}><OpsPage /></ProtectedRoute>} />
         <Route path="/app/security" element={<SecurityPage />} />
+        <Route path="/app/gst" element={<ProtectedRoute allowedRoles={['admin', 'sales', 'client']}><GstPage /></ProtectedRoute>} />
         <Route path="/app/customers" element={<ProtectedRoute allowedRoles={['admin', 'sales']}><CustomersPage /></ProtectedRoute>} />
         <Route
           path="/app/leads"

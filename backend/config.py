@@ -35,3 +35,4 @@ class Config:
     AUTO_SEED = os.getenv('AUTO_SEED', 'true').lower() == 'true'
     RATE_LIMIT_PER_MINUTE = int(os.getenv('RATE_LIMIT_PER_MINUTE', '120'))
     BACKUP_FOLDER = os.getenv('BACKUP_FOLDER', str(BASE_DIR / 'backups'))
+    EINVOICE_PROVIDER = os.getenv('EINVOICE_PROVIDER', 'demo')

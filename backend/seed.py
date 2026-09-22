@@ -1,6 +1,6 @@
 from werkzeug.security import generate_password_hash
 from .extensions import db
-from .models import AuditLog, BomItem, Contract, CreditNote, Customer, CustomerPricing, DeliverySchedule, InventoryItem, Invoice, Lead, LeadNote, LeadTask, Notification, Order, PaymentReconciliation, Product, ProductVariant, ProductionJob, PurchaseOrder, PurchaseOrderItem, Quote, QuoteClientAccess, QuoteItem, QuotePreset, ProjectUpdate, ReturnRequest, StockMovement, Supplier, User, Warehouse, WarehouseStock
+from .models import AuditLog, BomItem, Contract, CreditNote, Customer, CustomerPricing, DeliverySchedule, EInvoice, InventoryItem, Invoice, Lead, LeadNote, LeadTask, Notification, Order, PaymentReconciliation, Product, ProductVariant, ProductionJob, PurchaseOrder, PurchaseOrderItem, Quote, QuoteClientAccess, QuoteItem, QuotePreset, ProjectUpdate, ReturnRequest, StockMovement, Supplier, User, Warehouse, WarehouseStock
 
 
 DEMO_PRODUCTS = [
@@ -63,6 +63,7 @@ def seed_database():
     seed_production()
     seed_reconciliation()
     seed_contracts()
+    seed_gst()
     seed_leads()
 
 
@@ -294,4 +295,13 @@ def seed_contracts():
     admin = db.session.scalar(db.select(User).where(User.email == 'admin@furnivo.demo'))
     if quote and admin:
         db.session.add(Contract(contract_number='CTR-7001', quote_id=quote.id, title='Northline Studio project agreement', terms='1. Furnivo will deliver the approved scope and materials listed in the quotation.\n2. Production begins after written approval and agreed advance payment.\n3. Delivery and installation dates are scheduled after material confirmation.\n4. Variations require written approval and may change price or timeline.', status='Sent', created_by_id=admin.id))
+        db.session.commit()
+
+
+def seed_gst():
+    if db.session.scalar(db.select(EInvoice).limit(1)):
+        return
+    invoice = db.session.scalar(db.select(Invoice).where(Invoice.invoice_number == 'INV-2001'))
+    if invoice:
+        db.session.add(EInvoice(invoice_id=invoice.id, gstin=invoice.customer.gstin if invoice.customer else '', place_of_supply='Delhi', tax_mode='CGST/SGST', hsn_summary_json='[{"hsn":"9403","description":"Furniture and interiors","taxable_value":158000}]', cgst_amount=14220, sgst_amount=14220, irn='DEMO-INV-2001-IRN', acknowledgement_number='ACK-DEMO-2001', status='Generated'))
         db.session.commit()
