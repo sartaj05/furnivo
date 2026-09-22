@@ -1,6 +1,7 @@
-from flask import Blueprint, jsonify
+from flask import Blueprint, jsonify, request
 from ..extensions import db
 from ..models import Notification
+from ..services.notifications import deliver_notification
 from ..utils import current_user, roles_required
 
 notifications_bp = Blueprint('notifications', __name__)
@@ -24,3 +25,18 @@ def mark_read(notification_id):
     item.is_read = True
     db.session.commit()
     return jsonify({'item': item.to_dict(), 'mode': 'api'})
+
+
+@notifications_bp.post('/<int:notification_id>/deliver')
+@roles_required('admin', 'sales', 'designer', 'client')
+def deliver(notification_id):
+    item = db.session.scalar(db.select(Notification).where(Notification.id == notification_id, Notification.user_id == current_user().id))
+    if not item:
+        return jsonify({'message': 'Notification not found.'}), 404
+    payload = request.get_json(silent=True) or {}
+    channel = str(payload.get('channel', '')).strip().lower()
+    recipient = str(payload.get('recipient') or (current_user().email if channel == 'email' else '')).strip()
+    if channel not in {'email', 'whatsapp'} or not recipient:
+        return jsonify({'message': 'Choose email or WhatsApp and provide a recipient.'}), 400
+    delivery = deliver_notification(item, channel, recipient)
+    return jsonify({'item': delivery.to_dict(), 'mode': 'api'})

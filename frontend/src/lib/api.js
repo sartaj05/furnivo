@@ -452,6 +452,15 @@ export async function markNotificationRead(id) {
   }
 }
 
+export async function deliverNotification(id, channel, recipient = '') {
+  try { return await backendRequest(`/notifications/${id}/deliver`, { method: 'POST', body: JSON.stringify({ channel, recipient }) }) }
+  catch (error) {
+    if (error.status) throw error
+    await delay()
+    return { item: { id: Date.now(), notification_id: id, channel, recipient, status: 'demo-queued', error: 'Configure the provider in the backend environment for live delivery.' }, mode: 'demo' }
+  }
+}
+
 
 export async function createProduct(payload) {
   try {

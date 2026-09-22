@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { getNotifications, markNotificationRead } from '../lib/api'
+import { deliverNotification, getNotifications, markNotificationRead } from '../lib/api'
 
 const navItems = [
   { to: '/app', label: 'Overview', shortLabel: 'Home', roles: ['admin', 'sales', 'designer', 'client'], end: true },
@@ -37,6 +37,13 @@ export default function AppShell({ title, eyebrow, actions, children }) {
       await markNotificationRead(item.id)
       setNotifications((current) => current.map((notification) => notification.id === item.id ? { ...notification, is_read: true } : notification))
     }
+  }
+
+  async function deliver(item, channel) {
+    const recipient = channel === 'whatsapp' ? window.prompt('WhatsApp number with country code') : user.email
+    if (!recipient) return
+    await deliverNotification(item.id, channel, recipient)
+    window.alert(`${channel === 'email' ? 'Email' : 'WhatsApp'} delivery requested.`)
   }
 
   function logout() {
@@ -82,7 +89,7 @@ export default function AppShell({ title, eyebrow, actions, children }) {
         <div className="sidebar-bottom">
           <div className="notification-wrap">
             <button className="text-button notification-button" onClick={() => setShowNotifications((value) => !value)}>Notifications {notifications.filter((item) => !item.is_read).length > 0 && <span className="notification-count">{notifications.filter((item) => !item.is_read).length}</span>}</button>
-            {showNotifications && <div className="notification-panel"><strong>Notifications</strong>{notifications.length ? notifications.map((item) => <button className={`notification-item ${item.is_read ? 'read' : ''}`} key={item.id} onClick={() => readNotification(item)}><b>{item.title}</b><span>{item.body}</span><small>{new Date(item.created_at).toLocaleString()}</small></button>) : <small>No new notifications.</small>}</div>}
+            {showNotifications && <div className="notification-panel"><strong>Notifications</strong>{notifications.length ? notifications.map((item) => <div className={`notification-item ${item.is_read ? 'read' : ''}`} key={item.id} onClick={() => readNotification(item)}><b>{item.title}</b><span>{item.body}</span><small>{new Date(item.created_at).toLocaleString()}</small><div><button className="button-link" onClick={(event) => { event.stopPropagation(); deliver(item, 'email') }}>Email</button> <button className="button-link" onClick={(event) => { event.stopPropagation(); deliver(item, 'whatsapp') }}>WhatsApp</button></div></div>) : <small>No new notifications.</small>}</div>}
           </div>
           <span className={`mode-chip desktop-mode-chip ${mode === 'demo' ? 'demo' : ''}`}>
             {mode === 'demo' ? 'Demo data active' : 'Live API'}

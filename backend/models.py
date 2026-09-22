@@ -351,6 +351,30 @@ class Notification(TimestampMixin, db.Model):
             'created_at': self.created_at.isoformat(),
         }
 
+
+class NotificationDelivery(TimestampMixin, db.Model):
+    __tablename__ = 'notification_deliveries'
+
+    id = db.Column(db.Integer, primary_key=True)
+    notification_id = db.Column(db.Integer, db.ForeignKey('notifications.id', ondelete='CASCADE'), nullable=False, index=True)
+    channel = db.Column(db.String(40), nullable=False)
+    recipient = db.Column(db.String(255), nullable=False)
+    status = db.Column(db.String(40), nullable=False, default='queued')
+    error = db.Column(db.Text, nullable=False, default='')
+    attempted_at = db.Column(db.DateTime(timezone=True))
+    notification = db.relationship('Notification')
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'notification_id': self.notification_id,
+            'channel': self.channel,
+            'recipient': self.recipient,
+            'status': self.status,
+            'error': self.error,
+            'attempted_at': self.attempted_at.isoformat() if self.attempted_at else None,
+        }
+
 class Customer(TimestampMixin, db.Model):
     __tablename__ = 'customers'
 
