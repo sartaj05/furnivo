@@ -27,6 +27,7 @@ const navItems = [
   { to: '/app/data-admin', label: 'Data administration', shortLabel: 'Data', roles: ['admin'] },
   { to: '/app/access-control', label: 'Access & approvals', shortLabel: 'Access', roles: ['admin'] },
   { to: '/app/service', label: 'Warranty & service', shortLabel: 'Service', roles: ['admin', 'sales', 'designer', 'client'] },
+  { to: '/app/analytics', label: 'Analytics & forecasting', shortLabel: 'Analytics', roles: ['admin', 'sales', 'designer'] },
   { to: '/app/schedules', label: 'Delivery & installation', shortLabel: 'Schedule', roles: ['admin', 'sales', 'designer', 'client'] },
   { to: '/app/warehouses', label: 'Warehouses', shortLabel: 'Stock map', roles: ['admin', 'sales', 'designer'] },
   { to: '/app/returns', label: 'Returns & refunds', shortLabel: 'Returns', roles: ['admin', 'sales', 'client'] },

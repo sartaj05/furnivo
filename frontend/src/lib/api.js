@@ -1,4 +1,4 @@
-import { demoAccessUsers, demoApprovalRequests, demoAuditLogs, demoBackups, demoBackgroundJobs, demoContracts, demoCustomerPricing, demoCustomers, demoDepartments, demoEInvoices, demoInventory, demoInvoices, demoLeads, demoNotifications, demoOpsHealth, demoOrders, demoPaymentReconciliations, demoProducts, demoProductionJobs, demoProjectOwnership, demoPurchaseOrders, demoQuotePresets, demoQuotes, demoReturns, demoSchedules, demoServiceTickets, demoStockMovements, demoSupportTickets, demoSuppliers, demoUsers, demoWarehouseStock, demoWarehouses, demoWarranties } from '../data/demoData'
+import { demoAccessUsers, demoAnalytics, demoApprovalRequests, demoAuditLogs, demoBackups, demoBackgroundJobs, demoContracts, demoCustomerPricing, demoCustomers, demoDepartments, demoEInvoices, demoInventory, demoInvoices, demoLeads, demoNotifications, demoOpsHealth, demoOrders, demoPaymentReconciliations, demoProducts, demoProductionJobs, demoProjectOwnership, demoPurchaseOrders, demoQuotePresets, demoQuotes, demoReturns, demoSchedules, demoServiceTickets, demoStockMovements, demoSupportTickets, demoSuppliers, demoUsers, demoWarehouseStock, demoWarehouses, demoWarranties } from '../data/demoData'
 
 const API_URL = import.meta.env.VITE_API_URL?.replace(/\/$/, '')
 const STORAGE_KEY = 'furnivo-demo-db'
@@ -1104,4 +1104,9 @@ export async function createServiceTicket(payload) {
 export async function updateServiceTicket(id, payload) {
   try { return await backendRequest(`/service/tickets/${id}`, { method: 'PATCH', body: JSON.stringify(payload) }) }
   catch (error) { if (error.status) throw error; const db = getLocalDb(); db.serviceTickets = db.serviceTickets.map((item) => Number(item.id) === Number(id) ? { ...item, ...payload, updated_at: new Date().toISOString() } : item); saveLocalDb(db); return { item: db.serviceTickets.find((item) => Number(item.id) === Number(id)), mode: 'demo' } }
+}
+
+export async function getAnalytics() {
+  try { return await backendRequest('/analytics') }
+  catch (error) { if (error.status) throw error; await delay(); return { ...getLocalDb().analytics || demoAnalytics, mode: 'demo' } }
 }
