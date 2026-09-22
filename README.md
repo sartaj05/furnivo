@@ -155,6 +155,10 @@ git push -u origin main
 
 No GitHub remote is embedded in the ZIP because that requires your own GitHub account/repository URL.
 
+## Free deployment
+
+See [DEPLOYMENT.md](DEPLOYMENT.md) for the reusable Render, Supabase, Cloudinary, Vercel, secrets, health-check, and GitHub deployment guide. The repository includes `render.yaml`, a public database-aware `/api/health` endpoint, Cloudinary-backed product/field-proof upload routes, and an optional five-minute GitHub Actions health workflow. Add real provider values only in hosting secrets after pushing to your own GitHub repository.
+
 ## Feature-wise commit history
 
 ```text

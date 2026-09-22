@@ -1,0 +1,17 @@
+name: Furnivo API health check
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "*/5 * * * *"
+
+jobs:
+  health-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check deployed API
+        env:
+          FURNIVO_HEALTH_URL: ${{ secrets.FURNIVO_HEALTH_URL }}
+        run: |
+          test -n "$FURNIVO_HEALTH_URL"
+          curl --fail --silent --show-error --max-time 20 "$FURNIVO_HEALTH_URL"

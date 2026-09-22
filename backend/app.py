@@ -7,6 +7,7 @@ from flask import Flask, g, jsonify, request, send_from_directory
 from flask_cors import CORS
 from .config import Config
 from .extensions import db, jwt, migrate
+from .services.health import run_health_check
 
 
 def create_app(config_object=Config):
@@ -122,8 +123,8 @@ def create_app(config_object=Config):
 
     @app.get('/api/health')
     def health():
-        db.session.execute(db.text('SELECT 1'))
-        return jsonify({'ok': True, 'service': 'furnivo-api', 'version': app.config['APP_VERSION'], 'environment': app.config['ENVIRONMENT']})
+        result = run_health_check(app.config)
+        return jsonify({'ok': result['status'] == 'ok', **result}), 200 if result['status'] == 'ok' else 503
 
     @app.get('/uploads/<path:filename>')
     def uploaded_file(filename):
