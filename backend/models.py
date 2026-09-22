@@ -398,6 +398,9 @@ class NotificationDelivery(TimestampMixin, db.Model):
     status = db.Column(db.String(40), nullable=False, default='queued')
     error = db.Column(db.Text, nullable=False, default='')
     attempted_at = db.Column(db.DateTime(timezone=True))
+    attempt_count = db.Column(db.Integer, nullable=False, default=0)
+    next_attempt_at = db.Column(db.DateTime(timezone=True))
+    provider_message_id = db.Column(db.String(180), nullable=False, default='')
     notification = db.relationship('Notification')
 
     def to_dict(self):
@@ -408,6 +411,9 @@ class NotificationDelivery(TimestampMixin, db.Model):
             'recipient': self.recipient,
             'status': self.status,
             'error': self.error,
+            'attempt_count': self.attempt_count,
+            'next_attempt_at': self.next_attempt_at.isoformat() if self.next_attempt_at else None,
+            'provider_message_id': self.provider_message_id,
             'attempted_at': self.attempted_at.isoformat() if self.attempted_at else None,
         }
 

@@ -37,3 +37,14 @@ def test_client_workspace_records_are_scoped(client):
     assert visits.status_code == 200
     assert all(item['order_number'] == 'ORD-1001' for item in visits.json['items'])
     assert approvals.status_code == 403
+
+
+def test_notification_delivery_is_retryable(client, admin_headers):
+    notifications = client.get('/api/notifications', headers=admin_headers)
+    notification_id = notifications.json['items'][0]['id']
+    delivery = client.post(f'/api/notifications/{notification_id}/deliver', headers=admin_headers, json={'channel': 'email', 'recipient': 'demo@example.com'})
+    assert delivery.status_code == 200
+    assert delivery.json['item']['attempt_count'] == 1
+    retry = client.post(f"/api/notifications/deliveries/{delivery.json['item']['id']}/retry", headers=admin_headers)
+    assert retry.status_code == 200
+    assert retry.json['item']['attempt_count'] == 2

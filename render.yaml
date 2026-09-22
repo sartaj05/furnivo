@@ -16,6 +16,12 @@ services:
         sync: false
       - key: CLOUDINARY_URL
         sync: false
+      - key: NOTIFICATION_EMAIL_URL
+        sync: false
+      - key: NOTIFICATION_EMAIL_TOKEN
+        sync: false
+      - key: WHATSAPP_WEBHOOK_URL
+        sync: false
       - key: AUTO_SEED
         value: "false"
       - key: ENVIRONMENT

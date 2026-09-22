@@ -3,8 +3,9 @@ import json
 import os
 import smtplib
 import urllib.request
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from email.message import EmailMessage
+from sqlalchemy import or_
 from ..models import Notification, NotificationDelivery, QuoteClientAccess, User
 
 
@@ -33,27 +34,36 @@ def notify_quote_client(quote, title, body, notification_type='info'):
     return [create_notification(access.user_id, title, body, notification_type, 'quote', quote.id) for access in accesses]
 
 
-def deliver_notification(notification, channel, recipient):
-    delivery = NotificationDelivery(notification_id=notification.id, channel=channel, recipient=recipient, status='queued')
-    db.session.add(delivery)
+def deliver_notification(notification, channel, recipient, existing_delivery=None):
+    delivery = existing_delivery or NotificationDelivery(notification_id=notification.id, channel=channel, recipient=recipient, status='queued')
+    if existing_delivery is None:
+        db.session.add(delivery)
     db.session.flush()
+    delivery.attempt_count += 1
+    delivery.status = 'sending'
+    delivery.error = ''
     try:
         if channel == 'email':
-            host = os.getenv('SMTP_HOST', '')
-            if not host:
-                raise RuntimeError('SMTP_HOST is not configured.')
-            message = EmailMessage()
-            message['Subject'] = notification.title
-            message['From'] = os.getenv('NOTIFICATION_FROM_EMAIL', 'notifications@furnivo.local')
-            message['To'] = recipient
-            message.set_content(notification.body)
-            port = int(os.getenv('SMTP_PORT', '587'))
-            with smtplib.SMTP(host, port, timeout=10) as smtp:
-                if os.getenv('SMTP_TLS', 'true').lower() == 'true':
-                    smtp.starttls()
-                if os.getenv('SMTP_USERNAME'):
-                    smtp.login(os.getenv('SMTP_USERNAME'), os.getenv('SMTP_PASSWORD', ''))
-                smtp.send_message(message)
+            provider_url = os.getenv('NOTIFICATION_EMAIL_URL', '')
+            if provider_url:
+                payload = json.dumps({'to': recipient, 'subject': notification.title, 'text': notification.body, 'idempotency_key': f'notification-delivery-{delivery.id}'}).encode()
+                headers = {'Content-Type': 'application/json'}
+                if os.getenv('NOTIFICATION_EMAIL_TOKEN'): headers['Authorization'] = f"Bearer {os.getenv('NOTIFICATION_EMAIL_TOKEN')}"
+                provider_request = urllib.request.Request(provider_url, data=payload, headers=headers, method='POST')
+                with urllib.request.urlopen(provider_request, timeout=10) as response:
+                    if response.status >= 300: raise RuntimeError(f'Email provider returned HTTP {response.status}.')
+                    try: provider_result = json.loads(response.read().decode() or '{}')
+                    except (TypeError, ValueError): provider_result = {}
+                    delivery.provider_message_id = str(provider_result.get('id') or provider_result.get('message_id') or '')
+            else:
+                host = os.getenv('SMTP_HOST', '')
+                if not host: raise RuntimeError('NOTIFICATION_EMAIL_URL is not configured.')
+                message = EmailMessage(); message['Subject'] = notification.title; message['From'] = os.getenv('NOTIFICATION_FROM_EMAIL', 'notifications@furnivo.local'); message['To'] = recipient; message.set_content(notification.body)
+                port = int(os.getenv('SMTP_PORT', '587'))
+                with smtplib.SMTP(host, port, timeout=10) as smtp:
+                    if os.getenv('SMTP_TLS', 'true').lower() == 'true': smtp.starttls()
+                    if os.getenv('SMTP_USERNAME'): smtp.login(os.getenv('SMTP_USERNAME'), os.getenv('SMTP_PASSWORD', ''))
+                    smtp.send_message(message)
         elif channel == 'whatsapp':
             webhook = os.getenv('WHATSAPP_WEBHOOK_URL', '')
             if not webhook:
@@ -66,9 +76,18 @@ def deliver_notification(notification, channel, recipient):
         else:
             raise RuntimeError('Unsupported notification channel.')
         delivery.status = 'sent'
+        delivery.next_attempt_at = None
     except Exception as exc:
-        delivery.status = 'pending_configuration' if 'not configured' in str(exc) else 'failed'
+        delivery.status = 'pending_configuration' if 'not configured' in str(exc) else 'pending'
         delivery.error = str(exc)
+        delivery.next_attempt_at = datetime.now(timezone.utc) + timedelta(minutes=min(60, 5 * (2 ** min(delivery.attempt_count - 1, 3))))
     delivery.attempted_at = datetime.now(timezone.utc)
+    notification.delivery_status = delivery.status
     db.session.commit()
     return delivery
+
+
+def retry_pending_deliveries(limit=25):
+    now = datetime.now(timezone.utc)
+    items = db.session.scalars(db.select(NotificationDelivery).where(NotificationDelivery.status.in_(['pending', 'pending_configuration']), or_(NotificationDelivery.next_attempt_at.is_(None), NotificationDelivery.next_attempt_at <= now)).order_by(NotificationDelivery.id).limit(limit)).all()
+    return [deliver_notification(item.notification, item.channel, item.recipient, existing_delivery=item) for item in items]

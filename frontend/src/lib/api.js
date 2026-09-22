@@ -594,6 +594,11 @@ export async function deliverNotification(id, channel, recipient = '') {
   }
 }
 
+export async function retryNotificationDelivery(deliveryId) {
+  try { return await backendRequest(`/notifications/deliveries/${deliveryId}/retry`, { method: 'POST' }) }
+  catch (error) { if (error.status) throw error; await delay(); return { item: { id: deliveryId, status: 'demo-queued', error: 'Connect the notification provider to retry delivery.' }, mode: 'demo' } }
+}
+
 export async function getInvoices() {
   try { return await backendRequest('/invoices') }
   catch (error) { if (error.status) throw error; await delay(); return { items: getLocalDb().invoices, mode: 'demo' } }
