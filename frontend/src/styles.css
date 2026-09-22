@@ -803,8 +803,14 @@ img { max-width: 100%; }
 .history-item { display: grid; gap: 4px; padding: 12px 0; border-bottom: 1px solid var(--line); }
 .history-item span, .history-item small { color: var(--muted); }
 .empty-state { text-align: center; padding: 42px; }
+.order-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.order-card { cursor: pointer; }
+.order-card.selected { border-color: #86a290; box-shadow: 0 0 0 2px rgba(35,75,60,.07); }
+.order-status-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.order-meta { display: flex; justify-content: space-between; margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--line); color: var(--muted); font-size: 13px; }
 @media (max-width: 780px) { .customer-grid { grid-template-columns: 1fr; } }
 @media (max-width: 780px) { .client-quote-grid { grid-template-columns: 1fr; } }
+@media (max-width: 780px) { .order-grid, .order-status-grid { grid-template-columns: 1fr; } }
 .lead-workspace { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(320px, .85fr); gap: 14px; align-items: start; }
 .lead-workspace .lead-grid { grid-template-columns: 1fr 1fr; }
 .lead-card { cursor: pointer; }

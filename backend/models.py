@@ -228,6 +228,56 @@ class QuoteRevision(TimestampMixin, db.Model):
             'created_at': self.created_at.isoformat(),
         }
 
+
+class Order(TimestampMixin, db.Model):
+    __tablename__ = 'orders'
+
+    id = db.Column(db.Integer, primary_key=True)
+    order_number = db.Column(db.String(40), unique=True, nullable=False, index=True)
+    quote_id = db.Column(db.Integer, db.ForeignKey('quotes.id'), nullable=False, unique=True, index=True)
+    customer_id = db.Column(db.Integer, db.ForeignKey('customers.id'), nullable=True, index=True)
+    customer_name = db.Column(db.String(180), nullable=False)
+    status = db.Column(db.String(40), nullable=False, default='Confirmed')
+    production_status = db.Column(db.String(40), nullable=False, default='Not started')
+    delivery_date = db.Column(db.Date)
+    installation_status = db.Column(db.String(40), nullable=False, default='Not scheduled')
+    notes = db.Column(db.Text, nullable=False, default='')
+    created_by_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    quote = db.relationship('Quote')
+    customer = db.relationship('Customer')
+    updates = db.relationship('ProjectUpdate', back_populates='order', cascade='all, delete-orphan', lazy='selectin')
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'order_number': self.order_number,
+            'quote_id': self.quote_id,
+            'quote_number': self.quote.quote_number if self.quote else None,
+            'customer_id': self.customer_id,
+            'customer': self.customer_name,
+            'status': self.status,
+            'production_status': self.production_status,
+            'delivery_date': self.delivery_date.isoformat() if self.delivery_date else None,
+            'installation_status': self.installation_status,
+            'notes': self.notes,
+            'amount': float(self.quote.total) if self.quote else 0,
+            'updates': [update.to_dict() for update in sorted(self.updates, key=lambda item: item.created_at, reverse=True)],
+        }
+
+
+class ProjectUpdate(TimestampMixin, db.Model):
+    __tablename__ = 'project_updates'
+
+    id = db.Column(db.Integer, primary_key=True)
+    order_id = db.Column(db.Integer, db.ForeignKey('orders.id', ondelete='CASCADE'), nullable=False, index=True)
+    body = db.Column(db.Text, nullable=False)
+    author_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    order = db.relationship('Order', back_populates='updates')
+    author = db.relationship('User')
+
+    def to_dict(self):
+        return {'id': self.id, 'body': self.body, 'author': self.author.name if self.author else 'Team', 'created_at': self.created_at.isoformat()}
+
 class Customer(TimestampMixin, db.Model):
     __tablename__ = 'customers'
 

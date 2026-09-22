@@ -8,6 +8,7 @@ const navItems = [
   { to: '/app/customers', label: 'Customers', shortLabel: 'Clients', roles: ['admin', 'sales'] },
   { to: '/app/leads', label: 'Lead CRM', shortLabel: 'Leads', roles: ['admin', 'sales'] },
   { to: '/app/client-quotes', label: 'My quotations', shortLabel: 'Quotes', roles: ['client'] },
+  { to: '/app/orders', label: 'Orders & projects', shortLabel: 'Orders', roles: ['admin', 'sales', 'designer', 'client'] },
 ]
 
 export default function AppShell({ title, eyebrow, actions, children }) {

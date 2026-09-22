@@ -1,6 +1,6 @@
 from werkzeug.security import generate_password_hash
 from .extensions import db
-from .models import Customer, Lead, LeadNote, LeadTask, Product, ProductVariant, Quote, QuoteClientAccess, QuoteItem, User
+from .models import Customer, Lead, LeadNote, LeadTask, Order, Product, ProductVariant, Quote, QuoteClientAccess, QuoteItem, ProjectUpdate, User
 
 
 DEMO_PRODUCTS = [
@@ -50,6 +50,7 @@ def seed_database():
     seed_customers()
     seed_quotes()
     seed_client_quote_access()
+    seed_orders()
     seed_leads()
 
 
@@ -115,3 +116,17 @@ def seed_client_quote_access():
     if not existing:
         db.session.add(QuoteClientAccess(user_id=client.id, quote_id=quote.id))
         db.session.commit()
+
+
+def seed_orders():
+    if db.session.scalar(db.select(Order).limit(1)):
+        return
+    quote = db.session.scalar(db.select(Quote).where(Quote.quote_number == 'Q-1042'))
+    admin = db.session.scalar(db.select(User).where(User.role == 'admin'))
+    if not quote or not admin:
+        return
+    order = Order(order_number='ORD-1001', quote_id=quote.id, customer_id=quote.customer_id, customer_name=quote.customer_name, production_status='In production', installation_status='Scheduled', created_by_id=admin.id, notes='Demo project order')
+    db.session.add(order)
+    db.session.flush()
+    db.session.add(ProjectUpdate(order_id=order.id, body='Materials confirmed and production slot reserved.', author_id=admin.id))
+    db.session.commit()

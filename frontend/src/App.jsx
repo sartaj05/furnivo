@@ -8,6 +8,7 @@ import QuotesPage from './pages/QuotesPage'
 import LeadsPage from './pages/LeadsPage'
 import CustomersPage from './pages/CustomersPage'
 import ClientQuotesPage from './pages/ClientQuotesPage'
+import OrdersPage from './pages/OrdersPage'
 import ProtectedRoute from './components/ProtectedRoute'
 
 export default function App() {
@@ -31,6 +32,7 @@ export default function App() {
           }
         />
         <Route path="/app/client-quotes" element={<ProtectedRoute allowedRoles={['client']}><ClientQuotesPage /></ProtectedRoute>} />
+        <Route path="/app/orders" element={<OrdersPage />} />
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />

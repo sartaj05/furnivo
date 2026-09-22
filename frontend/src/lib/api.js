@@ -1,4 +1,4 @@
-import { demoCustomers, demoLeads, demoProducts, demoQuotes, demoUsers } from '../data/demoData'
+import { demoCustomers, demoLeads, demoOrders, demoProducts, demoQuotes, demoUsers } from '../data/demoData'
 
 const API_URL = import.meta.env.VITE_API_URL?.replace(/\/$/, '')
 const STORAGE_KEY = 'furnivo-demo-db'
@@ -47,6 +47,7 @@ function getLocalDb() {
       leads: parsed.leads || demoLeads,
       users: parsed.users || demoUsers,
       customers: parsed.customers || demoCustomers,
+      orders: parsed.orders || demoOrders,
     }
     if (!parsed.users) localStorage.setItem(STORAGE_KEY, JSON.stringify(normalized))
     return normalized
@@ -58,6 +59,7 @@ function getLocalDb() {
     leads: demoLeads,
     users: demoUsers,
     customers: demoCustomers,
+    orders: demoOrders,
   }
   localStorage.setItem(STORAGE_KEY, JSON.stringify(initial))
   return initial
@@ -360,6 +362,41 @@ export async function updateLeadTask(leadId, taskId, payload) {
   catch (error) {
     if (error.status) throw error
     const db = getLocalDb(); const lead = db.leads.find((item) => Number(item.id) === Number(leadId)); lead.tasks = (lead.tasks || []).map((task) => Number(task.id) === Number(taskId) ? { ...task, ...payload } : task); saveLocalDb(db); return { mode: 'demo' }
+  }
+}
+
+export async function getOrders() {
+  try { return await backendRequest('/orders') }
+  catch (error) { if (error.status) throw error; await delay(); return { items: getLocalDb().orders, mode: 'demo' } }
+}
+
+export async function createOrder(payload) {
+  try { return await backendRequest('/orders', { method: 'POST', body: JSON.stringify(payload) }) }
+  catch (error) {
+    if (error.status) throw error
+    await delay()
+    const db = getLocalDb()
+    const quote = db.quotes.find((item) => item.database_id === Number(payload.quote_id) || item.id === payload.quote_id)
+    if (!quote) throw new Error('Choose a valid quotation.')
+    const order = { id: Date.now(), order_number: `ORD-${1001 + db.orders.length}`, quote_id: quote.database_id, quote_number: quote.id, customer: quote.customer, status: 'Confirmed', production_status: 'Not started', delivery_date: payload.delivery_date || null, installation_status: 'Not scheduled', amount: Number(quote.amount || 0), notes: payload.notes || '', updates: [] }
+    db.orders = [order, ...db.orders]; saveLocalDb(db); return { item: order, mode: 'demo' }
+  }
+}
+
+export async function updateOrder(id, payload) {
+  try { return await backendRequest(`/orders/${id}`, { method: 'PATCH', body: JSON.stringify(payload) }) }
+  catch (error) {
+    if (error.status) throw error
+    const db = getLocalDb(); db.orders = db.orders.map((order) => Number(order.id) === Number(id) ? { ...order, ...payload } : order); saveLocalDb(db)
+    return { item: db.orders.find((order) => Number(order.id) === Number(id)), mode: 'demo' }
+  }
+}
+
+export async function addOrderUpdate(id, body) {
+  try { return await backendRequest(`/orders/${id}/updates`, { method: 'POST', body: JSON.stringify({ body }) }) }
+  catch (error) {
+    if (error.status) throw error
+    const db = getLocalDb(); const order = db.orders.find((item) => Number(item.id) === Number(id)); const update = { id: Date.now(), body, author: 'Demo user', created_at: new Date().toISOString() }; order.updates = [update, ...(order.updates || [])]; saveLocalDb(db); return { item: update, order, mode: 'demo' }
   }
 }
 

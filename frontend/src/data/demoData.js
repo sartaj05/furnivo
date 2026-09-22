@@ -141,3 +141,7 @@ export const demoCustomers = [
   { id: 2, company: 'The Green House', contact_name: 'Rohan Sen', email: 'hello@greenhouse.demo', phone: '+91 98100 21002', billing_address: 'Gurugram', project_address: 'Gurugram, Haryana', gstin: '', notes: '' },
   { id: 3, company: 'Avenue Architects', contact_name: 'Neha Jain', email: 'studio@avenue.demo', phone: '+91 98100 21003', billing_address: 'Noida', project_address: 'Noida, Uttar Pradesh', gstin: '', notes: '' },
 ]
+
+export const demoOrders = [
+  { id: 1, order_number: 'ORD-1001', quote_id: 1042, quote_number: 'Q-1042', customer: 'Northline Studio', status: 'Confirmed', production_status: 'In production', delivery_date: '2026-10-18', installation_status: 'Scheduled', amount: 186400, notes: 'Demo project order', updates: [{ id: 1, body: 'Materials confirmed and production slot reserved.', author: 'Aarav Admin', created_at: '2026-09-18T10:00:00.000Z' }] },
+]
