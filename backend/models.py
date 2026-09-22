@@ -665,6 +665,44 @@ class CustomerPricing(TimestampMixin, db.Model):
     def to_dict(self): return {'id': self.id, 'customer_id': self.customer_id, 'customer': self.customer.company if self.customer else None, 'tier': self.tier, 'discount_percent': float(self.discount_percent or 0)}
 
 
+class ProductionJob(TimestampMixin, db.Model):
+    __tablename__ = 'production_jobs'
+
+    id = db.Column(db.Integer, primary_key=True)
+    order_id = db.Column(db.Integer, db.ForeignKey('orders.id', ondelete='CASCADE'), nullable=False, unique=True, index=True)
+    job_number = db.Column(db.String(40), unique=True, nullable=False, index=True)
+    status = db.Column(db.String(40), nullable=False, default='Planned')
+    scheduled_start = db.Column(db.Date)
+    due_date = db.Column(db.Date)
+    assigned_team = db.Column(db.String(160), nullable=False, default='')
+    wastage_percent = db.Column(db.Numeric(6, 2), nullable=False, default=0)
+    notes = db.Column(db.Text, nullable=False, default='')
+    created_by_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    order = db.relationship('Order')
+    bom_items = db.relationship('BomItem', back_populates='production_job', cascade='all, delete-orphan', lazy='selectin')
+
+    def to_dict(self):
+        return {'id': self.id, 'job_number': self.job_number, 'order_id': self.order_id, 'order_number': self.order.order_number if self.order else None, 'customer': self.order.customer_name if self.order else None, 'status': self.status, 'scheduled_start': self.scheduled_start.isoformat() if self.scheduled_start else None, 'due_date': self.due_date.isoformat() if self.due_date else None, 'assigned_team': self.assigned_team, 'wastage_percent': float(self.wastage_percent or 0), 'notes': self.notes, 'bom_items': [item.to_dict() for item in self.bom_items]}
+
+
+class BomItem(TimestampMixin, db.Model):
+    __tablename__ = 'bom_items'
+
+    id = db.Column(db.Integer, primary_key=True)
+    production_job_id = db.Column(db.Integer, db.ForeignKey('production_jobs.id', ondelete='CASCADE'), nullable=False, index=True)
+    product_id = db.Column(db.Integer, db.ForeignKey('products.id'), nullable=True)
+    description = db.Column(db.String(255), nullable=False)
+    quantity = db.Column(db.Numeric(12, 2), nullable=False, default=1)
+    unit = db.Column(db.String(40), nullable=False, default='piece')
+    wastage_percent = db.Column(db.Numeric(6, 2), nullable=False, default=0)
+    status = db.Column(db.String(40), nullable=False, default='Required')
+    production_job = db.relationship('ProductionJob', back_populates='bom_items')
+    product = db.relationship('Product')
+
+    def to_dict(self):
+        return {'id': self.id, 'product_id': self.product_id, 'product': self.product.name if self.product else None, 'description': self.description, 'quantity': float(self.quantity or 0), 'unit': self.unit, 'wastage_percent': float(self.wastage_percent or 0), 'planned_quantity': float((self.quantity or 0) * (1 + (self.wastage_percent or 0) / 100)), 'status': self.status}
+
+
 class Customer(TimestampMixin, db.Model):
     __tablename__ = 'customers'
 

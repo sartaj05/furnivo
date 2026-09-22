@@ -8,6 +8,7 @@ const navItems = [
   { to: '/app/catalog', label: 'Catalog', shortLabel: 'Catalog', roles: ['admin', 'sales', 'designer', 'client'] },
   { to: '/app/quotes', label: 'Quotations', shortLabel: 'Quotes', roles: ['admin', 'sales', 'designer'] },
   { to: '/app/configurator', label: 'Quote configurator', shortLabel: 'Configure', roles: ['admin', 'sales', 'designer'] },
+  { to: '/app/production', label: 'Production planning', shortLabel: 'Production', roles: ['admin', 'sales', 'designer'] },
   { to: '/app/customers', label: 'Customers', shortLabel: 'Clients', roles: ['admin', 'sales'] },
   { to: '/app/leads', label: 'Lead CRM', shortLabel: 'Leads', roles: ['admin', 'sales'] },
   { to: '/app/client-quotes', label: 'My quotations', shortLabel: 'Quotes', roles: ['client'] },

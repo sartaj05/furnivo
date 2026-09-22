@@ -1,4 +1,4 @@
-import { demoAuditLogs, demoCustomerPricing, demoCustomers, demoInventory, demoInvoices, demoLeads, demoNotifications, demoOrders, demoProducts, demoPurchaseOrders, demoQuotePresets, demoQuotes, demoReturns, demoSchedules, demoStockMovements, demoSuppliers, demoUsers, demoWarehouseStock, demoWarehouses } from '../data/demoData'
+import { demoAuditLogs, demoCustomerPricing, demoCustomers, demoInventory, demoInvoices, demoLeads, demoNotifications, demoOrders, demoProducts, demoProductionJobs, demoPurchaseOrders, demoQuotePresets, demoQuotes, demoReturns, demoSchedules, demoStockMovements, demoSuppliers, demoUsers, demoWarehouseStock, demoWarehouses } from '../data/demoData'
 
 const API_URL = import.meta.env.VITE_API_URL?.replace(/\/$/, '')
 const STORAGE_KEY = 'furnivo-demo-db'
@@ -65,6 +65,7 @@ function getLocalDb() {
       returns: parsed.returns || demoReturns,
       quotePresets: parsed.quotePresets || demoQuotePresets,
       customerPricing: parsed.customerPricing || demoCustomerPricing,
+      productionJobs: parsed.productionJobs || demoProductionJobs,
     }
     if (!parsed.users) localStorage.setItem(STORAGE_KEY, JSON.stringify(normalized))
     return normalized
@@ -90,6 +91,7 @@ function getLocalDb() {
     returns: demoReturns,
     quotePresets: demoQuotePresets,
     customerPricing: demoCustomerPricing,
+    productionJobs: demoProductionJobs,
   }
   localStorage.setItem(STORAGE_KEY, JSON.stringify(initial))
   return initial
@@ -643,6 +645,24 @@ export async function createReturn(payload) {
 export async function updateReturn(id, payload) {
   try { return await backendRequest(`/returns/${id}`, { method: 'PATCH', body: JSON.stringify(payload) }) }
   catch (error) { if (error.status) throw error; const db = getLocalDb(); db.returns = db.returns.map((item) => Number(item.id) === Number(id) ? { ...item, ...payload, credit_note: payload.status === 'Approved' ? { credit_note_number: `CN-${4000 + Number(id)}`, amount: item.amount, status: 'Issued' } : item.credit_note } : item); saveLocalDb(db); return { item: db.returns.find((item) => Number(item.id) === Number(id)), mode: 'demo' } }
+}
+
+export async function getProductionJobs() {
+  try { return await backendRequest('/production') }
+  catch (error) { if (error.status) throw error; await delay(); return { items: getLocalDb().productionJobs, mode: 'demo' } }
+}
+
+export async function createProductionJob(payload) {
+  try { return await backendRequest('/production', { method: 'POST', body: JSON.stringify(payload) }) }
+  catch (error) {
+    if (error.status) throw error
+    const db = getLocalDb(); const order = db.orders.find((item) => Number(item.id) === Number(payload.order_id)); const item = { id: Date.now(), job_number: `JOB-${5000 + db.productionJobs.length + 1}`, customer: order?.customer, order_number: order?.order_number, status: 'Planned', ...payload, bom_items: payload.bom_items || [] }; db.productionJobs = [item, ...db.productionJobs]; saveLocalDb(db); return { item, mode: 'demo' }
+  }
+}
+
+export async function updateProductionJob(id, payload) {
+  try { return await backendRequest(`/production/${id}`, { method: 'PATCH', body: JSON.stringify(payload) }) }
+  catch (error) { if (error.status) throw error; const db = getLocalDb(); db.productionJobs = db.productionJobs.map((item) => Number(item.id) === Number(id) ? { ...item, ...payload } : item); saveLocalDb(db); return { item: db.productionJobs.find((item) => Number(item.id) === Number(id)), mode: 'demo' } }
 }
 
 

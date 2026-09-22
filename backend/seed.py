@@ -1,6 +1,6 @@
 from werkzeug.security import generate_password_hash
 from .extensions import db
-from .models import AuditLog, CreditNote, Customer, CustomerPricing, DeliverySchedule, InventoryItem, Invoice, Lead, LeadNote, LeadTask, Notification, Order, Product, ProductVariant, PurchaseOrder, PurchaseOrderItem, Quote, QuoteClientAccess, QuoteItem, QuotePreset, ProjectUpdate, ReturnRequest, StockMovement, Supplier, User, Warehouse, WarehouseStock
+from .models import AuditLog, BomItem, CreditNote, Customer, CustomerPricing, DeliverySchedule, InventoryItem, Invoice, Lead, LeadNote, LeadTask, Notification, Order, Product, ProductVariant, ProductionJob, PurchaseOrder, PurchaseOrderItem, Quote, QuoteClientAccess, QuoteItem, QuotePreset, ProjectUpdate, ReturnRequest, StockMovement, Supplier, User, Warehouse, WarehouseStock
 
 
 DEMO_PRODUCTS = [
@@ -60,6 +60,7 @@ def seed_database():
     seed_warehouses()
     seed_returns()
     seed_configurator()
+    seed_production()
     seed_leads()
 
 
@@ -258,4 +259,18 @@ def seed_configurator():
     customer = db.session.scalar(db.select(Customer).where(Customer.company == 'Northline Studio'))
     if customer and not db.session.scalar(db.select(CustomerPricing).where(CustomerPricing.customer_id == customer.id)):
         db.session.add(CustomerPricing(customer_id=customer.id, tier='Gold', discount_percent=10))
+        db.session.commit()
+
+
+def seed_production():
+    if db.session.scalar(db.select(ProductionJob).limit(1)):
+        return
+    order = db.session.scalar(db.select(Order).where(Order.order_number == 'ORD-1001'))
+    admin = db.session.scalar(db.select(User).where(User.email == 'admin@furnivo.demo'))
+    sofa = db.session.scalar(db.select(Product).where(Product.sku == 'FUR-SOF-101'))
+    light = db.session.scalar(db.select(Product).where(Product.sku == 'INT-LGT-204'))
+    if order and admin and sofa and light:
+        job = ProductionJob(order_id=order.id, job_number='JOB-5001', status='Assembly', scheduled_start=__import__('datetime').date(2026, 9, 24), due_date=__import__('datetime').date(2026, 10, 10), assigned_team='North workshop team', wastage_percent=5, notes='Demo job card generated from approved quote.', created_by_id=admin.id)
+        job.bom_items = [BomItem(product_id=sofa.id, description='Aster Modular Sofa', quantity=2, unit=sofa.unit, wastage_percent=5), BomItem(product_id=light.id, description='Halo Pendant Light', quantity=2, unit=light.unit, wastage_percent=3)]
+        db.session.add(job)
         db.session.commit()
