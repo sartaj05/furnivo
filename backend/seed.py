@@ -1,6 +1,6 @@
 from werkzeug.security import generate_password_hash
 from .extensions import db
-from .models import AuditLog, Customer, DeliverySchedule, InventoryItem, Invoice, Lead, LeadNote, LeadTask, Notification, Order, Product, ProductVariant, PurchaseOrder, PurchaseOrderItem, Quote, QuoteClientAccess, QuoteItem, ProjectUpdate, StockMovement, Supplier, User, Warehouse, WarehouseStock
+from .models import AuditLog, CreditNote, Customer, DeliverySchedule, InventoryItem, Invoice, Lead, LeadNote, LeadTask, Notification, Order, Product, ProductVariant, PurchaseOrder, PurchaseOrderItem, Quote, QuoteClientAccess, QuoteItem, ProjectUpdate, ReturnRequest, StockMovement, Supplier, User, Warehouse, WarehouseStock
 
 
 DEMO_PRODUCTS = [
@@ -58,6 +58,7 @@ def seed_database():
     seed_audit_logs()
     seed_schedules()
     seed_warehouses()
+    seed_returns()
     seed_leads()
 
 
@@ -219,4 +220,15 @@ def seed_warehouses():
         db.session.add(WarehouseStock(warehouse_id=delhi.id, product_id=products[0].id, quantity=8, reserved_quantity=1))
         if len(products) > 1: db.session.add(WarehouseStock(warehouse_id=delhi.id, product_id=products[1].id, quantity=20, reserved_quantity=4))
         if len(products) > 2: db.session.add(WarehouseStock(warehouse_id=gurugram.id, product_id=products[2].id, quantity=900, reserved_quantity=200))
-    db.session.commit()
+        db.session.commit()
+
+
+def seed_returns():
+    if db.session.scalar(db.select(ReturnRequest).limit(1)):
+        return
+    order = db.session.scalar(db.select(Order).where(Order.order_number == 'ORD-1001'))
+    invoice = db.session.scalar(db.select(Invoice).where(Invoice.invoice_number == 'INV-2001'))
+    admin = db.session.scalar(db.select(User).where(User.email == 'admin@furnivo.demo'))
+    if order and invoice and admin:
+        item = ReturnRequest(order_id=order.id, invoice_id=invoice.id, customer_name=order.customer_name, reason='One light fixture arrived damaged', amount=12400, status='Requested', created_by_id=admin.id)
+        db.session.add(item); db.session.commit()

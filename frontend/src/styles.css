@@ -843,6 +843,8 @@ img { max-width: 100%; }
 .schedule-date strong { font-size: 24px; }
 .schedule-date span { color: var(--muted); }
 .warehouse-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin-bottom: 14px; }
+.return-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.return-card { display: grid; gap: 12px; }
 @media (max-width: 780px) { .customer-grid { grid-template-columns: 1fr; } }
 @media (max-width: 780px) { .client-quote-grid { grid-template-columns: 1fr; } }
 @media (max-width: 780px) { .order-grid, .order-status-grid { grid-template-columns: 1fr; } }
@@ -852,6 +854,7 @@ img { max-width: 100%; }
 @media (max-width: 780px) { .report-grid { grid-template-columns: 1fr; } }
 @media (max-width: 780px) { .schedule-grid { grid-template-columns: 1fr; } }
 @media (max-width: 780px) { .warehouse-grid { grid-template-columns: 1fr; } }
+@media (max-width: 780px) { .return-grid { grid-template-columns: 1fr; } }
 .lead-workspace { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(320px, .85fr); gap: 14px; align-items: start; }
 .lead-workspace .lead-grid { grid-template-columns: 1fr 1fr; }
 .lead-card { cursor: pointer; }

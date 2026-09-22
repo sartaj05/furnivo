@@ -599,6 +599,38 @@ class StockMovement(TimestampMixin, db.Model):
     def to_dict(self): return {'id': self.id, 'from_warehouse': self.from_warehouse.name if self.from_warehouse else None, 'to_warehouse': self.to_warehouse.name if self.to_warehouse else None, 'product': self.product.name if self.product else None, 'quantity': float(self.quantity or 0), 'movement_type': self.movement_type, 'reference': self.reference, 'created_at': self.created_at.isoformat()}
 
 
+class ReturnRequest(TimestampMixin, db.Model):
+    __tablename__ = 'return_requests'
+
+    id = db.Column(db.Integer, primary_key=True)
+    order_id = db.Column(db.Integer, db.ForeignKey('orders.id'), nullable=False, index=True)
+    invoice_id = db.Column(db.Integer, db.ForeignKey('invoices.id'), nullable=True, index=True)
+    customer_name = db.Column(db.String(180), nullable=False)
+    reason = db.Column(db.String(255), nullable=False)
+    amount = db.Column(db.Numeric(12, 2), nullable=False, default=0)
+    status = db.Column(db.String(40), nullable=False, default='Requested')
+    notes = db.Column(db.Text, nullable=False, default='')
+    created_by_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    order = db.relationship('Order')
+    invoice = db.relationship('Invoice')
+    credit_note = db.relationship('CreditNote', back_populates='return_request', uselist=False, cascade='all, delete-orphan')
+
+    def to_dict(self): return {'id': self.id, 'order_id': self.order_id, 'order_number': self.order.order_number if self.order else None, 'invoice_id': self.invoice_id, 'customer': self.customer_name, 'reason': self.reason, 'amount': float(self.amount or 0), 'status': self.status, 'notes': self.notes, 'credit_note': self.credit_note.to_dict() if self.credit_note else None, 'created_at': self.created_at.isoformat()}
+
+
+class CreditNote(TimestampMixin, db.Model):
+    __tablename__ = 'credit_notes'
+
+    id = db.Column(db.Integer, primary_key=True)
+    credit_note_number = db.Column(db.String(40), unique=True, nullable=False, index=True)
+    return_request_id = db.Column(db.Integer, db.ForeignKey('return_requests.id', ondelete='CASCADE'), nullable=False, unique=True)
+    amount = db.Column(db.Numeric(12, 2), nullable=False)
+    status = db.Column(db.String(40), nullable=False, default='Issued')
+    return_request = db.relationship('ReturnRequest', back_populates='credit_note')
+
+    def to_dict(self): return {'id': self.id, 'credit_note_number': self.credit_note_number, 'amount': float(self.amount or 0), 'status': self.status}
+
+
 class Customer(TimestampMixin, db.Model):
     __tablename__ = 'customers'
 

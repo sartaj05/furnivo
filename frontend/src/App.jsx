@@ -16,6 +16,7 @@ import ReportsPage from './pages/ReportsPage'
 import AuditPage from './pages/AuditPage'
 import SchedulesPage from './pages/SchedulesPage'
 import WarehousesPage from './pages/WarehousesPage'
+import ReturnsPage from './pages/ReturnsPage'
 import ProtectedRoute from './components/ProtectedRoute'
 
 export default function App() {
@@ -47,6 +48,7 @@ export default function App() {
         <Route path="/app/audit" element={<ProtectedRoute allowedRoles={['admin']}><AuditPage /></ProtectedRoute>} />
         <Route path="/app/schedules" element={<SchedulesPage />} />
         <Route path="/app/warehouses" element={<WarehousesPage />} />
+        <Route path="/app/returns" element={<ReturnsPage />} />
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />

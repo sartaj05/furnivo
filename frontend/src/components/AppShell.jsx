@@ -18,6 +18,7 @@ const navItems = [
   { to: '/app/audit', label: 'Audit log', shortLabel: 'Audit', roles: ['admin'] },
   { to: '/app/schedules', label: 'Delivery & installation', shortLabel: 'Schedule', roles: ['admin', 'sales', 'designer', 'client'] },
   { to: '/app/warehouses', label: 'Warehouses', shortLabel: 'Stock map', roles: ['admin', 'sales', 'designer'] },
+  { to: '/app/returns', label: 'Returns & refunds', shortLabel: 'Returns', roles: ['admin', 'sales', 'client'] },
 ]
 
 export default function AppShell({ title, eyebrow, actions, children }) {

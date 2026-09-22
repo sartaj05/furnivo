@@ -1,0 +1,16 @@
+import { useEffect, useState } from 'react'
+import AppShell from '../components/AppShell'
+import { createReturn, getInvoices, getOrders, getReturns, updateReturn } from '../lib/api'
+import { useAuth } from '../context/AuthContext'
+
+export default function ReturnsPage() {
+  const { user } = useAuth(); const canManage = ['admin', 'sales'].includes(user.role); const [items, setItems] = useState([]); const [orders, setOrders] = useState([]); const [invoices, setInvoices] = useState([]); const [showForm, setShowForm] = useState(false); const [form, setForm] = useState({ order_id: '', invoice_id: '', reason: '', amount: 0, notes: '' }); const [error, setError] = useState('')
+  async function load() { setItems((await getReturns()).items || []); setOrders((await getOrders()).items || []); setInvoices((await getInvoices()).items || []) }
+  useEffect(() => { load() }, [])
+  async function submit(e) { e.preventDefault(); try { await createReturn(form); setShowForm(false); await load() } catch (err) { setError(err.message) } }
+  async function status(item, value) { try { await updateReturn(item.id, { status: value }); await load() } catch (err) { setError(err.message) } }
+  return <AppShell title="Returns & refunds" eyebrow="After-sales care" actions={<button className="button button-small" onClick={() => setShowForm(!showForm)}>{showForm ? 'Close' : 'New return request'}</button>}>
+    {showForm && <form className="panel customer-editor" onSubmit={submit}><h3>Request a return or refund</h3><div className="form-grid form-grid-3"><label>Order<select required value={form.order_id} onChange={(e) => setForm({ ...form, order_id: e.target.value })}><option value="">Choose order</option>{orders.map((item) => <option value={item.id} key={item.id}>{item.order_number} · {item.customer}</option>)}</select></label><label>Invoice<select value={form.invoice_id} onChange={(e) => setForm({ ...form, invoice_id: e.target.value })}><option value="">Optional invoice</option>{invoices.map((item) => <option value={item.id} key={item.id}>{item.invoice_number}</option>)}</select></label><label>Refund amount<input required type="number" min="0.01" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} /></label><label className="form-span-3">Reason<input required value={form.reason} onChange={(e) => setForm({ ...form, reason: e.target.value })} /></label></div>{error && <div className="form-error">{error}</div>}<button className="button">Submit request</button></form>}
+    <section className="return-grid">{items.map((item) => <article className="panel return-card" key={item.id}><div className="panel-heading"><div><p className="eyebrow">{item.order_number}</p><h3>{item.customer}</h3></div>{canManage ? <select value={item.status} onChange={(e) => status(item, e.target.value)}><option>Requested</option><option>Approved</option><option>Rejected</option><option>Refunded</option></select> : <span className="status status-sent">{item.status}</span>}</div><p>{item.reason}</p><div className="order-meta"><span>Refund ₹{Number(item.amount || 0).toLocaleString('en-IN')}</span>{item.credit_note && <strong>{item.credit_note.credit_note_number}</strong>}</div></article>)}</section>
+  </AppShell>
+}

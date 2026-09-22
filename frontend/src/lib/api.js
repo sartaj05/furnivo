@@ -1,4 +1,4 @@
-import { demoAuditLogs, demoCustomers, demoInventory, demoInvoices, demoLeads, demoNotifications, demoOrders, demoProducts, demoPurchaseOrders, demoQuotes, demoSchedules, demoStockMovements, demoSuppliers, demoUsers, demoWarehouseStock, demoWarehouses } from '../data/demoData'
+import { demoAuditLogs, demoCustomers, demoInventory, demoInvoices, demoLeads, demoNotifications, demoOrders, demoProducts, demoPurchaseOrders, demoQuotes, demoReturns, demoSchedules, demoStockMovements, demoSuppliers, demoUsers, demoWarehouseStock, demoWarehouses } from '../data/demoData'
 
 const API_URL = import.meta.env.VITE_API_URL?.replace(/\/$/, '')
 const STORAGE_KEY = 'furnivo-demo-db'
@@ -62,6 +62,7 @@ function getLocalDb() {
       warehouses: parsed.warehouses || demoWarehouses,
       warehouseStock: parsed.warehouseStock || demoWarehouseStock,
       stockMovements: parsed.stockMovements || demoStockMovements,
+      returns: parsed.returns || demoReturns,
     }
     if (!parsed.users) localStorage.setItem(STORAGE_KEY, JSON.stringify(normalized))
     return normalized
@@ -84,6 +85,7 @@ function getLocalDb() {
     warehouses: demoWarehouses,
     warehouseStock: demoWarehouseStock,
     stockMovements: demoStockMovements,
+    returns: demoReturns,
   }
   localStorage.setItem(STORAGE_KEY, JSON.stringify(initial))
   return initial
@@ -580,6 +582,19 @@ export async function createWarehouse(payload) {
 export async function transferStock(payload) {
   try { return await backendRequest('/warehouses/transfer', { method: 'POST', body: JSON.stringify(payload) }) }
   catch (error) { if (error.status) throw error; const db = getLocalDb(); const source = db.warehouseStock.find((item) => Number(item.warehouse_id) === Number(payload.from_warehouse_id) && Number(item.product_id) === Number(payload.product_id)); const target = db.warehouseStock.find((item) => Number(item.warehouse_id) === Number(payload.to_warehouse_id) && Number(item.product_id) === Number(payload.product_id)); const quantity = Number(payload.quantity); if (!source || Number(source.available_quantity) < quantity) throw new Error('Not enough available stock.'); source.quantity -= quantity; source.available_quantity -= quantity; if (target) { target.quantity += quantity; target.available_quantity += quantity } const movement = { id: Date.now(), from_warehouse: source.warehouse, to_warehouse: target?.warehouse || 'New warehouse', product: source.product, quantity, movement_type: 'Transfer', reference: payload.reference || '', created_at: new Date().toISOString() }; db.stockMovements = [movement, ...db.stockMovements]; saveLocalDb(db); return { item: movement, mode: 'demo' } }
+}
+
+export async function getReturns() {
+  try { return await backendRequest('/returns') }
+  catch (error) { if (error.status) throw error; await delay(); return { items: getLocalDb().returns, mode: 'demo' } }
+}
+export async function createReturn(payload) {
+  try { return await backendRequest('/returns', { method: 'POST', body: JSON.stringify(payload) }) }
+  catch (error) { if (error.status) throw error; const db = getLocalDb(); const order = db.orders.find((item) => Number(item.id) === Number(payload.order_id)); const item = { id: Date.now(), order_id: order?.id, order_number: order?.order_number, customer: order?.customer, status: 'Requested', credit_note: null, created_at: new Date().toISOString(), ...payload, amount: Number(payload.amount) }; db.returns = [item, ...db.returns]; saveLocalDb(db); return { item, mode: 'demo' } }
+}
+export async function updateReturn(id, payload) {
+  try { return await backendRequest(`/returns/${id}`, { method: 'PATCH', body: JSON.stringify(payload) }) }
+  catch (error) { if (error.status) throw error; const db = getLocalDb(); db.returns = db.returns.map((item) => Number(item.id) === Number(id) ? { ...item, ...payload, credit_note: payload.status === 'Approved' ? { credit_note_number: `CN-${4000 + Number(id)}`, amount: item.amount, status: 'Issued' } : item.credit_note } : item); saveLocalDb(db); return { item: db.returns.find((item) => Number(item.id) === Number(id)), mode: 'demo' } }
 }
 
 
