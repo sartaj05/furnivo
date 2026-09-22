@@ -516,6 +516,16 @@ export async function updatePurchaseOrder(id, payload) {
   catch (error) { if (error.status) throw error; const db = getLocalDb(); db.purchaseOrders = db.purchaseOrders.map((item) => Number(item.id) === Number(id) ? { ...item, ...payload } : item); saveLocalDb(db); return { item: db.purchaseOrders.find((item) => Number(item.id) === Number(id)), mode: 'demo' } }
 }
 
+export async function getReportSummary() {
+  try { return await backendRequest('/reports/summary') }
+  catch (error) {
+    if (error.status) throw error
+    await delay()
+    const db = getLocalDb(); const quotes = db.quotes; const leads = db.leads; const orders = db.orders; const invoices = db.invoices; const payments = invoices.flatMap((item) => item.payments || [])
+    return { data: { quotes: { count: quotes.length, value: quotes.reduce((sum, item) => sum + Number(item.amount || 0), 0) }, leads: { count: leads.length, value: leads.reduce((sum, item) => sum + Number(item.value || 0), 0), won: leads.filter((item) => item.stage === 'Won').length }, orders: { count: orders.length, value: orders.reduce((sum, item) => sum + Number(item.amount || 0), 0) }, invoices: { count: invoices.length, value: invoices.reduce((sum, item) => sum + Number(item.total || 0), 0), paid: invoices.reduce((sum, item) => sum + Number(item.amount_paid || 0), 0), balance: invoices.reduce((sum, item) => sum + Number(item.balance || 0), 0) }, payments: { count: payments.length, value: payments.reduce((sum, item) => sum + Number(item.amount || 0), 0) }, inventory: { items: db.inventory.length, low_stock: db.inventory.filter((item) => item.is_low_stock).length, available_units: db.inventory.reduce((sum, item) => sum + Number(item.available_quantity || 0), 0) } }, mode: 'demo' }
+  }
+}
+
 
 export async function createProduct(payload) {
   try {

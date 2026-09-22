@@ -833,12 +833,17 @@ img { max-width: 100%; }
 .supplier-card p:not(.eyebrow) { color: var(--muted); font-size: 13px; }
 .procurement-list { display: grid; gap: 14px; }
 .procurement-card { display: grid; gap: 12px; }
+.report-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+.report-card { display: grid; gap: 8px; }
+.report-card > strong { font-size: 32px; }
+.report-card > span, .report-card > small { color: var(--muted); }
 @media (max-width: 780px) { .customer-grid { grid-template-columns: 1fr; } }
 @media (max-width: 780px) { .client-quote-grid { grid-template-columns: 1fr; } }
 @media (max-width: 780px) { .order-grid, .order-status-grid { grid-template-columns: 1fr; } }
 @media (max-width: 780px) { .inventory-grid, .inventory-edit-grid { grid-template-columns: 1fr; } }
 @media (max-width: 780px) { .invoice-grid { grid-template-columns: 1fr; } }
 @media (max-width: 780px) { .supplier-grid { grid-template-columns: 1fr; } }
+@media (max-width: 780px) { .report-grid { grid-template-columns: 1fr; } }
 .lead-workspace { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(320px, .85fr); gap: 14px; align-items: start; }
 .lead-workspace .lead-grid { grid-template-columns: 1fr 1fr; }
 .lead-card { cursor: pointer; }

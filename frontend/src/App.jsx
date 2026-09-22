@@ -12,6 +12,7 @@ import OrdersPage from './pages/OrdersPage'
 import InventoryPage from './pages/InventoryPage'
 import InvoicesPage from './pages/InvoicesPage'
 import ProcurementPage from './pages/ProcurementPage'
+import ReportsPage from './pages/ReportsPage'
 import ProtectedRoute from './components/ProtectedRoute'
 
 export default function App() {
@@ -39,6 +40,7 @@ export default function App() {
         <Route path="/app/inventory" element={<InventoryPage />} />
         <Route path="/app/invoices" element={<InvoicesPage />} />
         <Route path="/app/procurement" element={<ProcurementPage />} />
+        <Route path="/app/reports" element={<ProtectedRoute allowedRoles={['admin', 'sales']}><ReportsPage /></ProtectedRoute>} />
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />
