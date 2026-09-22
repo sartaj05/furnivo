@@ -553,6 +553,41 @@ class PaymentReconciliation(TimestampMixin, db.Model):
         return {'id': self.id, 'invoice_id': self.invoice_id, 'invoice_number': self.invoice.invoice_number if self.invoice else None, 'customer': self.invoice.customer_name if self.invoice else None, 'provider': self.provider, 'external_id': self.external_id, 'amount': float(self.amount or 0), 'refunded_amount': float(self.refunded_amount or 0), 'refundable_amount': float(max((self.amount or 0) - (self.refunded_amount or 0), 0)), 'status': self.status, 'refund_status': self.refund_status, 'provider_refund_id': self.provider_refund_id, 'dispute_reason': self.dispute_reason, 'created_at': self.created_at.isoformat()}
 
 
+class Contract(TimestampMixin, db.Model):
+    __tablename__ = 'contracts'
+
+    id = db.Column(db.Integer, primary_key=True)
+    contract_number = db.Column(db.String(40), unique=True, nullable=False, index=True)
+    quote_id = db.Column(db.Integer, db.ForeignKey('quotes.id', ondelete='CASCADE'), nullable=False, unique=True, index=True)
+    title = db.Column(db.String(180), nullable=False)
+    terms = db.Column(db.Text, nullable=False, default='')
+    status = db.Column(db.String(40), nullable=False, default='Draft')
+    locked = db.Column(db.Boolean, nullable=False, default=False)
+    signed_at = db.Column(db.DateTime(timezone=True))
+    created_by_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    quote = db.relationship('Quote')
+    signatures = db.relationship('ContractSignature', back_populates='contract', cascade='all, delete-orphan', lazy='selectin')
+
+    def to_dict(self):
+        return {'id': self.id, 'contract_number': self.contract_number, 'quote_id': self.quote_id, 'quote_number': self.quote.quote_number if self.quote else None, 'customer': self.quote.customer_name if self.quote else None, 'title': self.title, 'terms': self.terms, 'status': self.status, 'locked': self.locked, 'signed_at': self.signed_at.isoformat() if self.signed_at else None, 'signatures': [signature.to_dict() for signature in self.signatures]}
+
+
+class ContractSignature(TimestampMixin, db.Model):
+    __tablename__ = 'contract_signatures'
+
+    id = db.Column(db.Integer, primary_key=True)
+    contract_id = db.Column(db.Integer, db.ForeignKey('contracts.id', ondelete='CASCADE'), nullable=False, index=True)
+    signer_name = db.Column(db.String(160), nullable=False)
+    signer_email = db.Column(db.String(255), nullable=False, default='')
+    signer_role = db.Column(db.String(40), nullable=False, default='client')
+    signature_text = db.Column(db.String(255), nullable=False)
+    signed_at = db.Column(db.DateTime(timezone=True), default=utcnow, nullable=False)
+    ip_address = db.Column(db.String(80), nullable=False, default='')
+    contract = db.relationship('Contract', back_populates='signatures')
+
+    def to_dict(self): return {'id': self.id, 'signer_name': self.signer_name, 'signer_email': self.signer_email, 'signer_role': self.signer_role, 'signature_text': self.signature_text, 'signed_at': self.signed_at.isoformat()}
+
+
 class DeliverySchedule(TimestampMixin, db.Model):
     __tablename__ = 'delivery_schedules'
 

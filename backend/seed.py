@@ -1,6 +1,6 @@
 from werkzeug.security import generate_password_hash
 from .extensions import db
-from .models import AuditLog, BomItem, CreditNote, Customer, CustomerPricing, DeliverySchedule, InventoryItem, Invoice, Lead, LeadNote, LeadTask, Notification, Order, PaymentReconciliation, Product, ProductVariant, ProductionJob, PurchaseOrder, PurchaseOrderItem, Quote, QuoteClientAccess, QuoteItem, QuotePreset, ProjectUpdate, ReturnRequest, StockMovement, Supplier, User, Warehouse, WarehouseStock
+from .models import AuditLog, BomItem, Contract, CreditNote, Customer, CustomerPricing, DeliverySchedule, InventoryItem, Invoice, Lead, LeadNote, LeadTask, Notification, Order, PaymentReconciliation, Product, ProductVariant, ProductionJob, PurchaseOrder, PurchaseOrderItem, Quote, QuoteClientAccess, QuoteItem, QuotePreset, ProjectUpdate, ReturnRequest, StockMovement, Supplier, User, Warehouse, WarehouseStock
 
 
 DEMO_PRODUCTS = [
@@ -62,6 +62,7 @@ def seed_database():
     seed_configurator()
     seed_production()
     seed_reconciliation()
+    seed_contracts()
     seed_leads()
 
 
@@ -283,4 +284,14 @@ def seed_reconciliation():
     invoice = db.session.scalar(db.select(Invoice).where(Invoice.invoice_number == 'INV-2001'))
     if invoice:
         db.session.add(PaymentReconciliation(invoice_id=invoice.id, provider='Bank transfer', external_id='NEFT-001', amount=50000, status='Paid'))
+        db.session.commit()
+
+
+def seed_contracts():
+    if db.session.scalar(db.select(Contract).limit(1)):
+        return
+    quote = db.session.scalar(db.select(Quote).where(Quote.quote_number == 'Q-1042'))
+    admin = db.session.scalar(db.select(User).where(User.email == 'admin@furnivo.demo'))
+    if quote and admin:
+        db.session.add(Contract(contract_number='CTR-7001', quote_id=quote.id, title='Northline Studio project agreement', terms='1. Furnivo will deliver the approved scope and materials listed in the quotation.\n2. Production begins after written approval and agreed advance payment.\n3. Delivery and installation dates are scheduled after material confirmation.\n4. Variations require written approval and may change price or timeline.', status='Sent', created_by_id=admin.id))
         db.session.commit()

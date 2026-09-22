@@ -1,4 +1,4 @@
-import { demoAuditLogs, demoCustomerPricing, demoCustomers, demoInventory, demoInvoices, demoLeads, demoNotifications, demoOrders, demoPaymentReconciliations, demoProducts, demoProductionJobs, demoPurchaseOrders, demoQuotePresets, demoQuotes, demoReturns, demoSchedules, demoStockMovements, demoSuppliers, demoUsers, demoWarehouseStock, demoWarehouses } from '../data/demoData'
+import { demoAuditLogs, demoContracts, demoCustomerPricing, demoCustomers, demoInventory, demoInvoices, demoLeads, demoNotifications, demoOrders, demoPaymentReconciliations, demoProducts, demoProductionJobs, demoPurchaseOrders, demoQuotePresets, demoQuotes, demoReturns, demoSchedules, demoStockMovements, demoSuppliers, demoUsers, demoWarehouseStock, demoWarehouses } from '../data/demoData'
 
 const API_URL = import.meta.env.VITE_API_URL?.replace(/\/$/, '')
 const STORAGE_KEY = 'furnivo-demo-db'
@@ -67,6 +67,7 @@ function getLocalDb() {
       customerPricing: parsed.customerPricing || demoCustomerPricing,
       productionJobs: parsed.productionJobs || demoProductionJobs,
       paymentReconciliations: parsed.paymentReconciliations || demoPaymentReconciliations,
+      contracts: parsed.contracts || demoContracts,
     }
     if (!parsed.users) localStorage.setItem(STORAGE_KEY, JSON.stringify(normalized))
     return normalized
@@ -94,6 +95,7 @@ function getLocalDb() {
     customerPricing: demoCustomerPricing,
     productionJobs: demoProductionJobs,
     paymentReconciliations: demoPaymentReconciliations,
+    contracts: demoContracts,
   }
   localStorage.setItem(STORAGE_KEY, JSON.stringify(initial))
   return initial
@@ -686,6 +688,33 @@ export async function refundReconciledPayment(id, payload = {}) {
     if (error.status) throw error
     const db = getLocalDb(); const item = db.paymentReconciliations.find((entry) => Number(entry.id) === Number(id)); const amount = Number(payload.amount || item?.refundable_amount || 0); if (!item || amount <= 0 || amount > Number(item.refundable_amount)) throw new Error('Refund amount exceeds the refundable balance.'); item.refunded_amount += amount; item.refundable_amount -= amount; item.refund_status = item.refundable_amount === 0 ? 'Refunded' : 'Partially refunded'; const invoice = db.invoices.find((entry) => Number(entry.id) === Number(item.invoice_id)); if (invoice) { invoice.amount_paid = Math.max(Number(invoice.amount_paid) - amount, 0); invoice.balance = Math.max(Number(invoice.total) - invoice.amount_paid, 0) } saveLocalDb(db); return { item, mode: 'demo' }
   }
+}
+
+export async function getContracts() {
+  try { return await backendRequest('/contracts') }
+  catch (error) { if (error.status) throw error; await delay(); return { items: getLocalDb().contracts, mode: 'demo' } }
+}
+
+export async function createContract(payload) {
+  try { return await backendRequest('/contracts', { method: 'POST', body: JSON.stringify(payload) }) }
+  catch (error) { if (error.status) throw error; const db = getLocalDb(); const quote = db.quotes.find((item) => Number(item.database_id || item.id) === Number(payload.quote_id)); const item = { id: Date.now(), contract_number: `CTR-${7000 + db.contracts.length + 1}`, quote_id: payload.quote_id, quote_number: quote?.id, customer: quote?.customer, status: 'Sent', locked: false, signatures: [], ...payload }; db.contracts = [item, ...db.contracts]; saveLocalDb(db); return { item, mode: 'demo' } }
+}
+
+export async function signContract(id, signature_text) {
+  try { return await backendRequest(`/contracts/${id}/sign`, { method: 'POST', body: JSON.stringify({ signature_text }) }) }
+  catch (error) { if (error.status) throw error; const db = getLocalDb(); const item = db.contracts.find((contract) => Number(contract.id) === Number(id)); if (!item || item.locked) throw new Error('This contract is locked.'); item.status = 'Signed'; item.locked = true; item.signed_at = new Date().toISOString(); item.signatures = [{ id: Date.now(), signer_name: JSON.parse(localStorage.getItem('furnivo-user') || '{}').name || 'Client', signer_role: 'client', signature_text, signed_at: item.signed_at }]; saveLocalDb(db); return { item, mode: 'demo' } }
+}
+
+export async function updateContract(id, payload) {
+  try { return await backendRequest(`/contracts/${id}`, { method: 'PATCH', body: JSON.stringify(payload) }) }
+  catch (error) { if (error.status) throw error; const db = getLocalDb(); db.contracts = db.contracts.map((item) => Number(item.id) === Number(id) ? { ...item, ...payload } : item); saveLocalDb(db); return { item: db.contracts.find((item) => Number(item.id) === Number(id)), mode: 'demo' } }
+}
+
+export async function downloadContractPdf(contract) {
+  if (API_URL && contract.id) {
+    try { const token = localStorage.getItem('furnivo-token'); const response = await fetch(`${API_URL}/contracts/${contract.id}/pdf`, { headers: token ? { Authorization: `Bearer ${token}` } : {} }); if (!response.ok) throw new Error('Could not download contract.'); const blob = await response.blob(); const url = URL.createObjectURL(blob); const anchor = document.createElement('a'); anchor.href = url; anchor.download = `${contract.contract_number}.pdf`; anchor.click(); URL.revokeObjectURL(url); return { mode: 'api' } } catch (error) { if (error.status) throw error }
+  }
+  const body = `${contract.title}\n\n${contract.terms}\n\nStatus: ${contract.status}`; const url = URL.createObjectURL(new Blob([body], { type: 'text/plain' })); const anchor = document.createElement('a'); anchor.href = url; anchor.download = `${contract.contract_number}.txt`; anchor.click(); URL.revokeObjectURL(url); return { mode: 'demo' }
 }
 
 

@@ -863,6 +863,13 @@ img { max-width: 100%; }
 .reconciliation-card { display: grid; gap: 14px; }
 .reconciliation-meta { display: flex; justify-content: space-between; gap: 12px; color: var(--muted); font-size: 11px; word-break: break-all; }
 @media (max-width: 780px) { .reconciliation-grid { grid-template-columns: 1fr; } }
+.contract-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.contract-card { display: grid; gap: 12px; }
+.contract-card h4 { margin: 0; }
+.contract-terms { white-space: pre-line; color: var(--muted); line-height: 1.65; font-size: 13px; }
+.contract-signatures { padding: 10px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); color: var(--green); }
+.signature-input { min-width: 150px; border: 1px solid #d7dbd5; padding: 9px; border-radius: 9px; }
+@media (max-width: 780px) { .contract-grid { grid-template-columns: 1fr; } }
 .configurator-layout { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(300px, .65fr); gap: 14px; align-items: start; }
 .configurator-main { min-width: 0; }
 .configurator-fields { margin-bottom: 22px; }

@@ -16,6 +16,7 @@ const navItems = [
   { to: '/app/inventory', label: 'Inventory', shortLabel: 'Stock', roles: ['admin', 'sales', 'designer', 'client'] },
   { to: '/app/invoices', label: 'Invoices & payments', shortLabel: 'Invoices', roles: ['admin', 'sales', 'client'] },
   { to: '/app/payment-reconciliation', label: 'Payment reconciliation', shortLabel: 'Reconcile', roles: ['admin', 'sales', 'client'] },
+  { to: '/app/contracts', label: 'Contracts & signatures', shortLabel: 'Contracts', roles: ['admin', 'sales', 'designer', 'client'] },
   { to: '/app/procurement', label: 'Procurement', shortLabel: 'Buying', roles: ['admin', 'sales', 'designer'] },
   { to: '/app/reports', label: 'Reports & exports', shortLabel: 'Reports', roles: ['admin', 'sales'] },
   { to: '/app/audit', label: 'Audit log', shortLabel: 'Audit', roles: ['admin'] },

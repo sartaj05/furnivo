@@ -20,6 +20,7 @@ import ReturnsPage from './pages/ReturnsPage'
 import QuoteConfiguratorPage from './pages/QuoteConfiguratorPage'
 import ProductionPage from './pages/ProductionPage'
 import PaymentReconciliationPage from './pages/PaymentReconciliationPage'
+import ContractsPage from './pages/ContractsPage'
 import ProtectedRoute from './components/ProtectedRoute'
 
 export default function App() {
@@ -36,6 +37,7 @@ export default function App() {
         <Route path="/app/configurator" element={<ProtectedRoute allowedRoles={['admin', 'sales', 'designer']}><QuoteConfiguratorPage /></ProtectedRoute>} />
         <Route path="/app/production" element={<ProtectedRoute allowedRoles={['admin', 'sales', 'designer']}><ProductionPage /></ProtectedRoute>} />
         <Route path="/app/payment-reconciliation" element={<ProtectedRoute allowedRoles={['admin', 'sales', 'client']}><PaymentReconciliationPage /></ProtectedRoute>} />
+        <Route path="/app/contracts" element={<ContractsPage />} />
         <Route path="/app/customers" element={<ProtectedRoute allowedRoles={['admin', 'sales']}><CustomersPage /></ProtectedRoute>} />
         <Route
           path="/app/leads"
