@@ -1,4 +1,4 @@
-import { demoAuditLogs, demoCustomers, demoInventory, demoInvoices, demoLeads, demoNotifications, demoOrders, demoProducts, demoPurchaseOrders, demoQuotes, demoSchedules, demoSuppliers, demoUsers } from '../data/demoData'
+import { demoAuditLogs, demoCustomers, demoInventory, demoInvoices, demoLeads, demoNotifications, demoOrders, demoProducts, demoPurchaseOrders, demoQuotes, demoSchedules, demoStockMovements, demoSuppliers, demoUsers, demoWarehouseStock, demoWarehouses } from '../data/demoData'
 
 const API_URL = import.meta.env.VITE_API_URL?.replace(/\/$/, '')
 const STORAGE_KEY = 'furnivo-demo-db'
@@ -59,6 +59,9 @@ function getLocalDb() {
       purchaseOrders: parsed.purchaseOrders || demoPurchaseOrders,
       auditLogs: parsed.auditLogs || demoAuditLogs,
       schedules: parsed.schedules || demoSchedules,
+      warehouses: parsed.warehouses || demoWarehouses,
+      warehouseStock: parsed.warehouseStock || demoWarehouseStock,
+      stockMovements: parsed.stockMovements || demoStockMovements,
     }
     if (!parsed.users) localStorage.setItem(STORAGE_KEY, JSON.stringify(normalized))
     return normalized
@@ -78,6 +81,9 @@ function getLocalDb() {
     purchaseOrders: demoPurchaseOrders,
     auditLogs: demoAuditLogs,
     schedules: demoSchedules,
+    warehouses: demoWarehouses,
+    warehouseStock: demoWarehouseStock,
+    stockMovements: demoStockMovements,
   }
   localStorage.setItem(STORAGE_KEY, JSON.stringify(initial))
   return initial
@@ -553,6 +559,27 @@ export async function createSchedule(payload) {
 export async function updateSchedule(id, payload) {
   try { return await backendRequest(`/schedules/${id}`, { method: 'PATCH', body: JSON.stringify(payload) }) }
   catch (error) { if (error.status) throw error; const db = getLocalDb(); db.schedules = db.schedules.map((item) => Number(item.id) === Number(id) ? { ...item, ...payload } : item); saveLocalDb(db); return { item: db.schedules.find((item) => Number(item.id) === Number(id)), mode: 'demo' } }
+}
+
+export async function getWarehouses() {
+  try { return await backendRequest('/warehouses') }
+  catch (error) { if (error.status) throw error; await delay(); return { items: getLocalDb().warehouses, mode: 'demo' } }
+}
+export async function getWarehouseStock() {
+  try { return await backendRequest('/warehouses/stock') }
+  catch (error) { if (error.status) throw error; await delay(); return { items: getLocalDb().warehouseStock, mode: 'demo' } }
+}
+export async function getStockMovements() {
+  try { return await backendRequest('/warehouses/movements') }
+  catch (error) { if (error.status) throw error; await delay(); return { items: getLocalDb().stockMovements, mode: 'demo' } }
+}
+export async function createWarehouse(payload) {
+  try { return await backendRequest('/warehouses', { method: 'POST', body: JSON.stringify(payload) }) }
+  catch (error) { if (error.status) throw error; const db = getLocalDb(); const item = { id: Date.now(), ...payload }; db.warehouses = [...db.warehouses, item]; saveLocalDb(db); return { item, mode: 'demo' } }
+}
+export async function transferStock(payload) {
+  try { return await backendRequest('/warehouses/transfer', { method: 'POST', body: JSON.stringify(payload) }) }
+  catch (error) { if (error.status) throw error; const db = getLocalDb(); const source = db.warehouseStock.find((item) => Number(item.warehouse_id) === Number(payload.from_warehouse_id) && Number(item.product_id) === Number(payload.product_id)); const target = db.warehouseStock.find((item) => Number(item.warehouse_id) === Number(payload.to_warehouse_id) && Number(item.product_id) === Number(payload.product_id)); const quantity = Number(payload.quantity); if (!source || Number(source.available_quantity) < quantity) throw new Error('Not enough available stock.'); source.quantity -= quantity; source.available_quantity -= quantity; if (target) { target.quantity += quantity; target.available_quantity += quantity } const movement = { id: Date.now(), from_warehouse: source.warehouse, to_warehouse: target?.warehouse || 'New warehouse', product: source.product, quantity, movement_type: 'Transfer', reference: payload.reference || '', created_at: new Date().toISOString() }; db.stockMovements = [movement, ...db.stockMovements]; saveLocalDb(db); return { item: movement, mode: 'demo' } }
 }
 
 

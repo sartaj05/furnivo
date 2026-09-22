@@ -552,6 +552,53 @@ class DeliverySchedule(TimestampMixin, db.Model):
     def to_dict(self):
         return {'id': self.id, 'order_id': self.order_id, 'order_number': self.order.order_number if self.order else None, 'customer': self.order.customer_name if self.order else None, 'schedule_type': self.schedule_type, 'scheduled_date': self.scheduled_date.isoformat(), 'time_slot': self.time_slot, 'assigned_team': self.assigned_team, 'status': self.status, 'proof_url': self.proof_url, 'notes': self.notes}
 
+class Warehouse(TimestampMixin, db.Model):
+    __tablename__ = 'warehouses'
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(160), nullable=False, unique=True)
+    address = db.Column(db.String(255), nullable=False, default='')
+    manager = db.Column(db.String(120), nullable=False, default='')
+    is_active = db.Column(db.Boolean, nullable=False, default=True)
+
+    def to_dict(self): return {'id': self.id, 'name': self.name, 'address': self.address, 'manager': self.manager, 'is_active': self.is_active}
+
+
+class WarehouseStock(TimestampMixin, db.Model):
+    __tablename__ = 'warehouse_stock'
+    __table_args__ = (db.UniqueConstraint('warehouse_id', 'product_id', 'variant_id', name='uq_warehouse_stock_selection'),)
+
+    id = db.Column(db.Integer, primary_key=True)
+    warehouse_id = db.Column(db.Integer, db.ForeignKey('warehouses.id', ondelete='CASCADE'), nullable=False, index=True)
+    product_id = db.Column(db.Integer, db.ForeignKey('products.id'), nullable=False, index=True)
+    variant_id = db.Column(db.Integer, db.ForeignKey('product_variants.id'), nullable=True)
+    quantity = db.Column(db.Numeric(12, 2), nullable=False, default=0)
+    reserved_quantity = db.Column(db.Numeric(12, 2), nullable=False, default=0)
+    warehouse = db.relationship('Warehouse')
+    product = db.relationship('Product')
+    variant = db.relationship('ProductVariant')
+
+    def to_dict(self): return {'id': self.id, 'warehouse_id': self.warehouse_id, 'warehouse': self.warehouse.name if self.warehouse else None, 'product_id': self.product_id, 'product': self.product.name if self.product else None, 'sku': self.variant.sku if self.variant else self.product.sku if self.product else None, 'quantity': float(self.quantity or 0), 'reserved_quantity': float(self.reserved_quantity or 0), 'available_quantity': float(max((self.quantity or 0) - (self.reserved_quantity or 0), 0))}
+
+
+class StockMovement(TimestampMixin, db.Model):
+    __tablename__ = 'stock_movements'
+
+    id = db.Column(db.Integer, primary_key=True)
+    from_warehouse_id = db.Column(db.Integer, db.ForeignKey('warehouses.id'), nullable=True)
+    to_warehouse_id = db.Column(db.Integer, db.ForeignKey('warehouses.id'), nullable=True)
+    product_id = db.Column(db.Integer, db.ForeignKey('products.id'), nullable=False)
+    quantity = db.Column(db.Numeric(12, 2), nullable=False)
+    movement_type = db.Column(db.String(40), nullable=False, default='Transfer')
+    reference = db.Column(db.String(120), nullable=False, default='')
+    created_by_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    product = db.relationship('Product')
+    from_warehouse = db.relationship('Warehouse', foreign_keys=[from_warehouse_id])
+    to_warehouse = db.relationship('Warehouse', foreign_keys=[to_warehouse_id])
+
+    def to_dict(self): return {'id': self.id, 'from_warehouse': self.from_warehouse.name if self.from_warehouse else None, 'to_warehouse': self.to_warehouse.name if self.to_warehouse else None, 'product': self.product.name if self.product else None, 'quantity': float(self.quantity or 0), 'movement_type': self.movement_type, 'reference': self.reference, 'created_at': self.created_at.isoformat()}
+
+
 class Customer(TimestampMixin, db.Model):
     __tablename__ = 'customers'
 

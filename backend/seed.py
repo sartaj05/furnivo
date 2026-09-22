@@ -1,6 +1,6 @@
 from werkzeug.security import generate_password_hash
 from .extensions import db
-from .models import AuditLog, Customer, DeliverySchedule, InventoryItem, Invoice, Lead, LeadNote, LeadTask, Notification, Order, Product, ProductVariant, PurchaseOrder, PurchaseOrderItem, Quote, QuoteClientAccess, QuoteItem, ProjectUpdate, Supplier, User
+from .models import AuditLog, Customer, DeliverySchedule, InventoryItem, Invoice, Lead, LeadNote, LeadTask, Notification, Order, Product, ProductVariant, PurchaseOrder, PurchaseOrderItem, Quote, QuoteClientAccess, QuoteItem, ProjectUpdate, StockMovement, Supplier, User, Warehouse, WarehouseStock
 
 
 DEMO_PRODUCTS = [
@@ -57,6 +57,7 @@ def seed_database():
     seed_procurement()
     seed_audit_logs()
     seed_schedules()
+    seed_warehouses()
     seed_leads()
 
 
@@ -204,3 +205,18 @@ def seed_schedules():
         db.session.add(DeliverySchedule(order_id=order.id, schedule_type='Delivery', scheduled_date=__import__('datetime').date(2026, 10, 18), time_slot='10:00–12:00', assigned_team='North Delhi delivery team', status='Scheduled', created_by_id=admin.id))
         db.session.add(DeliverySchedule(order_id=order.id, schedule_type='Installation', scheduled_date=__import__('datetime').date(2026, 10, 20), time_slot='09:00–13:00', assigned_team='Furnivo installation team', status='Scheduled', created_by_id=admin.id))
         db.session.commit()
+
+
+def seed_warehouses():
+    if db.session.scalar(db.select(Warehouse).limit(1)):
+        return
+    admin = db.session.scalar(db.select(User).where(User.email == 'admin@furnivo.demo'))
+    products = db.session.scalars(db.select(Product).order_by(Product.id)).all()
+    delhi = Warehouse(name='Delhi warehouse', address='Okhla Phase II, New Delhi', manager='Ravi Kumar')
+    gurugram = Warehouse(name='Gurugram warehouse', address='Sector 18, Gurugram', manager='Nisha Verma')
+    db.session.add_all([delhi, gurugram]); db.session.flush()
+    if products:
+        db.session.add(WarehouseStock(warehouse_id=delhi.id, product_id=products[0].id, quantity=8, reserved_quantity=1))
+        if len(products) > 1: db.session.add(WarehouseStock(warehouse_id=delhi.id, product_id=products[1].id, quantity=20, reserved_quantity=4))
+        if len(products) > 2: db.session.add(WarehouseStock(warehouse_id=gurugram.id, product_id=products[2].id, quantity=900, reserved_quantity=200))
+    db.session.commit()
