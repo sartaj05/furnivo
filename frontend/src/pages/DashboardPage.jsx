@@ -1,5 +1,7 @@
+import { useEffect, useState } from 'react'
 import AppShell from '../components/AppShell'
 import { useAuth } from '../context/AuthContext'
+import { getLeads, getProducts, getQuotes } from '../lib/api'
 
 const roleCopy = {
   admin: {
@@ -25,8 +27,28 @@ const roleCopy = {
 }
 
 export default function DashboardPage() {
-  const { user } = useAuth()
+  const { user, mode } = useAuth()
+  const [metrics, setMetrics] = useState({ products: 0, quotes: 0, quoteValue: 0, leads: 0, followUps: 0, pipelineValue: 0 })
   const copy = roleCopy[user.role]
+
+  useEffect(() => {
+    async function loadMetrics() {
+      const products = await getProducts().catch(() => ({ items: [] }))
+      const quoteResult = ['admin', 'sales', 'designer'].includes(user.role) ? await getQuotes().catch(() => ({ items: [] })) : { items: [] }
+      const leadResult = ['admin', 'sales'].includes(user.role) ? await getLeads().catch(() => ({ items: [] })) : { items: [] }
+      const quotes = quoteResult.items || []
+      const leads = leadResult.items || []
+      setMetrics({
+        products: (products.items || []).length,
+        quotes: quotes.filter((quote) => quote.status !== 'Rejected').length,
+        quoteValue: quotes.filter((quote) => quote.status !== 'Rejected').reduce((sum, quote) => sum + Number(quote.amount || 0), 0),
+        leads: leads.filter((lead) => !['Won', 'Lost'].includes(lead.stage)).length,
+        followUps: leads.reduce((sum, lead) => sum + (lead.tasks || []).filter((task) => !task.is_done).length, 0),
+        pipelineValue: leads.filter((lead) => ['Qualified', 'Proposal'].includes(lead.stage)).reduce((sum, lead) => sum + Number(lead.value || 0), 0),
+      })
+    }
+    loadMetrics()
+  }, [user.role])
 
   return (
     <AppShell title={copy.title} eyebrow={copy.subtitle}>
@@ -39,26 +61,26 @@ export default function DashboardPage() {
         <div className="welcome-metric">
           <span>Workspace</span>
           <strong>Ready</strong>
-          <small>Demo-safe data layer active</small>
+          <small>{mode === 'demo' ? 'Local demo data active' : 'Connected to live API'}</small>
         </div>
       </section>
 
       <section className="metric-grid">
         <article className="metric-card">
           <span>Catalog products</span>
-          <strong>148</strong>
-          <small>Across 12 active collections</small>
+          <strong>{metrics.products}</strong>
+          <small>Active catalog products</small>
         </article>
         <article className="metric-card">
           <span>Open quotations</span>
-          <strong>23</strong>
-          <small>₹18.4L potential value</small>
+          <strong>{metrics.quotes}</strong>
+          <small>₹{metrics.quoteValue.toLocaleString('en-IN')} total value</small>
         </article>
         {(user.role === 'admin' || user.role === 'sales') && (
           <article className="metric-card">
             <span>Active leads</span>
-            <strong>31</strong>
-            <small>8 need follow-up this week</small>
+            <strong>{metrics.leads}</strong>
+            <small>{metrics.followUps} open follow-up tasks</small>
           </article>
         )}
         <article className="metric-card">
@@ -87,7 +109,7 @@ export default function DashboardPage() {
           <p className="eyebrow eyebrow-light">This week</p>
           <h3>Keep the warm leads warm.</h3>
           <p>Eight active enquiries are due for follow-up. Prioritize qualified and proposal-stage opportunities while buyer intent is still fresh.</p>
-          <div className="accent-number">₹7.35L</div>
+          <div className="accent-number">₹{metrics.pipelineValue.toLocaleString('en-IN')}</div>
           <small>Value currently in Qualified + Proposal</small>
         </article>
       </section>

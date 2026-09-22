@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useState } from 'react'
 import AppShell from '../components/AppShell'
-import { createQuote, downloadQuotePdf, getCustomers, getProducts, getQuotes } from '../lib/api'
+import { useAuth } from '../context/AuthContext'
+import { createQuote, downloadQuotePdf, getCustomers, getProducts, getQuotes, updateQuoteStatus } from '../lib/api'
 
 const emptyLine = () => ({ product_id: '', variant_id: '', description: '', sku: '', quantity: 1, unit: 'piece', unit_price: 0 })
 
 export default function QuotesPage() {
+  const { user } = useAuth()
   const [quotes, setQuotes] = useState([])
   const [products, setProducts] = useState([])
   const [customers, setCustomers] = useState([])
@@ -61,6 +63,11 @@ export default function QuotesPage() {
     } catch (err) { setError(err.message) }
   }
 
+  async function changeStatus(quote, status) {
+    await updateQuoteStatus(quote.database_id || quote.id, status)
+    await load()
+  }
+
   return (
     <AppShell title="Quotations" eyebrow="Commercial documents" actions={<button className="button button-small" onClick={() => setShowForm(!showForm)}>{showForm ? 'Close' : 'New quotation'}</button>}>
       {showForm && (
@@ -94,7 +101,7 @@ export default function QuotesPage() {
         </form>
       )}
 
-      <section className="panel table-panel"><div className="table-wrap"><table><thead><tr><th>Quote</th><th>Customer</th><th>Lines</th><th>Date</th><th>Status</th><th className="align-right">Amount</th><th>PDF</th></tr></thead><tbody>{quotes.map((quote) => <tr key={quote.id}><td data-label="Quote"><strong>{quote.id}</strong></td><td data-label="Customer">{quote.customer}</td><td data-label="Lines">{quote.items?.length || '—'}</td><td data-label="Date">{quote.date}</td><td data-label="Status"><span className={`status status-${quote.status.toLowerCase()}`}>{quote.status}</span></td><td data-label="Amount" className="align-right">₹{Number(quote.amount).toLocaleString('en-IN')}</td><td data-label="PDF"><button className="button-link" onClick={() => downloadQuotePdf(quote)}>Download</button></td></tr>)}</tbody></table></div></section>
+      <section className="panel table-panel"><div className="table-wrap"><table><thead><tr><th>Quote</th><th>Customer</th><th>Lines</th><th>Date</th><th>Status</th><th className="align-right">Amount</th><th>PDF</th></tr></thead><tbody>{quotes.map((quote) => <tr key={quote.id}><td data-label="Quote"><strong>{quote.id}</strong></td><td data-label="Customer">{quote.customer}</td><td data-label="Lines">{quote.items?.length || '—'}</td><td data-label="Date">{quote.date}</td><td data-label="Status">{user.role === 'admin' || user.role === 'sales' ? <select className="status-select" value={quote.status} onChange={(e) => changeStatus(quote, e.target.value)}><option>Draft</option><option>Sent</option><option>Approved</option><option>Rejected</option></select> : <span className={`status status-${quote.status.toLowerCase()}`}>{quote.status}</span>}</td><td data-label="Amount" className="align-right">₹{Number(quote.amount).toLocaleString('en-IN')}</td><td data-label="PDF"><button className="button-link" onClick={() => downloadQuotePdf(quote)}>Download</button></td></tr>)}</tbody></table></div></section>
     </AppShell>
   )
 }

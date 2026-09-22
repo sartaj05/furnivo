@@ -2,13 +2,28 @@ import { demoCustomers, demoLeads, demoProducts, demoQuotes, demoUsers } from '.
 
 const API_URL = import.meta.env.VITE_API_URL?.replace(/\/$/, '')
 const STORAGE_KEY = 'furnivo-demo-db'
+const REQUEST_TIMEOUT_MS = 8000
 
 const delay = (ms = 180) => new Promise((resolve) => setTimeout(resolve, ms))
+
+function setDataMode(mode) {
+  localStorage.setItem('furnivo-mode', mode)
+  window.dispatchEvent(new CustomEvent('furnivo-mode-change', { detail: mode }))
+}
 
 function getLocalDb() {
   const existing = localStorage.getItem(STORAGE_KEY)
   if (existing) {
-    const parsed = JSON.parse(existing)
+    let parsed
+    try {
+      parsed = JSON.parse(existing)
+    } catch {
+      parsed = null
+    }
+    if (!parsed || typeof parsed !== 'object') {
+      localStorage.removeItem(STORAGE_KEY)
+      return getLocalDb()
+    }
     const normalized = {
       products: parsed.products || demoProducts,
       quotes: parsed.quotes || demoQuotes,
@@ -39,14 +54,27 @@ async function backendRequest(path, options = {}) {
   if (!API_URL) throw new Error('Backend URL not configured')
 
   const token = localStorage.getItem('furnivo-token')
-  const response = await fetch(`${API_URL}${path}`, {
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...(options.headers || {}),
-    },
-  })
+  const controller = new AbortController()
+  const timeout = window.setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS)
+
+  let response
+  try {
+    response = await fetch(`${API_URL}${path}`, {
+      ...options,
+      signal: options.signal || controller.signal,
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...(options.headers || {}),
+      },
+    })
+  } catch (error) {
+    // A network failure means the demo adapter is the correct source of data.
+    setDataMode('demo')
+    throw error
+  } finally {
+    window.clearTimeout(timeout)
+  }
 
   const data = await response.json().catch(() => ({}))
   if (!response.ok) {
@@ -54,6 +82,7 @@ async function backendRequest(path, options = {}) {
     error.status = response.status
     throw error
   }
+  setDataMode('api')
   return data
 }
 
@@ -174,6 +203,24 @@ export async function createQuote(payload) {
   }
 }
 
+export async function updateQuoteStatus(id, status) {
+  try {
+    return await backendRequest(`/quotes/${id}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status }),
+    })
+  } catch (error) {
+    if (error.status) throw error
+    await delay()
+    const db = getLocalDb()
+    db.quotes = db.quotes.map((quote) => quote.database_id === id || quote.id === id
+      ? { ...quote, status }
+      : quote)
+    saveLocalDb(db)
+    return { item: db.quotes.find((quote) => quote.database_id === id || quote.id === id), mode: 'demo' }
+  }
+}
+
 export async function getLeads() {
   try { return await backendRequest('/leads') }
   catch (error) {
@@ -200,6 +247,33 @@ export async function updateLead(id, payload) {
     if (error.status) throw error
     const db = getLocalDb(); db.leads = db.leads.map((lead) => Number(lead.id) === Number(id) ? { ...lead, ...payload } : lead); saveLocalDb(db)
     return { item: db.leads.find((lead) => Number(lead.id) === Number(id)), mode: 'demo' }
+  }
+}
+
+export async function createLead(payload) {
+  try {
+    return await backendRequest('/leads', { method: 'POST', body: JSON.stringify(payload) })
+  } catch (error) {
+    if (error.status) throw error
+    await delay()
+    const db = getLocalDb()
+    const lead = {
+      id: Math.max(0, ...db.leads.map((item) => Number(item.id) || 0)) + 1,
+      email: '',
+      phone: '',
+      source: 'Website',
+      stage: 'New',
+      value: 0,
+      owner_id: null,
+      owner: null,
+      notes: [],
+      tasks: [],
+      ...payload,
+      value: Number(payload.value || 0),
+    }
+    db.leads = [lead, ...db.leads]
+    saveLocalDb(db)
+    return { item: lead, mode: 'demo' }
   }
 }
 
@@ -329,6 +403,7 @@ export async function uploadProductImage(file) {
       return data
     } catch (error) {
       if (error.status) throw error
+      setDataMode('demo')
     }
   }
 

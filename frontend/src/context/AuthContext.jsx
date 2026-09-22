@@ -1,4 +1,4 @@
-import { createContext, useContext, useMemo, useState } from 'react'
+import { createContext, useContext, useEffect, useMemo, useState } from 'react'
 import * as api from '../lib/api'
 
 const AuthContext = createContext(null)
@@ -9,6 +9,15 @@ export function AuthProvider({ children }) {
     return saved ? JSON.parse(saved) : null
   })
   const [mode, setMode] = useState(() => localStorage.getItem('furnivo-mode') || 'demo')
+
+  useEffect(() => {
+    function handleModeChange(event) {
+      setMode(event.detail || localStorage.getItem('furnivo-mode') || 'demo')
+    }
+
+    window.addEventListener('furnivo-mode-change', handleModeChange)
+    return () => window.removeEventListener('furnivo-mode-change', handleModeChange)
+  }, [])
 
   function persistSession(result) {
     localStorage.setItem('furnivo-token', result.token)

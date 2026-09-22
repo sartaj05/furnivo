@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import AppShell from '../components/AppShell'
-import { addLeadNote, addLeadTask, getLeads, updateLead, updateLeadStage, updateLeadTask } from '../lib/api'
+import { addLeadNote, addLeadTask, createLead, getLeads, updateLead, updateLeadStage, updateLeadTask } from '../lib/api'
 
 const stages = ['New', 'Qualified', 'Proposal', 'Won', 'Lost']
 
@@ -10,6 +10,9 @@ export default function LeadsPage() {
   const [selectedId, setSelectedId] = useState(null)
   const [note, setNote] = useState('')
   const [task, setTask] = useState({ title: '', due_date: '' })
+  const [showForm, setShowForm] = useState(false)
+  const [form, setForm] = useState({ name: '', company: '', email: '', phone: '', source: 'Website', value: 0, owner_id: '' })
+  const [error, setError] = useState('')
 
   async function load() {
     const result = await getLeads()
@@ -27,7 +30,29 @@ export default function LeadsPage() {
   async function submitTask(event) { event.preventDefault(); if (!task.title.trim()) return; await addLeadTask(selected.id, task); setTask({ title: '', due_date: '' }); await load() }
   async function toggleTask(taskItem) { await updateLeadTask(selected.id, taskItem.id, { is_done: !taskItem.is_done }); await load() }
 
-  return <AppShell title="Lead CRM" eyebrow="Sales pipeline">
+  async function submitLead(event) {
+    event.preventDefault()
+    setError('')
+    try {
+      await createLead(form)
+      setForm({ name: '', company: '', email: '', phone: '', source: 'Website', value: 0, owner_id: '' })
+      setShowForm(false)
+      await load()
+    } catch (err) {
+      setError(err.message || 'Unable to create lead')
+    }
+  }
+
+  return <AppShell title="Lead CRM" eyebrow="Sales pipeline" actions={<button className="button button-small" onClick={() => setShowForm((value) => !value)}>{showForm ? 'Close' : 'New lead'}</button>}>
+    {showForm && <form className="panel customer-editor" onSubmit={submitLead}><div className="panel-heading"><div><p className="eyebrow">Lead capture</p><h3>Add a new enquiry</h3></div><button type="button" className="text-button dark-text-button" onClick={() => setShowForm(false)}>Close</button></div><div className="form-grid form-grid-3">
+      <label>Name<input required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></label>
+      <label>Company<input value={form.company} onChange={(e) => setForm({ ...form, company: e.target.value })} /></label>
+      <label>Phone<input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} /></label>
+      <label>Email<input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></label>
+      <label>Source<select value={form.source} onChange={(e) => setForm({ ...form, source: e.target.value })}><option>Website</option><option>Referral</option><option>Instagram</option><option>Exhibition</option><option>Other</option></select></label>
+      <label>Opportunity value<input type="number" min="0" value={form.value} onChange={(e) => setForm({ ...form, value: e.target.value })} /></label>
+      <label>Owner<select value={form.owner_id} onChange={(e) => setForm({ ...form, owner_id: e.target.value })}><option value="">Current user</option>{team.map((member) => <option value={member.id} key={member.id}>{member.name}</option>)}</select></label>
+    </div>{error && <div className="form-error">{error}</div>}<button className="button">Create lead</button></form>}
     <section className="crm-summary">{stages.slice(0, 4).map((stage) => { const stageLeads = leads.filter((lead) => lead.stage === stage); const total = stageLeads.reduce((sum, lead) => sum + Number(lead.value), 0); return <div key={stage}><span>{stage}</span><strong>{stageLeads.length}</strong><small>₹{total.toLocaleString('en-IN')}</small></div> })}</section>
 
     <div className="lead-workspace">
