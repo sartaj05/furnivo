@@ -75,6 +75,16 @@ VITE_API_URL = https://YOUR-API-NAME.onrender.com/api
 
 After the first API deploy, replace the placeholder frontend/API URLs in the Render dashboard and redeploy the frontend.
 
+## CI/CD release gate
+
+`.github/workflows/ci.yml` runs backend tests, migration checks, frontend tests, and the production build on every pull request and push. On a successful push to `main`, it triggers Render only when this GitHub secret exists:
+
+```text
+RENDER_DEPLOY_HOOK_URL=https://api.render.com/deploy/srv-...
+```
+
+If `FURNIVO_HEALTH_URL` is also configured, the workflow waits for `/api/health` to return successfully after the deploy starts. The Render start command runs `flask db upgrade` before Gunicorn, so schema changes are applied before the API accepts traffic.
+
 ## Keeping the free API warm
 
 The repository includes `.github/workflows/health-check.yml`. It calls the deployed health endpoint every five minutes:

@@ -3,7 +3,7 @@ services:
     name: furnivo-api
     runtime: python
     buildCommand: pip install -r backend/requirements.txt
-    startCommand: gunicorn --chdir . --workers 1 --threads 4 --timeout 120 --bind 0.0.0.0:$PORT backend.app:app
+    startCommand: flask --app backend.app db upgrade && gunicorn --chdir . --workers 1 --threads 4 --timeout 120 --bind 0.0.0.0:$PORT backend.app:app
     healthCheckPath: /api/health
     envVars:
       - key: DATABASE_URL
