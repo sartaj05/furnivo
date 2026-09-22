@@ -7,3 +7,4 @@ psycopg[binary]>=3.2,<4
 PyMySQL>=1.1,<2
 cloudinary>=1.41,<2
 reportlab>=4.2,<5
+pytest>=8.3,<9

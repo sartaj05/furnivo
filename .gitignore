@@ -1,5 +1,6 @@
 node_modules/
 dist/
+frontend/coverage/
 .venv/
 __pycache__/
 *.pyc
@@ -10,5 +11,7 @@ backend/uploads/*
 !backend/uploads/.gitkeep
 backend/backups/*
 !backend/backups/.gitkeep
+backend/tests/.backups/
+backend/tests/.uploads/
 .env
 *.sqlite3

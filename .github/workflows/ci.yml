@@ -14,6 +14,7 @@ jobs:
         with:
           python-version: '3.12'
       - run: pip install -r backend/requirements.txt
+      - run: pytest backend/tests -q
       - run: python -m compileall backend
 
   frontend:
@@ -24,6 +25,8 @@ jobs:
         with:
           node-version: '20'
       - run: npm install
+        working-directory: frontend
+      - run: npm test
         working-directory: frontend
       - run: npm run build
         working-directory: frontend
