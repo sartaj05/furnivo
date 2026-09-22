@@ -13,6 +13,7 @@ const navItems = [
   { to: '/app/orders', label: 'Orders & projects', shortLabel: 'Orders', roles: ['admin', 'sales', 'designer', 'client'] },
   { to: '/app/inventory', label: 'Inventory', shortLabel: 'Stock', roles: ['admin', 'sales', 'designer', 'client'] },
   { to: '/app/invoices', label: 'Invoices & payments', shortLabel: 'Invoices', roles: ['admin', 'sales', 'client'] },
+  { to: '/app/procurement', label: 'Procurement', shortLabel: 'Buying', roles: ['admin', 'sales', 'designer'] },
 ]
 
 export default function AppShell({ title, eyebrow, actions, children }) {

@@ -1,4 +1,4 @@
-import { demoCustomers, demoInventory, demoInvoices, demoLeads, demoNotifications, demoOrders, demoProducts, demoQuotes, demoUsers } from '../data/demoData'
+import { demoCustomers, demoInventory, demoInvoices, demoLeads, demoNotifications, demoOrders, demoProducts, demoPurchaseOrders, demoQuotes, demoSuppliers, demoUsers } from '../data/demoData'
 
 const API_URL = import.meta.env.VITE_API_URL?.replace(/\/$/, '')
 const STORAGE_KEY = 'furnivo-demo-db'
@@ -55,6 +55,8 @@ function getLocalDb() {
       inventory: parsed.inventory || demoInventory,
       notifications: parsed.notifications || demoNotifications,
       invoices: parsed.invoices || demoInvoices,
+      suppliers: parsed.suppliers || demoSuppliers,
+      purchaseOrders: parsed.purchaseOrders || demoPurchaseOrders,
     }
     if (!parsed.users) localStorage.setItem(STORAGE_KEY, JSON.stringify(normalized))
     return normalized
@@ -70,6 +72,8 @@ function getLocalDb() {
     inventory: demoInventory,
     notifications: demoNotifications,
     invoices: demoInvoices,
+    suppliers: demoSuppliers,
+    purchaseOrders: demoPurchaseOrders,
   }
   localStorage.setItem(STORAGE_KEY, JSON.stringify(initial))
   return initial
@@ -485,6 +489,31 @@ export async function recordPayment(id, payload) {
     const db = getLocalDb(); const invoice = db.invoices.find((item) => Number(item.id) === Number(id)); const amount = Number(payload.amount || 0); if (!invoice || amount <= 0 || amount > Number(invoice.balance)) throw new Error('Payment amount is invalid.')
     const payment = { id: Date.now(), amount, method: payload.method || 'Bank transfer', reference: payload.reference || '', paid_at: new Date().toISOString() }; invoice.amount_paid = Number(invoice.amount_paid || 0) + amount; invoice.balance = Math.max(Number(invoice.total) - invoice.amount_paid, 0); invoice.status = invoice.balance === 0 ? 'Paid' : 'Partially Paid'; invoice.payments = [payment, ...(invoice.payments || [])]; saveLocalDb(db); return { item: invoice, mode: 'demo' }
   }
+}
+
+export async function getSuppliers() {
+  try { return await backendRequest('/procurement/suppliers') }
+  catch (error) { if (error.status) throw error; await delay(); return { items: getLocalDb().suppliers, mode: 'demo' } }
+}
+
+export async function createSupplier(payload) {
+  try { return await backendRequest('/procurement/suppliers', { method: 'POST', body: JSON.stringify(payload) }) }
+  catch (error) { if (error.status) throw error; const db = getLocalDb(); const item = { id: Date.now(), ...payload }; db.suppliers = [item, ...db.suppliers]; saveLocalDb(db); return { item, mode: 'demo' } }
+}
+
+export async function getPurchaseOrders() {
+  try { return await backendRequest('/procurement/purchase-orders') }
+  catch (error) { if (error.status) throw error; await delay(); return { items: getLocalDb().purchaseOrders, mode: 'demo' } }
+}
+
+export async function createPurchaseOrder(payload) {
+  try { return await backendRequest('/procurement/purchase-orders', { method: 'POST', body: JSON.stringify(payload) }) }
+  catch (error) { if (error.status) throw error; const db = getLocalDb(); const supplier = db.suppliers.find((item) => Number(item.id) === Number(payload.supplier_id)); const items = (payload.items || []).map((item, index) => ({ id: Date.now() + index, ...item, quantity: Number(item.quantity), unit_cost: Number(item.unit_cost), line_total: Number(item.quantity) * Number(item.unit_cost) })); const po = { id: Date.now(), po_number: `PO-${3001 + db.purchaseOrders.length}`, supplier_id: supplier?.id, supplier: supplier?.name, status: 'Draft', order_date: new Date().toISOString().slice(0, 10), expected_date: payload.expected_date || '', notes: payload.notes || '', total: items.reduce((sum, item) => sum + item.line_total, 0), items }; db.purchaseOrders = [po, ...db.purchaseOrders]; saveLocalDb(db); return { item: po, mode: 'demo' } }
+}
+
+export async function updatePurchaseOrder(id, payload) {
+  try { return await backendRequest(`/procurement/purchase-orders/${id}`, { method: 'PATCH', body: JSON.stringify(payload) }) }
+  catch (error) { if (error.status) throw error; const db = getLocalDb(); db.purchaseOrders = db.purchaseOrders.map((item) => Number(item.id) === Number(id) ? { ...item, ...payload } : item); saveLocalDb(db); return { item: db.purchaseOrders.find((item) => Number(item.id) === Number(id)), mode: 'demo' } }
 }
 
 

@@ -448,6 +448,60 @@ class Payment(TimestampMixin, db.Model):
     def to_dict(self):
         return {'id': self.id, 'amount': float(self.amount or 0), 'method': self.method, 'reference': self.reference, 'paid_at': self.paid_at.isoformat()}
 
+
+class Supplier(TimestampMixin, db.Model):
+    __tablename__ = 'suppliers'
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(180), nullable=False, unique=True)
+    email = db.Column(db.String(255), nullable=False, default='')
+    phone = db.Column(db.String(60), nullable=False, default='')
+    notes = db.Column(db.Text, nullable=False, default='')
+    is_active = db.Column(db.Boolean, nullable=False, default=True)
+
+    def to_dict(self):
+        return {'id': self.id, 'name': self.name, 'email': self.email, 'phone': self.phone, 'notes': self.notes, 'is_active': self.is_active}
+
+
+class PurchaseOrder(TimestampMixin, db.Model):
+    __tablename__ = 'purchase_orders'
+
+    id = db.Column(db.Integer, primary_key=True)
+    po_number = db.Column(db.String(40), unique=True, nullable=False, index=True)
+    supplier_id = db.Column(db.Integer, db.ForeignKey('suppliers.id'), nullable=False, index=True)
+    status = db.Column(db.String(40), nullable=False, default='Draft')
+    order_date = db.Column(db.Date, nullable=False)
+    expected_date = db.Column(db.Date)
+    notes = db.Column(db.Text, nullable=False, default='')
+    created_by_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    supplier = db.relationship('Supplier')
+    items = db.relationship('PurchaseOrderItem', back_populates='purchase_order', cascade='all, delete-orphan', lazy='selectin')
+
+    @property
+    def total(self):
+        return sum((item.line_total for item in self.items), 0)
+
+    def to_dict(self):
+        return {'id': self.id, 'po_number': self.po_number, 'supplier_id': self.supplier_id, 'supplier': self.supplier.name if self.supplier else None, 'status': self.status, 'order_date': self.order_date.isoformat(), 'expected_date': self.expected_date.isoformat() if self.expected_date else None, 'notes': self.notes, 'total': float(self.total), 'items': [item.to_dict() for item in self.items]}
+
+
+class PurchaseOrderItem(TimestampMixin, db.Model):
+    __tablename__ = 'purchase_order_items'
+
+    id = db.Column(db.Integer, primary_key=True)
+    purchase_order_id = db.Column(db.Integer, db.ForeignKey('purchase_orders.id', ondelete='CASCADE'), nullable=False, index=True)
+    product_id = db.Column(db.Integer, db.ForeignKey('products.id'), nullable=False)
+    description = db.Column(db.String(255), nullable=False)
+    quantity = db.Column(db.Numeric(12, 2), nullable=False, default=1)
+    unit_cost = db.Column(db.Numeric(12, 2), nullable=False, default=0)
+    purchase_order = db.relationship('PurchaseOrder', back_populates='items')
+    product = db.relationship('Product')
+
+    @property
+    def line_total(self): return (self.quantity or 0) * (self.unit_cost or 0)
+
+    def to_dict(self): return {'id': self.id, 'product_id': self.product_id, 'description': self.description, 'quantity': float(self.quantity or 0), 'unit_cost': float(self.unit_cost or 0), 'line_total': float(self.line_total)}
+
 class Customer(TimestampMixin, db.Model):
     __tablename__ = 'customers'
 

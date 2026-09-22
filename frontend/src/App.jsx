@@ -11,6 +11,7 @@ import ClientQuotesPage from './pages/ClientQuotesPage'
 import OrdersPage from './pages/OrdersPage'
 import InventoryPage from './pages/InventoryPage'
 import InvoicesPage from './pages/InvoicesPage'
+import ProcurementPage from './pages/ProcurementPage'
 import ProtectedRoute from './components/ProtectedRoute'
 
 export default function App() {
@@ -37,6 +38,7 @@ export default function App() {
         <Route path="/app/orders" element={<OrdersPage />} />
         <Route path="/app/inventory" element={<InventoryPage />} />
         <Route path="/app/invoices" element={<InvoicesPage />} />
+        <Route path="/app/procurement" element={<ProcurementPage />} />
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />

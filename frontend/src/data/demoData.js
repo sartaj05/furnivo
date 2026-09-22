@@ -160,3 +160,6 @@ export const demoNotifications = [
 export const demoInvoices = [
   { id: 1, invoice_number: 'INV-2001', order_id: 1, order_number: 'ORD-1001', customer: 'Northline Studio', issue_date: '2026-09-18', due_date: '2026-10-03', status: 'Partially Paid', subtotal: 158000, tax_amount: 28440, total: 186440, amount_paid: 50000, balance: 136440, payment_link: '/pay/INV-2001', payments: [{ id: 1, amount: 50000, method: 'Bank transfer', reference: 'NEFT-001', paid_at: '2026-09-19T10:00:00.000Z' }] },
 ]
+
+export const demoSuppliers = [{ id: 1, name: 'Oak & Co. Furnishings', email: 'orders@oakco.demo', phone: '+91 98000 10001', notes: 'Primary timber and furniture supplier' }]
+export const demoPurchaseOrders = [{ id: 1, po_number: 'PO-3001', supplier_id: 1, supplier: 'Oak & Co. Furnishings', status: 'Confirmed', order_date: '2026-09-19', expected_date: '2026-10-05', total: 260000, items: [{ id: 1, product_id: 1, description: 'Aster Modular Sofa', quantity: 4, unit_cost: 65000, line_total: 260000 }] }]

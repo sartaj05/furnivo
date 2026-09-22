@@ -1,6 +1,6 @@
 from werkzeug.security import generate_password_hash
 from .extensions import db
-from .models import Customer, InventoryItem, Invoice, Lead, LeadNote, LeadTask, Notification, Order, Product, ProductVariant, Quote, QuoteClientAccess, QuoteItem, ProjectUpdate, User
+from .models import Customer, InventoryItem, Invoice, Lead, LeadNote, LeadTask, Notification, Order, Product, ProductVariant, PurchaseOrder, PurchaseOrderItem, Quote, QuoteClientAccess, QuoteItem, ProjectUpdate, Supplier, User
 
 
 DEMO_PRODUCTS = [
@@ -54,6 +54,7 @@ def seed_database():
     seed_inventory()
     seed_notifications()
     seed_invoices()
+    seed_procurement()
     seed_leads()
 
 
@@ -166,4 +167,18 @@ def seed_invoices():
     if not order or not admin:
         return
     db.session.add(Invoice(invoice_number='INV-2001', order_id=order.id, customer_id=order.customer_id, customer_name=order.customer_name, issue_date=__import__('datetime').date(2026, 9, 18), due_date=__import__('datetime').date(2026, 10, 3), status='Partially Paid', subtotal=order.quote.subtotal, tax_amount=order.quote.tax_amount, total=order.quote.total, amount_paid=50000, payment_link='/pay/INV-2001', created_by_id=admin.id))
+    db.session.commit()
+
+
+def seed_procurement():
+    if db.session.scalar(db.select(Supplier).limit(1)):
+        return
+    supplier = Supplier(name='Oak & Co. Furnishings', email='orders@oakco.demo', phone='+91 98000 10001', notes='Primary timber and furniture supplier')
+    db.session.add(supplier); db.session.flush()
+    product = db.session.scalar(db.select(Product).where(Product.sku == 'FUR-SOF-101'))
+    admin = db.session.scalar(db.select(User).where(User.email == 'admin@furnivo.demo'))
+    if product and admin:
+        po = PurchaseOrder(po_number='PO-3001', supplier_id=supplier.id, status='Confirmed', order_date=__import__('datetime').date(2026, 9, 19), expected_date=__import__('datetime').date(2026, 10, 5), created_by_id=admin.id)
+        po.items.append(PurchaseOrderItem(product_id=product.id, description=product.name, quantity=4, unit_cost=65000))
+        db.session.add(po)
     db.session.commit()
