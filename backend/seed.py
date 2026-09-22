@@ -1,6 +1,6 @@
 from werkzeug.security import generate_password_hash
 from .extensions import db
-from .models import AuditLog, BomItem, CreditNote, Customer, CustomerPricing, DeliverySchedule, InventoryItem, Invoice, Lead, LeadNote, LeadTask, Notification, Order, Product, ProductVariant, ProductionJob, PurchaseOrder, PurchaseOrderItem, Quote, QuoteClientAccess, QuoteItem, QuotePreset, ProjectUpdate, ReturnRequest, StockMovement, Supplier, User, Warehouse, WarehouseStock
+from .models import AuditLog, BomItem, CreditNote, Customer, CustomerPricing, DeliverySchedule, InventoryItem, Invoice, Lead, LeadNote, LeadTask, Notification, Order, PaymentReconciliation, Product, ProductVariant, ProductionJob, PurchaseOrder, PurchaseOrderItem, Quote, QuoteClientAccess, QuoteItem, QuotePreset, ProjectUpdate, ReturnRequest, StockMovement, Supplier, User, Warehouse, WarehouseStock
 
 
 DEMO_PRODUCTS = [
@@ -61,6 +61,7 @@ def seed_database():
     seed_returns()
     seed_configurator()
     seed_production()
+    seed_reconciliation()
     seed_leads()
 
 
@@ -273,4 +274,13 @@ def seed_production():
         job = ProductionJob(order_id=order.id, job_number='JOB-5001', status='Assembly', scheduled_start=__import__('datetime').date(2026, 9, 24), due_date=__import__('datetime').date(2026, 10, 10), assigned_team='North workshop team', wastage_percent=5, notes='Demo job card generated from approved quote.', created_by_id=admin.id)
         job.bom_items = [BomItem(product_id=sofa.id, description='Aster Modular Sofa', quantity=2, unit=sofa.unit, wastage_percent=5), BomItem(product_id=light.id, description='Halo Pendant Light', quantity=2, unit=light.unit, wastage_percent=3)]
         db.session.add(job)
+        db.session.commit()
+
+
+def seed_reconciliation():
+    if db.session.scalar(db.select(PaymentReconciliation).limit(1)):
+        return
+    invoice = db.session.scalar(db.select(Invoice).where(Invoice.invoice_number == 'INV-2001'))
+    if invoice:
+        db.session.add(PaymentReconciliation(invoice_id=invoice.id, provider='Bank transfer', external_id='NEFT-001', amount=50000, status='Paid'))
         db.session.commit()

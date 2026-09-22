@@ -534,6 +534,25 @@ class PaymentIntent(TimestampMixin, db.Model):
         return {'id': self.id, 'invoice_id': self.invoice_id, 'provider': self.provider, 'external_id': self.external_id, 'checkout_url': self.checkout_url, 'amount': float(self.amount or 0), 'status': self.status}
 
 
+class PaymentReconciliation(TimestampMixin, db.Model):
+    __tablename__ = 'payment_reconciliations'
+
+    id = db.Column(db.Integer, primary_key=True)
+    invoice_id = db.Column(db.Integer, db.ForeignKey('invoices.id', ondelete='CASCADE'), nullable=False, index=True)
+    provider = db.Column(db.String(40), nullable=False, default='Manual')
+    external_id = db.Column(db.String(180), nullable=False, unique=True, index=True)
+    amount = db.Column(db.Numeric(12, 2), nullable=False, default=0)
+    refunded_amount = db.Column(db.Numeric(12, 2), nullable=False, default=0)
+    status = db.Column(db.String(40), nullable=False, default='Paid')
+    refund_status = db.Column(db.String(40), nullable=False, default='Not refunded')
+    provider_refund_id = db.Column(db.String(180), nullable=False, default='')
+    dispute_reason = db.Column(db.String(255), nullable=False, default='')
+    invoice = db.relationship('Invoice')
+
+    def to_dict(self):
+        return {'id': self.id, 'invoice_id': self.invoice_id, 'invoice_number': self.invoice.invoice_number if self.invoice else None, 'customer': self.invoice.customer_name if self.invoice else None, 'provider': self.provider, 'external_id': self.external_id, 'amount': float(self.amount or 0), 'refunded_amount': float(self.refunded_amount or 0), 'refundable_amount': float(max((self.amount or 0) - (self.refunded_amount or 0), 0)), 'status': self.status, 'refund_status': self.refund_status, 'provider_refund_id': self.provider_refund_id, 'dispute_reason': self.dispute_reason, 'created_at': self.created_at.isoformat()}
+
+
 class DeliverySchedule(TimestampMixin, db.Model):
     __tablename__ = 'delivery_schedules'
 

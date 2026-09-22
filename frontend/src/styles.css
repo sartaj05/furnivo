@@ -859,6 +859,10 @@ img { max-width: 100%; }
 .bom-item small { color: var(--muted); margin-top: 3px; }
 @media (max-width: 780px) { .production-grid { grid-template-columns: 1fr; } .bom-line { grid-template-columns: 1fr 1fr; } }
 @media (max-width: 520px) { .bom-line { grid-template-columns: 1fr; } }
+.reconciliation-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.reconciliation-card { display: grid; gap: 14px; }
+.reconciliation-meta { display: flex; justify-content: space-between; gap: 12px; color: var(--muted); font-size: 11px; word-break: break-all; }
+@media (max-width: 780px) { .reconciliation-grid { grid-template-columns: 1fr; } }
 .configurator-layout { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(300px, .65fr); gap: 14px; align-items: start; }
 .configurator-main { min-width: 0; }
 .configurator-fields { margin-bottom: 22px; }

@@ -39,6 +39,7 @@ def create_app(config_object=Config):
     from .routes.returns import returns_bp
     from .routes.configurator import configurator_bp
     from .routes.production import production_bp
+    from .routes.reconciliation import reconciliation_bp
 
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(products_bp, url_prefix='/api/products')
@@ -59,6 +60,7 @@ def create_app(config_object=Config):
     app.register_blueprint(returns_bp, url_prefix='/api/returns')
     app.register_blueprint(configurator_bp, url_prefix='/api/quote-config')
     app.register_blueprint(production_bp, url_prefix='/api/production')
+    app.register_blueprint(reconciliation_bp, url_prefix='/api/payment-reconciliation')
 
     if app.config.get('AUTO_SEED'):
         with app.app_context():

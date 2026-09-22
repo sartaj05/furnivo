@@ -1,4 +1,4 @@
-import { demoAuditLogs, demoCustomerPricing, demoCustomers, demoInventory, demoInvoices, demoLeads, demoNotifications, demoOrders, demoProducts, demoProductionJobs, demoPurchaseOrders, demoQuotePresets, demoQuotes, demoReturns, demoSchedules, demoStockMovements, demoSuppliers, demoUsers, demoWarehouseStock, demoWarehouses } from '../data/demoData'
+import { demoAuditLogs, demoCustomerPricing, demoCustomers, demoInventory, demoInvoices, demoLeads, demoNotifications, demoOrders, demoPaymentReconciliations, demoProducts, demoProductionJobs, demoPurchaseOrders, demoQuotePresets, demoQuotes, demoReturns, demoSchedules, demoStockMovements, demoSuppliers, demoUsers, demoWarehouseStock, demoWarehouses } from '../data/demoData'
 
 const API_URL = import.meta.env.VITE_API_URL?.replace(/\/$/, '')
 const STORAGE_KEY = 'furnivo-demo-db'
@@ -66,6 +66,7 @@ function getLocalDb() {
       quotePresets: parsed.quotePresets || demoQuotePresets,
       customerPricing: parsed.customerPricing || demoCustomerPricing,
       productionJobs: parsed.productionJobs || demoProductionJobs,
+      paymentReconciliations: parsed.paymentReconciliations || demoPaymentReconciliations,
     }
     if (!parsed.users) localStorage.setItem(STORAGE_KEY, JSON.stringify(normalized))
     return normalized
@@ -92,6 +93,7 @@ function getLocalDb() {
     quotePresets: demoQuotePresets,
     customerPricing: demoCustomerPricing,
     productionJobs: demoProductionJobs,
+    paymentReconciliations: demoPaymentReconciliations,
   }
   localStorage.setItem(STORAGE_KEY, JSON.stringify(initial))
   return initial
@@ -663,6 +665,27 @@ export async function createProductionJob(payload) {
 export async function updateProductionJob(id, payload) {
   try { return await backendRequest(`/production/${id}`, { method: 'PATCH', body: JSON.stringify(payload) }) }
   catch (error) { if (error.status) throw error; const db = getLocalDb(); db.productionJobs = db.productionJobs.map((item) => Number(item.id) === Number(id) ? { ...item, ...payload } : item); saveLocalDb(db); return { item: db.productionJobs.find((item) => Number(item.id) === Number(id)), mode: 'demo' } }
+}
+
+export async function getPaymentReconciliations() {
+  try { return await backendRequest('/payment-reconciliation') }
+  catch (error) { if (error.status) throw error; await delay(); return { items: getLocalDb().paymentReconciliations, mode: 'demo' } }
+}
+
+export async function reconcilePayment(payload) {
+  try { return await backendRequest('/payment-reconciliation', { method: 'POST', body: JSON.stringify(payload) }) }
+  catch (error) {
+    if (error.status) throw error
+    const db = getLocalDb(); const invoice = db.invoices.find((item) => Number(item.id) === Number(payload.invoice_id)); const item = { id: Date.now(), invoice_id: invoice?.id, invoice_number: invoice?.invoice_number, customer: invoice?.customer, provider: payload.provider || 'Manual', external_id: payload.external_id, amount: Number(payload.amount), refunded_amount: 0, refundable_amount: Number(payload.amount), status: payload.status || 'Paid', refund_status: 'Not refunded', provider_refund_id: '', dispute_reason: payload.dispute_reason || '', created_at: new Date().toISOString() }; if (item.status === 'Paid' && invoice) { invoice.amount_paid += item.amount; invoice.balance = Math.max(Number(invoice.total) - invoice.amount_paid, 0) } db.paymentReconciliations = [item, ...db.paymentReconciliations]; saveLocalDb(db); return { item, mode: 'demo' }
+  }
+}
+
+export async function refundReconciledPayment(id, payload = {}) {
+  try { return await backendRequest(`/payment-reconciliation/${id}/refund`, { method: 'POST', body: JSON.stringify(payload) }) }
+  catch (error) {
+    if (error.status) throw error
+    const db = getLocalDb(); const item = db.paymentReconciliations.find((entry) => Number(entry.id) === Number(id)); const amount = Number(payload.amount || item?.refundable_amount || 0); if (!item || amount <= 0 || amount > Number(item.refundable_amount)) throw new Error('Refund amount exceeds the refundable balance.'); item.refunded_amount += amount; item.refundable_amount -= amount; item.refund_status = item.refundable_amount === 0 ? 'Refunded' : 'Partially refunded'; const invoice = db.invoices.find((entry) => Number(entry.id) === Number(item.invoice_id)); if (invoice) { invoice.amount_paid = Math.max(Number(invoice.amount_paid) - amount, 0); invoice.balance = Math.max(Number(invoice.total) - invoice.amount_paid, 0) } saveLocalDb(db); return { item, mode: 'demo' }
+  }
 }
 
 
