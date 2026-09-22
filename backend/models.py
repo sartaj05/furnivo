@@ -954,6 +954,27 @@ class LeadTask(TimestampMixin, db.Model):
         }
 
 
+class MediaAsset(TimestampMixin, db.Model):
+    __tablename__ = 'media_assets'
+
+    id = db.Column(db.Integer, primary_key=True)
+    provider = db.Column(db.String(40), nullable=False, default='local')
+    public_id = db.Column(db.String(255), nullable=False, default='')
+    url = db.Column(db.String(1000), nullable=False)
+    resource_type = db.Column(db.String(30), nullable=False, default='image')
+    folder = db.Column(db.String(255), nullable=False, default='')
+    entity_type = db.Column(db.String(60), nullable=False, default='unlinked')
+    entity_id = db.Column(db.String(120), nullable=False, default='')
+    original_filename = db.Column(db.String(255), nullable=False, default='')
+    bytes = db.Column(db.Integer, nullable=False, default=0)
+    is_active = db.Column(db.Boolean, nullable=False, default=True, index=True)
+    uploaded_by_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    uploaded_by = db.relationship('User')
+
+    def to_dict(self):
+        return {'id': self.id, 'provider': self.provider, 'public_id': self.public_id, 'url': self.url, 'resource_type': self.resource_type, 'folder': self.folder, 'entity_type': self.entity_type, 'entity_id': self.entity_id, 'original_filename': self.original_filename, 'bytes': self.bytes, 'is_active': self.is_active, 'uploaded_by': self.uploaded_by.public_dict() if self.uploaded_by else None, 'created_at': self.created_at.isoformat()}
+
+
 class FieldVisit(TimestampMixin, db.Model):
     __tablename__ = 'field_visits'
 

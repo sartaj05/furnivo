@@ -29,14 +29,24 @@ def save_asset(file_storage, folder='furnivo/uploads'):
             resource_type='image',
             transformation=[{'quality': 'auto', 'fetch_format': 'auto'}],
         )
-        return {'url': result['secure_url'], 'provider': 'cloudinary', 'public_id': result.get('public_id')}
+        return {'url': result['secure_url'], 'provider': 'cloudinary', 'public_id': result.get('public_id', ''), 'resource_type': result.get('resource_type', 'image'), 'folder': result.get('asset_folder', result.get('folder', '')), 'bytes': int(result.get('bytes', 0) or 0), 'original_filename': file_storage.filename}
 
     safe_name = secure_filename(file_storage.filename)
     filename = f'{uuid4().hex[:12]}-{safe_name}'
     target = Path(current_app.config['UPLOAD_FOLDER']) / filename
     file_storage.save(target)
-    return {'url': f'/uploads/{filename}', 'provider': 'local', 'filename': filename}
+    return {'url': f'/uploads/{filename}', 'provider': 'local', 'filename': filename, 'public_id': '', 'resource_type': 'image', 'folder': '', 'bytes': int(file_storage.content_length or 0), 'original_filename': file_storage.filename}
 
 
 def save_product_image(file_storage):
     return save_asset(file_storage, folder='furnivo/products')
+
+
+def delete_asset(public_id, resource_type='image'):
+    if not public_id or not current_app.config.get('CLOUDINARY_URL'):
+        return {'provider': 'local', 'deleted': False}
+    import cloudinary
+    import cloudinary.uploader
+    cloudinary.config(cloudinary_url=current_app.config['CLOUDINARY_URL'])
+    result = cloudinary.uploader.destroy(public_id, resource_type=resource_type, invalidate=True)
+    return {'provider': 'cloudinary', 'deleted': result.get('result') == 'ok', 'result': result.get('result', 'unknown')}

@@ -967,6 +967,22 @@ export async function uploadProductImage(file) {
   return { item: { url, provider: 'browser-demo' }, mode: 'demo' }
 }
 
+export async function uploadFieldProof(file, visitId) {
+  if (API_URL) {
+    try {
+      const token = localStorage.getItem('furnivo-token'); const body = new FormData(); body.append('file', file); body.append('visit_id', String(visitId || ''))
+      const response = await fetch(`${API_URL}/uploads/field-proof`, { method: 'POST', headers: token ? { Authorization: `Bearer ${token}` } : {}, body })
+      const data = await response.json().catch(() => ({}))
+      if (!response.ok) { const error = new Error(data.message || 'Proof upload failed'); error.status = response.status; throw error }
+      if (data.item?.url?.startsWith('/')) data.item.url = `${API_URL.replace(/\/api$/, '')}${data.item.url}`
+      return data
+    } catch (error) { if (error.status) throw error; setDataMode('demo') }
+  }
+  if (file.size > 1_500_000) throw new Error('Demo image must be under 1.5 MB.')
+  const url = await new Promise((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(reader.result); reader.onerror = reject; reader.readAsDataURL(file) })
+  return { item: { url, provider: 'browser-demo' }, mode: 'demo' }
+}
+
 export async function downloadQuotePdf(quote) {
   if (API_URL && quote.database_id) {
     try {
