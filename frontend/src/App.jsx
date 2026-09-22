@@ -27,6 +27,7 @@ import SecurityPage from './pages/SecurityPage'
 import GstPage from './pages/GstPage'
 import DataAdminPage from './pages/DataAdminPage'
 import AccessControlPage from './pages/AccessControlPage'
+import ServicePage from './pages/ServicePage'
 import ProtectedRoute from './components/ProtectedRoute'
 
 export default function App() {
@@ -50,6 +51,7 @@ export default function App() {
         <Route path="/app/gst" element={<ProtectedRoute allowedRoles={['admin', 'sales', 'client']}><GstPage /></ProtectedRoute>} />
         <Route path="/app/data-admin" element={<ProtectedRoute allowedRoles={['admin']}><DataAdminPage /></ProtectedRoute>} />
         <Route path="/app/access-control" element={<ProtectedRoute allowedRoles={['admin']}><AccessControlPage /></ProtectedRoute>} />
+        <Route path="/app/service" element={<ServicePage />} />
         <Route path="/app/customers" element={<ProtectedRoute allowedRoles={['admin', 'sales']}><CustomersPage /></ProtectedRoute>} />
         <Route
           path="/app/leads"

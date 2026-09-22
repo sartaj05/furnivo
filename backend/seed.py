@@ -1,6 +1,6 @@
 from werkzeug.security import generate_password_hash
 from .extensions import db
-from .models import AccessPermission, ApprovalRequest, AuditLog, BomItem, Contract, CreditNote, Customer, CustomerPricing, Department, DeliverySchedule, EInvoice, InventoryItem, Invoice, Lead, LeadNote, LeadTask, Notification, Order, PaymentReconciliation, Product, ProductVariant, ProductionJob, ProjectOwnership, PurchaseOrder, PurchaseOrderItem, Quote, QuoteClientAccess, QuoteItem, QuotePreset, ProjectUpdate, ReturnRequest, StockMovement, Supplier, User, UserDepartment, Warehouse, WarehouseStock
+from .models import AccessPermission, ApprovalRequest, AuditLog, BomItem, Contract, CreditNote, Customer, CustomerPricing, Department, DeliverySchedule, EInvoice, InventoryItem, Invoice, Lead, LeadNote, LeadTask, Notification, Order, PaymentReconciliation, Product, ProductVariant, ProductionJob, ProjectOwnership, PurchaseOrder, PurchaseOrderItem, Quote, QuoteClientAccess, QuoteItem, QuotePreset, ProjectUpdate, ReturnRequest, ServiceTicket, StockMovement, Supplier, User, UserDepartment, Warehouse, WarehouseStock, Warranty
 
 
 DEMO_PRODUCTS = [
@@ -66,6 +66,7 @@ def seed_database():
     seed_gst()
     seed_leads()
     seed_access_controls()
+    seed_service_management()
 
 
 def seed_access_controls():
@@ -99,6 +100,22 @@ def seed_access_controls():
     if quote and sales and not db.session.scalar(db.select(ApprovalRequest).where(ApprovalRequest.resource_id == quote.quote_number)):
         db.session.add(ApprovalRequest(request_type='Discount', resource_type='quote', resource_id=quote.quote_number, amount=186400, detail='Approval required for a customer discount above the sales threshold.', requested_by_id=sales.id))
         db.session.commit()
+
+
+def seed_service_management():
+    if db.session.scalar(db.select(Warranty).limit(1)):
+        return
+    order = db.session.scalar(db.select(Order).where(Order.order_number == 'ORD-1001'))
+    customer = db.session.scalar(db.select(Customer).where(Customer.company == 'Northline Studio'))
+    product = db.session.scalar(db.select(Product).where(Product.sku == 'FUR-SOF-101'))
+    admin = db.session.scalar(db.select(User).where(User.role == 'admin'))
+    sales = db.session.scalar(db.select(User).where(User.role == 'sales'))
+    if not order or not admin:
+        return
+    warranty = Warranty(warranty_number='WAR-7001', order_id=order.id, product_id=product.id if product else None, customer_id=customer.id if customer else None, start_date=__import__('datetime').date(2026, 10, 20), end_date=__import__('datetime').date(2028, 10, 19), serial_number='AST-1001', coverage='Manufacturing defects, hardware, and installation issues')
+    db.session.add(warranty); db.session.flush()
+    db.session.add(ServiceTicket(ticket_number='SVC-8001', warranty_id=warranty.id, order_id=order.id, customer_id=customer.id if customer else None, subject='Post-installation alignment check', description='Customer requested a technician visit to verify the sofa modules after installation.', priority='High', status='Assigned', assigned_to_id=sales.id if sales else admin.id, sla_due=__import__('datetime').date(2026, 10, 24)))
+    db.session.commit()
 
 
 def seed_quotes():

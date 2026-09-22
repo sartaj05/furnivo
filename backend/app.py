@@ -79,6 +79,7 @@ def create_app(config_object=Config):
     from .routes.gst import gst_bp
     from .routes.data_admin import data_admin_bp
     from .routes.access import access_bp
+    from .routes.service import service_bp
 
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(products_bp, url_prefix='/api/products')
@@ -106,6 +107,7 @@ def create_app(config_object=Config):
     app.register_blueprint(gst_bp, url_prefix='/api/gst')
     app.register_blueprint(data_admin_bp, url_prefix='/api/data-admin')
     app.register_blueprint(access_bp, url_prefix='/api/access')
+    app.register_blueprint(service_bp, url_prefix='/api/service')
 
     if app.config.get('AUTO_SEED'):
         with app.app_context():

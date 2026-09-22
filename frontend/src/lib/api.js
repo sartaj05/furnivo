@@ -1,4 +1,4 @@
-import { demoAccessUsers, demoApprovalRequests, demoAuditLogs, demoBackups, demoBackgroundJobs, demoContracts, demoCustomerPricing, demoCustomers, demoDepartments, demoEInvoices, demoInventory, demoInvoices, demoLeads, demoNotifications, demoOpsHealth, demoOrders, demoPaymentReconciliations, demoProducts, demoProductionJobs, demoProjectOwnership, demoPurchaseOrders, demoQuotePresets, demoQuotes, demoReturns, demoSchedules, demoStockMovements, demoSupportTickets, demoSuppliers, demoUsers, demoWarehouseStock, demoWarehouses } from '../data/demoData'
+import { demoAccessUsers, demoApprovalRequests, demoAuditLogs, demoBackups, demoBackgroundJobs, demoContracts, demoCustomerPricing, demoCustomers, demoDepartments, demoEInvoices, demoInventory, demoInvoices, demoLeads, demoNotifications, demoOpsHealth, demoOrders, demoPaymentReconciliations, demoProducts, demoProductionJobs, demoProjectOwnership, demoPurchaseOrders, demoQuotePresets, demoQuotes, demoReturns, demoSchedules, demoServiceTickets, demoStockMovements, demoSupportTickets, demoSuppliers, demoUsers, demoWarehouseStock, demoWarehouses, demoWarranties } from '../data/demoData'
 
 const API_URL = import.meta.env.VITE_API_URL?.replace(/\/$/, '')
 const STORAGE_KEY = 'furnivo-demo-db'
@@ -76,6 +76,8 @@ function getLocalDb() {
       departments: parsed.departments || demoDepartments,
       approvals: parsed.approvals || demoApprovalRequests,
       projectOwnership: parsed.projectOwnership || demoProjectOwnership,
+      warranties: parsed.warranties || demoWarranties,
+      serviceTickets: parsed.serviceTickets || demoServiceTickets,
     }
     if (!parsed.users) localStorage.setItem(STORAGE_KEY, JSON.stringify(normalized))
     return normalized
@@ -112,6 +114,8 @@ function getLocalDb() {
     departments: demoDepartments,
     approvals: demoApprovalRequests,
     projectOwnership: demoProjectOwnership,
+    warranties: demoWarranties,
+    serviceTickets: demoServiceTickets,
   }
   localStorage.setItem(STORAGE_KEY, JSON.stringify(initial))
   return initial
@@ -1075,4 +1079,29 @@ export async function getProjectOwnership() {
 export async function assignProjectOwner(payload) {
   try { return await backendRequest('/access/ownership', { method: 'POST', body: JSON.stringify(payload) }) }
   catch (error) { if (error.status) throw error; const db = getLocalDb(); const order = db.orders.find((item) => Number(item.id) === Number(payload.order_id)); const owner = db.users.find((item) => Number(item.id) === Number(payload.user_id)); const item = { id: Date.now(), ...payload, order_number: order?.order_number, customer: order?.customer, owner, assigned_by: JSON.parse(localStorage.getItem('furnivo-user') || '{}').name }; db.projectOwnership = [item, ...db.projectOwnership.filter((entry) => !(Number(entry.order_id) === Number(payload.order_id) && Number(entry.user_id) === Number(payload.user_id)))]; saveLocalDb(db); return { item, mode: 'demo' } }
+}
+
+export async function getWarranties() {
+  try { return await backendRequest('/service/warranties') }
+  catch (error) { if (error.status) throw error; await delay(); return { items: getLocalDb().warranties, mode: 'demo' } }
+}
+
+export async function createWarranty(payload) {
+  try { return await backendRequest('/service/warranties', { method: 'POST', body: JSON.stringify(payload) }) }
+  catch (error) { if (error.status) throw error; const db = getLocalDb(); const order = db.orders.find((item) => Number(item.id) === Number(payload.order_id)); const item = { id: Date.now(), warranty_number: `WAR-${7000 + db.warranties.length + 1}`, customer: order?.customer, order_number: order?.order_number, status: 'Active', ...payload }; db.warranties = [item, ...db.warranties]; saveLocalDb(db); return { item, mode: 'demo' } }
+}
+
+export async function getServiceTickets() {
+  try { return await backendRequest('/service/tickets') }
+  catch (error) { if (error.status) throw error; await delay(); return { items: getLocalDb().serviceTickets, mode: 'demo' } }
+}
+
+export async function createServiceTicket(payload) {
+  try { return await backendRequest('/service/tickets', { method: 'POST', body: JSON.stringify(payload) }) }
+  catch (error) { if (error.status) throw error; const db = getLocalDb(); const order = db.orders.find((item) => Number(item.id) === Number(payload.order_id)); const item = { id: Date.now(), ticket_number: `SVC-${8000 + db.serviceTickets.length + 1}`, order_number: order?.order_number, customer: order?.customer, status: 'Open', resolution: '', created_at: new Date().toISOString(), updated_at: new Date().toISOString(), ...payload }; db.serviceTickets = [item, ...db.serviceTickets]; saveLocalDb(db); return { item, mode: 'demo' } }
+}
+
+export async function updateServiceTicket(id, payload) {
+  try { return await backendRequest(`/service/tickets/${id}`, { method: 'PATCH', body: JSON.stringify(payload) }) }
+  catch (error) { if (error.status) throw error; const db = getLocalDb(); db.serviceTickets = db.serviceTickets.map((item) => Number(item.id) === Number(id) ? { ...item, ...payload, updated_at: new Date().toISOString() } : item); saveLocalDb(db); return { item: db.serviceTickets.find((item) => Number(item.id) === Number(id)), mode: 'demo' } }
 }

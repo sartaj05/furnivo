@@ -954,6 +954,51 @@ class LeadTask(TimestampMixin, db.Model):
         }
 
 
+class Warranty(TimestampMixin, db.Model):
+    __tablename__ = 'warranties'
+
+    id = db.Column(db.Integer, primary_key=True)
+    warranty_number = db.Column(db.String(50), unique=True, nullable=False, index=True)
+    order_id = db.Column(db.Integer, db.ForeignKey('orders.id', ondelete='CASCADE'), nullable=False, index=True)
+    product_id = db.Column(db.Integer, db.ForeignKey('products.id'), nullable=True)
+    customer_id = db.Column(db.Integer, db.ForeignKey('customers.id'), nullable=True)
+    start_date = db.Column(db.Date, nullable=False)
+    end_date = db.Column(db.Date, nullable=False)
+    coverage = db.Column(db.String(255), nullable=False, default='Manufacturing defects and installation issues')
+    status = db.Column(db.String(30), nullable=False, default='Active', index=True)
+    serial_number = db.Column(db.String(100), nullable=False, default='')
+    order = db.relationship('Order')
+    product = db.relationship('Product')
+    customer = db.relationship('Customer')
+
+    def to_dict(self):
+        return {'id': self.id, 'warranty_number': self.warranty_number, 'order_id': self.order_id, 'order_number': self.order.order_number if self.order else None, 'customer': self.customer.company if self.customer else (self.order.customer_name if self.order else None), 'product_id': self.product_id, 'product': self.product.name if self.product else None, 'start_date': self.start_date.isoformat(), 'end_date': self.end_date.isoformat(), 'coverage': self.coverage, 'status': self.status, 'serial_number': self.serial_number}
+
+
+class ServiceTicket(TimestampMixin, db.Model):
+    __tablename__ = 'service_tickets'
+
+    id = db.Column(db.Integer, primary_key=True)
+    ticket_number = db.Column(db.String(50), unique=True, nullable=False, index=True)
+    warranty_id = db.Column(db.Integer, db.ForeignKey('warranties.id'), nullable=True, index=True)
+    order_id = db.Column(db.Integer, db.ForeignKey('orders.id', ondelete='CASCADE'), nullable=False, index=True)
+    customer_id = db.Column(db.Integer, db.ForeignKey('customers.id'), nullable=True)
+    subject = db.Column(db.String(180), nullable=False)
+    description = db.Column(db.Text, nullable=False)
+    priority = db.Column(db.String(30), nullable=False, default='Normal')
+    status = db.Column(db.String(40), nullable=False, default='Open', index=True)
+    assigned_to_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    sla_due = db.Column(db.Date)
+    resolution = db.Column(db.Text, nullable=False, default='')
+    warranty = db.relationship('Warranty')
+    order = db.relationship('Order')
+    customer = db.relationship('Customer')
+    assigned_to = db.relationship('User')
+
+    def to_dict(self):
+        return {'id': self.id, 'ticket_number': self.ticket_number, 'warranty_id': self.warranty_id, 'warranty_number': self.warranty.warranty_number if self.warranty else None, 'order_id': self.order_id, 'order_number': self.order.order_number if self.order else None, 'customer': self.customer.company if self.customer else (self.order.customer_name if self.order else None), 'subject': self.subject, 'description': self.description, 'priority': self.priority, 'status': self.status, 'assigned_to_id': self.assigned_to_id, 'assigned_to': self.assigned_to.public_dict() if self.assigned_to else None, 'sla_due': self.sla_due.isoformat() if self.sla_due else None, 'resolution': self.resolution, 'created_at': self.created_at.isoformat(), 'updated_at': self.updated_at.isoformat()}
+
+
 class Department(TimestampMixin, db.Model):
     __tablename__ = 'departments'
 
