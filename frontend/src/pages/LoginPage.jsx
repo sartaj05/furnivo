@@ -11,26 +11,34 @@ const demoAccounts = [
 
 export default function LoginPage() {
   const navigate = useNavigate()
-  const { signIn } = useAuth()
+  const { signIn, verifyMfa } = useAuth()
   const [form, setForm] = useState({
     email: 'admin@furnivo.demo',
     password: 'admin123',
   })
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [challenge, setChallenge] = useState(null)
+  const [mfaCode, setMfaCode] = useState('')
 
   async function submit(event) {
     event.preventDefault()
     setError('')
     setLoading(true)
     try {
-      await signIn(form.email, form.password)
+      const result = await signIn(form.email, form.password)
+      if (result?.mfa_required) { setChallenge(result); return }
       navigate('/app')
     } catch (err) {
       setError(err.message || 'Unable to sign in')
     } finally {
       setLoading(false)
     }
+  }
+
+  async function submitMfa(event) {
+    event.preventDefault(); setError(''); setLoading(true)
+    try { await verifyMfa(challenge.challenge_id, mfaCode); navigate('/app') } catch (err) { setError(err.message || 'Invalid MFA code') } finally { setLoading(false) }
   }
 
   function useAccount(email, password) {
@@ -62,7 +70,7 @@ export default function LoginPage() {
       </section>
 
       <section className="login-panel">
-        <form className="login-card" onSubmit={submit}>
+        <form className="login-card" onSubmit={challenge ? submitMfa : submit}>
           <Link className="back-link" to="/">← Back to website</Link>
           <div className="login-heading">
             <p className="eyebrow">Welcome back</p>
@@ -70,7 +78,7 @@ export default function LoginPage() {
             <p>Use any demo account below or your Flask-backed credentials.</p>
           </div>
 
-          <label>
+          {!challenge && <><label>
             Email
             <input
               type="email"
@@ -90,7 +98,9 @@ export default function LoginPage() {
               placeholder="••••••••"
               required
             />
-          </label>
+          </label></>}
+
+          {challenge && <label>One-time verification code<input autoFocus inputMode="numeric" value={mfaCode} onChange={(e) => setMfaCode(e.target.value)} placeholder="6-digit code" required />{challenge.demo_code && <small className="field-hint">Demo code: {challenge.demo_code}</small>}</label>}
 
           {error && <div className="form-error">{error}</div>}
 

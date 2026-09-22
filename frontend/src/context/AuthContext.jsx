@@ -29,7 +29,13 @@ export function AuthProvider({ children }) {
   }
 
   async function signIn(email, password) {
-    return persistSession(await api.login(email, password))
+    const result = await api.login(email, password)
+    if (result.mfa_required) return result
+    return persistSession(result)
+  }
+
+  async function verifyMfa(challengeId, code) {
+    return persistSession(await api.verifyMfa(challengeId, code))
   }
 
   async function signUp(name, email, password) {
@@ -44,7 +50,7 @@ export function AuthProvider({ children }) {
   }
 
   const value = useMemo(
-    () => ({ user, mode, signIn, signUp, signOut, isAuthenticated: Boolean(user) }),
+    () => ({ user, mode, signIn, signUp, signOut, verifyMfa, isAuthenticated: Boolean(user) }),
     [user, mode],
   )
 

@@ -897,6 +897,14 @@ img { max-width: 100%; }
 .ops-checklist > div { display: grid; grid-template-columns: repeat(2, 1fr); gap: 9px; margin-top: 14px; }
 .ops-checklist span { padding: 11px 13px; border-radius: 9px; background: #f5f3ed; color: var(--muted); font-size: 12px; }
 @media (max-width: 780px) { .ops-health-grid { grid-template-columns: 1fr; } .ops-checklist > div { grid-template-columns: 1fr; } }
+.security-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px; }
+.security-card { display: grid; gap: 10px; }
+.session-row { display: flex; justify-content: space-between; gap: 16px; padding: 12px 0; border-bottom: 1px solid var(--line); }
+.session-row span, .session-row small { display: block; }
+.session-row small { color: var(--muted); margin-top: 4px; }
+.session-row b { color: var(--green); }
+.field-hint { display: block; color: var(--muted); margin-top: 5px; font-size: 11px; }
+@media (max-width: 780px) { .security-grid { grid-template-columns: 1fr; } }
 .configurator-layout { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(300px, .65fr); gap: 14px; align-items: start; }
 .configurator-main { min-width: 0; }
 .configurator-fields { margin-bottom: 22px; }

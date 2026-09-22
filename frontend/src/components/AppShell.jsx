@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { deliverNotification, getNotifications, markNotificationRead } from '../lib/api'
+import { deliverNotification, getNotifications, logoutSession, markNotificationRead } from '../lib/api'
 
 const navItems = [
   { to: '/app', label: 'Overview', shortLabel: 'Home', roles: ['admin', 'sales', 'designer', 'client'], end: true },
@@ -22,6 +22,7 @@ const navItems = [
   { to: '/app/reports', label: 'Reports & exports', shortLabel: 'Reports', roles: ['admin', 'sales'] },
   { to: '/app/audit', label: 'Audit log', shortLabel: 'Audit', roles: ['admin'] },
   { to: '/app/operations', label: 'Operations', shortLabel: 'Ops', roles: ['admin'] },
+  { to: '/app/security', label: 'Security settings', shortLabel: 'Security', roles: ['admin', 'sales', 'designer', 'client'] },
   { to: '/app/schedules', label: 'Delivery & installation', shortLabel: 'Schedule', roles: ['admin', 'sales', 'designer', 'client'] },
   { to: '/app/warehouses', label: 'Warehouses', shortLabel: 'Stock map', roles: ['admin', 'sales', 'designer'] },
   { to: '/app/returns', label: 'Returns & refunds', shortLabel: 'Returns', roles: ['admin', 'sales', 'client'] },
@@ -59,7 +60,8 @@ export default function AppShell({ title, eyebrow, actions, children }) {
     window.alert(`${channel === 'email' ? 'Email' : 'WhatsApp'} delivery requested.`)
   }
 
-  function logout() {
+  async function logout() {
+    await logoutSession().catch(() => {})
     signOut()
     navigate('/')
   }

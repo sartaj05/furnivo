@@ -16,6 +16,9 @@ class TestConfig:
     RATE_LIMIT_PER_MINUTE = 1000
     APP_VERSION = 'test'
     ENVIRONMENT = 'test'
+    REFRESH_TOKEN_DAYS = 30
+    JWT_ACCESS_TOKEN_EXPIRES = __import__('datetime').timedelta(hours=1)
+    JWT_TOKEN_LOCATION = ['headers', 'cookies']
     BACKUP_FOLDER = str(TEST_ROOT / '.backups')
     UPLOAD_FOLDER = str(TEST_ROOT / '.uploads')
 

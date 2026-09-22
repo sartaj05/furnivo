@@ -23,6 +23,7 @@ import PaymentReconciliationPage from './pages/PaymentReconciliationPage'
 import ContractsPage from './pages/ContractsPage'
 import ProjectPortalPage from './pages/ProjectPortalPage'
 import OpsPage from './pages/OpsPage'
+import SecurityPage from './pages/SecurityPage'
 import ProtectedRoute from './components/ProtectedRoute'
 
 export default function App() {
@@ -42,6 +43,7 @@ export default function App() {
         <Route path="/app/contracts" element={<ContractsPage />} />
         <Route path="/app/project-portal" element={<ProtectedRoute allowedRoles={['client']}><ProjectPortalPage /></ProtectedRoute>} />
         <Route path="/app/operations" element={<ProtectedRoute allowedRoles={['admin']}><OpsPage /></ProtectedRoute>} />
+        <Route path="/app/security" element={<SecurityPage />} />
         <Route path="/app/customers" element={<ProtectedRoute allowedRoles={['admin', 'sales']}><CustomersPage /></ProtectedRoute>} />
         <Route
           path="/app/leads"

@@ -29,6 +29,42 @@ class User(TimestampMixin, db.Model):
             'role': self.role,
         }
 
+
+class RefreshSession(TimestampMixin, db.Model):
+    __tablename__ = 'refresh_sessions'
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='CASCADE'), nullable=False, index=True)
+    token_hash = db.Column(db.String(128), unique=True, nullable=False, index=True)
+    expires_at = db.Column(db.DateTime(timezone=True), nullable=False)
+    revoked_at = db.Column(db.DateTime(timezone=True))
+    user_agent = db.Column(db.String(255), nullable=False, default='')
+    ip_address = db.Column(db.String(80), nullable=False, default='')
+    user = db.relationship('User')
+
+    def to_dict(self): return {'id': self.id, 'created_at': self.created_at.isoformat(), 'expires_at': self.expires_at.isoformat(), 'revoked': bool(self.revoked_at), 'user_agent': self.user_agent, 'ip_address': self.ip_address}
+
+
+class MfaSetting(TimestampMixin, db.Model):
+    __tablename__ = 'mfa_settings'
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='CASCADE'), nullable=False, unique=True, index=True)
+    enabled = db.Column(db.Boolean, nullable=False, default=False)
+    method = db.Column(db.String(40), nullable=False, default='demo-otp')
+    user = db.relationship('User')
+
+
+class MfaChallenge(TimestampMixin, db.Model):
+    __tablename__ = 'mfa_challenges'
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='CASCADE'), nullable=False, index=True)
+    code_hash = db.Column(db.String(128), nullable=False)
+    expires_at = db.Column(db.DateTime(timezone=True), nullable=False)
+    consumed_at = db.Column(db.DateTime(timezone=True))
+    user = db.relationship('User')
+
 class Product(TimestampMixin, db.Model):
     __tablename__ = 'products'
 

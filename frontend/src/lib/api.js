@@ -168,6 +168,39 @@ export async function login(email, password) {
   }
 }
 
+export async function verifyMfa(challengeId, code) {
+  try { return await backendRequest('/auth/mfa/verify', { method: 'POST', body: JSON.stringify({ challenge_id: challengeId, code }) }) }
+  catch (error) { if (error.status) throw error; throw new Error('MFA verification requires the connected backend.') }
+}
+
+export async function refreshSession() {
+  return backendRequest('/auth/refresh', { method: 'POST', body: JSON.stringify({}) })
+}
+
+export async function logoutSession() {
+  try { return await backendRequest('/auth/logout', { method: 'POST', body: JSON.stringify({}) }) } catch (error) { if (error.status) throw error; return { ok: true, mode: 'demo' } }
+}
+
+export async function getSecurityStatus() {
+  try { return await backendRequest('/auth/security') }
+  catch (error) { if (error.status) throw error; await delay(); return { mfa_enabled: false, mfa_method: null, sessions: [], mode: 'demo' } }
+}
+
+export async function enableMfa() {
+  try { return await backendRequest('/auth/mfa/enable', { method: 'POST', body: JSON.stringify({}) }) }
+  catch (error) { if (error.status) throw error; return { enabled: true, method: 'demo-otp', message: 'Demo MFA enabled. Connect the backend for real login challenges.', mode: 'demo' } }
+}
+
+export async function disableMfa() {
+  try { return await backendRequest('/auth/mfa/disable', { method: 'POST', body: JSON.stringify({}) }) }
+  catch (error) { if (error.status) throw error; return { enabled: false, mode: 'demo' } }
+}
+
+export async function revokeAllSessions() {
+  try { return await backendRequest('/auth/sessions/revoke-all', { method: 'POST', body: JSON.stringify({}) }) }
+  catch (error) { if (error.status) throw error; return { ok: true, mode: 'demo' } }
+}
+
 export async function register(name, email, password) {
   try {
     return await backendRequest('/auth/register', {
