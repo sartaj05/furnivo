@@ -278,6 +278,47 @@ class ProjectUpdate(TimestampMixin, db.Model):
     def to_dict(self):
         return {'id': self.id, 'body': self.body, 'author': self.author.name if self.author else 'Team', 'created_at': self.created_at.isoformat()}
 
+
+class InventoryItem(TimestampMixin, db.Model):
+    __tablename__ = 'inventory_items'
+    __table_args__ = (db.UniqueConstraint('product_id', 'variant_id', name='uq_inventory_product_variant'),)
+
+    id = db.Column(db.Integer, primary_key=True)
+    product_id = db.Column(db.Integer, db.ForeignKey('products.id', ondelete='CASCADE'), nullable=False, index=True)
+    variant_id = db.Column(db.Integer, db.ForeignKey('product_variants.id', ondelete='CASCADE'), nullable=True, index=True)
+    quantity = db.Column(db.Numeric(12, 2), nullable=False, default=0)
+    reserved_quantity = db.Column(db.Numeric(12, 2), nullable=False, default=0)
+    reorder_level = db.Column(db.Numeric(12, 2), nullable=False, default=0)
+    supplier = db.Column(db.String(180), nullable=False, default='')
+    location = db.Column(db.String(180), nullable=False, default='')
+    product = db.relationship('Product')
+    variant = db.relationship('ProductVariant')
+
+    @property
+    def available_quantity(self):
+        return max((self.quantity or 0) - (self.reserved_quantity or 0), 0)
+
+    @property
+    def is_low_stock(self):
+        return self.available_quantity <= (self.reorder_level or 0)
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'product_id': self.product_id,
+            'variant_id': self.variant_id,
+            'product': self.product.name if self.product else None,
+            'sku': self.variant.sku if self.variant else self.product.sku if self.product else None,
+            'variant': self.variant.finish if self.variant else None,
+            'quantity': float(self.quantity or 0),
+            'reserved_quantity': float(self.reserved_quantity or 0),
+            'available_quantity': float(self.available_quantity),
+            'reorder_level': float(self.reorder_level or 0),
+            'is_low_stock': self.is_low_stock,
+            'supplier': self.supplier,
+            'location': self.location,
+        }
+
 class Customer(TimestampMixin, db.Model):
     __tablename__ = 'customers'
 

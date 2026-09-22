@@ -1,6 +1,6 @@
 from werkzeug.security import generate_password_hash
 from .extensions import db
-from .models import Customer, Lead, LeadNote, LeadTask, Order, Product, ProductVariant, Quote, QuoteClientAccess, QuoteItem, ProjectUpdate, User
+from .models import Customer, InventoryItem, Lead, LeadNote, LeadTask, Order, Product, ProductVariant, Quote, QuoteClientAccess, QuoteItem, ProjectUpdate, User
 
 
 DEMO_PRODUCTS = [
@@ -51,6 +51,7 @@ def seed_database():
     seed_quotes()
     seed_client_quote_access()
     seed_orders()
+    seed_inventory()
     seed_leads()
 
 
@@ -129,4 +130,15 @@ def seed_orders():
     db.session.add(order)
     db.session.flush()
     db.session.add(ProjectUpdate(order_id=order.id, body='Materials confirmed and production slot reserved.', author_id=admin.id))
+    db.session.commit()
+
+
+def seed_inventory():
+    if db.session.scalar(db.select(InventoryItem).limit(1)):
+        return
+    products = db.session.scalars(db.select(Product).order_by(Product.id)).all()
+    demo_stock = [(12, 2, 4, 'Oak & Co. Furnishings', 'Delhi warehouse'), (24, 5, 8, 'Halo Lighting Works', 'Delhi warehouse'), (1200, 300, 400, 'Terra Surfaces', 'Gurugram warehouse')]
+    for product, values in zip(products, demo_stock):
+        quantity, reserved, reorder, supplier, location = values
+        db.session.add(InventoryItem(product_id=product.id, quantity=quantity, reserved_quantity=reserved, reorder_level=reorder, supplier=supplier, location=location))
     db.session.commit()

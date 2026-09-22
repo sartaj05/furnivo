@@ -1,4 +1,4 @@
-import { demoCustomers, demoLeads, demoOrders, demoProducts, demoQuotes, demoUsers } from '../data/demoData'
+import { demoCustomers, demoInventory, demoLeads, demoOrders, demoProducts, demoQuotes, demoUsers } from '../data/demoData'
 
 const API_URL = import.meta.env.VITE_API_URL?.replace(/\/$/, '')
 const STORAGE_KEY = 'furnivo-demo-db'
@@ -48,6 +48,7 @@ function getLocalDb() {
       users: parsed.users || demoUsers,
       customers: parsed.customers || demoCustomers,
       orders: parsed.orders || demoOrders,
+      inventory: parsed.inventory || demoInventory,
     }
     if (!parsed.users) localStorage.setItem(STORAGE_KEY, JSON.stringify(normalized))
     return normalized
@@ -60,6 +61,7 @@ function getLocalDb() {
     users: demoUsers,
     customers: demoCustomers,
     orders: demoOrders,
+    inventory: demoInventory,
   }
   localStorage.setItem(STORAGE_KEY, JSON.stringify(initial))
   return initial
@@ -397,6 +399,29 @@ export async function addOrderUpdate(id, body) {
   catch (error) {
     if (error.status) throw error
     const db = getLocalDb(); const order = db.orders.find((item) => Number(item.id) === Number(id)); const update = { id: Date.now(), body, author: 'Demo user', created_at: new Date().toISOString() }; order.updates = [update, ...(order.updates || [])]; saveLocalDb(db); return { item: update, order, mode: 'demo' }
+  }
+}
+
+export async function getInventory() {
+  try { return await backendRequest('/inventory') }
+  catch (error) { if (error.status) throw error; await delay(); return { items: getLocalDb().inventory, mode: 'demo' } }
+}
+
+export async function createInventory(payload) {
+  try { return await backendRequest('/inventory', { method: 'POST', body: JSON.stringify(payload) }) }
+  catch (error) {
+    if (error.status) throw error
+    const db = getLocalDb(); const product = db.products.find((item) => Number(item.id) === Number(payload.product_id)); if (!product) throw new Error('Choose a valid product.')
+    const item = { id: Date.now(), product_id: product.id, product: product.name, sku: product.sku, quantity: Number(payload.quantity || 0), reserved_quantity: Number(payload.reserved_quantity || 0), reorder_level: Number(payload.reorder_level || 0), supplier: payload.supplier || '', location: payload.location || '' }
+    item.available_quantity = Math.max(item.quantity - item.reserved_quantity, 0); item.is_low_stock = item.available_quantity <= item.reorder_level; db.inventory = [item, ...db.inventory]; saveLocalDb(db); return { item, mode: 'demo' }
+  }
+}
+
+export async function updateInventory(id, payload) {
+  try { return await backendRequest(`/inventory/${id}`, { method: 'PATCH', body: JSON.stringify(payload) }) }
+  catch (error) {
+    if (error.status) throw error
+    const db = getLocalDb(); db.inventory = db.inventory.map((item) => { if (Number(item.id) !== Number(id)) return item; const next = { ...item, ...payload }; next.available_quantity = Math.max(Number(next.quantity || 0) - Number(next.reserved_quantity || 0), 0); next.is_low_stock = next.available_quantity <= Number(next.reorder_level || 0); return next }); saveLocalDb(db); return { item: db.inventory.find((item) => Number(item.id) === Number(id)), mode: 'demo' }
   }
 }
 

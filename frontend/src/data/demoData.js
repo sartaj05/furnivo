@@ -145,3 +145,9 @@ export const demoCustomers = [
 export const demoOrders = [
   { id: 1, order_number: 'ORD-1001', quote_id: 1042, quote_number: 'Q-1042', customer: 'Northline Studio', status: 'Confirmed', production_status: 'In production', delivery_date: '2026-10-18', installation_status: 'Scheduled', amount: 186400, notes: 'Demo project order', updates: [{ id: 1, body: 'Materials confirmed and production slot reserved.', author: 'Aarav Admin', created_at: '2026-09-18T10:00:00.000Z' }] },
 ]
+
+export const demoInventory = [
+  { id: 1, product_id: 1, product: 'Aster Modular Sofa', sku: 'FUR-SOF-101', quantity: 12, reserved_quantity: 2, available_quantity: 10, reorder_level: 4, is_low_stock: false, supplier: 'Oak & Co. Furnishings', location: 'Delhi warehouse' },
+  { id: 2, product_id: 2, product: 'Halo Pendant Light', sku: 'INT-LGT-204', quantity: 24, reserved_quantity: 5, available_quantity: 19, reorder_level: 8, is_low_stock: false, supplier: 'Halo Lighting Works', location: 'Delhi warehouse' },
+  { id: 3, product_id: 3, product: 'Terra Fluted Wall Panel', sku: 'BLD-PNL-310', quantity: 1200, reserved_quantity: 300, available_quantity: 900, reorder_level: 400, is_low_stock: false, supplier: 'Terra Surfaces', location: 'Gurugram warehouse' },
+]
