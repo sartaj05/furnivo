@@ -1,5 +1,9 @@
+import json
+import logging
+import time
 from pathlib import Path
-from flask import Flask, jsonify, send_from_directory
+from uuid import uuid4
+from flask import Flask, g, jsonify, request, send_from_directory
 from flask_cors import CORS
 from .config import Config
 from .extensions import db, jwt, migrate
@@ -19,6 +23,35 @@ def create_app(config_object=Config):
         resources={r'/api/*': {'origins': app.config['FRONTEND_ORIGINS']}},
         supports_credentials=False,
     )
+
+    rate_buckets = {}
+
+    @app.before_request
+    def operational_request_start():
+        g.request_id = request.headers.get('X-Request-ID') or uuid4().hex
+        if not request.path.startswith('/api/') or app.config['RATE_LIMIT_PER_MINUTE'] <= 0:
+            return None
+        now = time.monotonic(); client = request.headers.get('X-Forwarded-For', request.remote_addr or 'unknown').split(',')[0].strip()
+        started, count = rate_buckets.get(client, (now, 0))
+        if now - started >= 60: started, count = now, 0
+        count += 1; rate_buckets[client] = (started, count)
+        if count > app.config['RATE_LIMIT_PER_MINUTE']:
+            response = jsonify({'message': 'Rate limit exceeded. Try again shortly.', 'request_id': g.request_id})
+            response.status_code = 429; response.headers['Retry-After'] = '60'; return response
+        return None
+
+    @app.after_request
+    def operational_request_end(response):
+        response.headers['X-Request-ID'] = getattr(g, 'request_id', '')
+        app.logger.info(json.dumps({'event': 'request_complete', 'request_id': getattr(g, 'request_id', ''), 'method': request.method, 'path': request.path, 'status': response.status_code, 'remote': request.remote_addr}))
+        return response
+
+    @app.errorhandler(Exception)
+    def api_error(error):
+        app.logger.exception('Unhandled application error', exc_info=error)
+        if request.path.startswith('/api/'):
+            return jsonify({'message': 'Unexpected server error.', 'request_id': getattr(g, 'request_id', '')}), 500
+        raise error
 
     from .routes.auth import auth_bp
     from .routes.products import products_bp
@@ -42,6 +75,7 @@ def create_app(config_object=Config):
     from .routes.reconciliation import reconciliation_bp
     from .routes.contracts import contracts_bp
     from .routes.portal import portal_bp
+    from .routes.ops import ops_bp
 
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(products_bp, url_prefix='/api/products')
@@ -65,6 +99,7 @@ def create_app(config_object=Config):
     app.register_blueprint(reconciliation_bp, url_prefix='/api/payment-reconciliation')
     app.register_blueprint(contracts_bp, url_prefix='/api/contracts')
     app.register_blueprint(portal_bp, url_prefix='/api/portal')
+    app.register_blueprint(ops_bp, url_prefix='/api/ops')
 
     if app.config.get('AUTO_SEED'):
         with app.app_context():
@@ -73,7 +108,8 @@ def create_app(config_object=Config):
 
     @app.get('/api/health')
     def health():
-        return jsonify({'ok': True, 'service': 'furnivo-api'})
+        db.session.execute(db.text('SELECT 1'))
+        return jsonify({'ok': True, 'service': 'furnivo-api', 'version': app.config['APP_VERSION'], 'environment': app.config['ENVIRONMENT']})
 
     @app.get('/uploads/<path:filename>')
     def uploaded_file(filename):

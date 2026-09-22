@@ -30,6 +30,11 @@ The application is a working React/Vite + Flask/SQLAlchemy sales workspace. The 
 - Admin audit log with resource filtering and object-level client record filtering.
 - Local demo CRUD persistence in `localStorage`.
 - Dashboard metrics sourced from the active API or demo data.
+- Production job cards with BOM materials, per-item wastage and production status stages.
+- Payment reconciliation records with failed/disputed states, partial/full refunds and invoice balance updates.
+- Digital contracts with terms, client e-signatures, locked versions and downloadable PDFs.
+- Customer project portal with progress, production, schedules, documents and support tickets.
+- Admin Operations screen with database health, request IDs, rate limiting, backup creation/history and deployment checklist.
 
 ## Offline/demo behavior
 
@@ -49,16 +54,16 @@ Demo accounts:
 These are not implemented as production features yet:
 
 - Automated frontend/backend unit and integration tests.
-- Refresh tokens, server-side session revocation and rate limiting.
+- Refresh tokens and server-side session revocation.
 - Audit log for sensitive changes such as price, quote status and permissions.
 - Email/WhatsApp notifications and scheduled reminders.
 - CSV/Excel exports.
 - Provider-specific production templates, retry queues and delivery webhooks for email/WhatsApp notifications.
-- Payment gateway checkout integration; current payment collection records manual payments and exposes payment-link placeholders.
+- Provider-specific automated refund API calls and refund webhook reconciliation remain partial; internal reconciliation and refund records are implemented.
 - Server-side pagination/filtering for larger catalogs and CRM data.
 - Object-level authorization for client-owned records; current access is role-level.
 - Live analytics beyond the current dashboard counts and totals.
-- Production deployment configuration, secret rotation and observability.
+- Secret rotation, external backup storage, centralized log shipping and full production deployment automation.
 
 ## Verification
 

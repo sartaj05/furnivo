@@ -1,4 +1,4 @@
-import { demoAuditLogs, demoContracts, demoCustomerPricing, demoCustomers, demoInventory, demoInvoices, demoLeads, demoNotifications, demoOrders, demoPaymentReconciliations, demoProducts, demoProductionJobs, demoPurchaseOrders, demoQuotePresets, demoQuotes, demoReturns, demoSchedules, demoStockMovements, demoSupportTickets, demoSuppliers, demoUsers, demoWarehouseStock, demoWarehouses } from '../data/demoData'
+import { demoAuditLogs, demoBackups, demoContracts, demoCustomerPricing, demoCustomers, demoInventory, demoInvoices, demoLeads, demoNotifications, demoOpsHealth, demoOrders, demoPaymentReconciliations, demoProducts, demoProductionJobs, demoPurchaseOrders, demoQuotePresets, demoQuotes, demoReturns, demoSchedules, demoStockMovements, demoSupportTickets, demoSuppliers, demoUsers, demoWarehouseStock, demoWarehouses } from '../data/demoData'
 
 const API_URL = import.meta.env.VITE_API_URL?.replace(/\/$/, '')
 const STORAGE_KEY = 'furnivo-demo-db'
@@ -69,6 +69,7 @@ function getLocalDb() {
       paymentReconciliations: parsed.paymentReconciliations || demoPaymentReconciliations,
       contracts: parsed.contracts || demoContracts,
       supportTickets: parsed.supportTickets || demoSupportTickets,
+      backups: parsed.backups || demoBackups,
     }
     if (!parsed.users) localStorage.setItem(STORAGE_KEY, JSON.stringify(normalized))
     return normalized
@@ -98,6 +99,7 @@ function getLocalDb() {
     paymentReconciliations: demoPaymentReconciliations,
     contracts: demoContracts,
     supportTickets: demoSupportTickets,
+    backups: demoBackups,
   }
   localStorage.setItem(STORAGE_KEY, JSON.stringify(initial))
   return initial
@@ -733,6 +735,25 @@ export async function getProjectPortal() {
 export async function createSupportTicket(payload) {
   try { return await backendRequest('/portal/tickets', { method: 'POST', body: JSON.stringify(payload) }) }
   catch (error) { if (error.status) throw error; const db = getLocalDb(); const order = db.orders.find((item) => Number(item.id) === Number(payload.order_id)); const item = { id: Date.now(), order_id: order?.id, order_number: order?.order_number, status: 'Open', response: '', created_at: new Date().toISOString(), updated_at: new Date().toISOString(), ...payload }; db.supportTickets = [item, ...db.supportTickets]; saveLocalDb(db); return { item, mode: 'demo' } }
+}
+
+export async function getOpsHealth() {
+  try { return await backendRequest('/ops/health') }
+  catch (error) { if (error.status) throw error; await delay(); return { ...demoOpsHealth, mode: 'demo' } }
+}
+
+export async function getBackups() {
+  try { return await backendRequest('/ops/backups') }
+  catch (error) { if (error.status) throw error; await delay(); return { items: getLocalDb().backups, mode: 'demo' } }
+}
+
+export async function createBackup() {
+  try { return await backendRequest('/ops/backups', { method: 'POST' }) }
+  catch (error) {
+    if (error.status) throw error
+    await delay()
+    const db = getLocalDb(); const item = { filename: `furnivo-demo-${Date.now()}.json`, size_bytes: JSON.stringify(db).length, created_at: new Date().toISOString() }; db.backups = [item, ...db.backups]; saveLocalDb(db); return { item, mode: 'demo' }
+  }
 }
 
 

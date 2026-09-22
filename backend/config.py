@@ -14,6 +14,8 @@ def _database_uri():
 
 
 class Config:
+    APP_VERSION = os.getenv('APP_VERSION', 'furnivo-v3')
+    ENVIRONMENT = os.getenv('ENVIRONMENT', 'development')
     SECRET_KEY = os.getenv('SECRET_KEY', 'dev-change-me')
     SQLALCHEMY_DATABASE_URI = _database_uri()
     SQLALCHEMY_TRACK_MODIFICATIONS = False
@@ -28,3 +30,5 @@ class Config:
     ]
     CLOUDINARY_URL = os.getenv('CLOUDINARY_URL', '')
     AUTO_SEED = os.getenv('AUTO_SEED', 'true').lower() == 'true'
+    RATE_LIMIT_PER_MINUTE = int(os.getenv('RATE_LIMIT_PER_MINUTE', '120'))
+    BACKUP_FOLDER = os.getenv('BACKUP_FOLDER', str(BASE_DIR / 'backups'))

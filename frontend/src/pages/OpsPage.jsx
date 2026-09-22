@@ -1,0 +1,13 @@
+import { useEffect, useState } from 'react'
+import AppShell from '../components/AppShell'
+import { createBackup, getBackups, getOpsHealth } from '../lib/api'
+
+export default function OpsPage() {
+  const [health, setHealth] = useState(null); const [backups, setBackups] = useState([]); const [error, setError] = useState(''); const [working, setWorking] = useState(false)
+  async function load() { const [healthResult, backupResult] = await Promise.all([getOpsHealth(), getBackups()]); setHealth(healthResult); setBackups(backupResult.items || []) }
+  useEffect(() => { load().catch((err) => setError(err.message)) }, [])
+  async function backup() { setWorking(true); setError(''); try { await createBackup(); await load() } catch (err) { setError(err.message) } finally { setWorking(false) } }
+  return <AppShell title="Operations" eyebrow="Deployment health & backups" actions={<button className="button button-small" onClick={backup} disabled={working}>{working ? 'Creating…' : 'Create backup'}</button>}>
+    {error && <div className="form-error">{error}</div>}<section className="ops-health-grid">{health && <><article className="panel ops-health-card"><span className="eyebrow">Application</span><strong>{health.status}</strong><small>{health.version} · {health.environment}</small></article><article className="panel ops-health-card"><span className="eyebrow">Database</span><strong>{health.database}</strong><small>Auto-seed: {String(health.auto_seed)}</small></article><article className="panel ops-health-card"><span className="eyebrow">Payments</span><strong>{health.payment_provider}</strong><small>Rate limit: {health.rate_limit_per_minute}/min</small></article></>}</section><section className="panel"><div className="panel-heading"><div><p className="eyebrow">Recovery points</p><h3>Database backups</h3></div><span className="mode-chip">Admin only</span></div>{backups.length ? <div className="backup-list">{backups.map((item) => <div className="backup-row" key={item.filename}><span><strong>{item.filename}</strong><small>{new Date(item.created_at).toLocaleString()}</small></span><b>{Math.round(Number(item.size_bytes || 0) / 1024)} KB</b></div>)}</div> : <div className="empty-state"><h3>No backups created yet</h3><p>Create a backup before deploying schema or configuration changes.</p></div>}</section><section className="panel ops-checklist"><p className="eyebrow">Production checklist</p><h3>Before go-live</h3><div><span>Set long SECRET_KEY and JWT_SECRET_KEY</span><span>Set AUTO_SEED=false</span><span>Run flask db upgrade against PostgreSQL</span><span>Configure PAYMENT_WEBHOOK_SECRET and provider keys</span><span>Store backups outside the application server</span></div></section>
+  </AppShell>
+}

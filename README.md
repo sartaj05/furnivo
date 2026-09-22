@@ -14,6 +14,11 @@ A responsive furniture / interiors / building-material sales suite built with Re
 8. **Commercial calculations** including percentage discount, tax/GST, shipping and grand totals.
 9. **Customer records** with company, contact, email, phone, GSTIN, billing address and project/delivery address.
 10. **Lead follow-up workspace** with stages, owners, notes, tasks/reminders and activity context.
+11. **Production planning and BOMs** with job cards, material quantities, wastage and production stages.
+12. **Payment reconciliation** with settlement records, failed/disputed payments, partial refunds and invoice balance updates.
+13. **Digital contracts and e-signatures** with locked signed versions and downloadable PDFs.
+14. **Customer project portal** with production progress, schedules, invoices, documents and support requests.
+15. **Operations tooling** with health checks, request IDs, rate limiting, database backups and admin deployment checks.
 
 ## Existing experience
 
@@ -106,6 +111,8 @@ flask db upgrade
 ```
 
 Set `AUTO_SEED=false` in production.
+
+The admin Operations screen is available at `/app/operations`. It exposes database health, payment provider configuration, rate-limit settings and manual backups. SQLite backups are copied locally; PostgreSQL and MySQL backups require `pg_dump` or `mysqldump` on the deployment host. Keep generated backups in external durable storage for real disaster recovery.
 
 ## Cloud product images
 

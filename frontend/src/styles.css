@@ -885,6 +885,18 @@ img { max-width: 100%; }
 .portal-lower-grid .panel { min-width: 0; }
 .muted-copy { color: var(--muted); font-size: 13px; }
 @media (max-width: 780px) { .portal-progress { grid-template-columns: 1fr; } .portal-lower-grid { grid-template-columns: 1fr; } }
+.ops-health-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin-bottom: 14px; }
+.ops-health-card { display: grid; gap: 7px; }
+.ops-health-card strong { font-size: 25px; text-transform: capitalize; }
+.ops-health-card small { color: var(--muted); }
+.backup-list { display: grid; gap: 8px; }
+.backup-row { display: flex; justify-content: space-between; gap: 14px; padding: 12px 0; border-bottom: 1px solid var(--line); }
+.backup-row span, .backup-row small { display: block; }
+.backup-row small { color: var(--muted); margin-top: 3px; }
+.ops-checklist { margin-top: 14px; }
+.ops-checklist > div { display: grid; grid-template-columns: repeat(2, 1fr); gap: 9px; margin-top: 14px; }
+.ops-checklist span { padding: 11px 13px; border-radius: 9px; background: #f5f3ed; color: var(--muted); font-size: 12px; }
+@media (max-width: 780px) { .ops-health-grid { grid-template-columns: 1fr; } .ops-checklist > div { grid-template-columns: 1fr; } }
 .configurator-layout { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(300px, .65fr); gap: 14px; align-items: start; }
 .configurator-main { min-width: 0; }
 .configurator-fields { margin-bottom: 22px; }

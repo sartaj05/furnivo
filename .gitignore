@@ -8,5 +8,7 @@ __pycache__/
 backend/furnivo.db
 backend/uploads/*
 !backend/uploads/.gitkeep
+backend/backups/*
+!backend/backups/.gitkeep
 .env
 *.sqlite3
