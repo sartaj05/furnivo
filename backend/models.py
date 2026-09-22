@@ -954,6 +954,40 @@ class LeadTask(TimestampMixin, db.Model):
         }
 
 
+class IntegrationConnection(TimestampMixin, db.Model):
+    __tablename__ = 'integration_connections'
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(120), nullable=False)
+    provider = db.Column(db.String(40), nullable=False, index=True)
+    base_url = db.Column(db.String(255), nullable=False, default='')
+    external_account = db.Column(db.String(160), nullable=False, default='')
+    credentials_ref = db.Column(db.String(255), nullable=False, default='')
+    status = db.Column(db.String(30), nullable=False, default='Not connected')
+    is_enabled = db.Column(db.Boolean, nullable=False, default=True)
+    last_sync_at = db.Column(db.DateTime(timezone=True))
+
+    def to_dict(self):
+        return {'id': self.id, 'name': self.name, 'provider': self.provider, 'base_url': self.base_url, 'external_account': self.external_account, 'credentials_ref': self.credentials_ref, 'status': self.status, 'is_enabled': self.is_enabled, 'last_sync_at': self.last_sync_at.isoformat() if self.last_sync_at else None}
+
+
+class SyncRun(TimestampMixin, db.Model):
+    __tablename__ = 'sync_runs'
+
+    id = db.Column(db.Integer, primary_key=True)
+    connection_id = db.Column(db.Integer, db.ForeignKey('integration_connections.id', ondelete='CASCADE'), nullable=False, index=True)
+    entity = db.Column(db.String(60), nullable=False, default='invoices')
+    status = db.Column(db.String(30), nullable=False, default='Queued')
+    records_synced = db.Column(db.Integer, nullable=False, default=0)
+    error = db.Column(db.Text, nullable=False, default='')
+    started_at = db.Column(db.DateTime(timezone=True), default=utcnow, nullable=False)
+    completed_at = db.Column(db.DateTime(timezone=True))
+    connection = db.relationship('IntegrationConnection')
+
+    def to_dict(self):
+        return {'id': self.id, 'connection_id': self.connection_id, 'provider': self.connection.provider if self.connection else None, 'entity': self.entity, 'status': self.status, 'records_synced': self.records_synced, 'error': self.error, 'started_at': self.started_at.isoformat(), 'completed_at': self.completed_at.isoformat() if self.completed_at else None}
+
+
 class Warranty(TimestampMixin, db.Model):
     __tablename__ = 'warranties'
 

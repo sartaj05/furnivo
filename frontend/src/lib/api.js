@@ -1,4 +1,4 @@
-import { demoAccessUsers, demoAnalytics, demoApprovalRequests, demoAuditLogs, demoBackups, demoBackgroundJobs, demoContracts, demoCustomerPricing, demoCustomers, demoDepartments, demoEInvoices, demoInventory, demoInvoices, demoLeads, demoNotifications, demoOpsHealth, demoOrders, demoPaymentReconciliations, demoProducts, demoProductionJobs, demoProjectOwnership, demoPurchaseOrders, demoQuotePresets, demoQuotes, demoReturns, demoSchedules, demoServiceTickets, demoStockMovements, demoSupportTickets, demoSuppliers, demoUsers, demoWarehouseStock, demoWarehouses, demoWarranties } from '../data/demoData'
+import { demoAccessUsers, demoAnalytics, demoApprovalRequests, demoAuditLogs, demoBackups, demoBackgroundJobs, demoContracts, demoCustomerPricing, demoCustomers, demoDepartments, demoEInvoices, demoIntegrations, demoInventory, demoInvoices, demoLeads, demoNotifications, demoOpsHealth, demoOrders, demoPaymentReconciliations, demoProducts, demoProductionJobs, demoProjectOwnership, demoPurchaseOrders, demoQuotePresets, demoQuotes, demoReturns, demoSchedules, demoServiceTickets, demoStockMovements, demoSupportTickets, demoSuppliers, demoSyncRuns, demoUsers, demoWarehouseStock, demoWarehouses, demoWarranties } from '../data/demoData'
 
 const API_URL = import.meta.env.VITE_API_URL?.replace(/\/$/, '')
 const STORAGE_KEY = 'furnivo-demo-db'
@@ -78,6 +78,8 @@ function getLocalDb() {
       projectOwnership: parsed.projectOwnership || demoProjectOwnership,
       warranties: parsed.warranties || demoWarranties,
       serviceTickets: parsed.serviceTickets || demoServiceTickets,
+      integrations: parsed.integrations || demoIntegrations,
+      syncRuns: parsed.syncRuns || demoSyncRuns,
     }
     if (!parsed.users) localStorage.setItem(STORAGE_KEY, JSON.stringify(normalized))
     return normalized
@@ -116,6 +118,8 @@ function getLocalDb() {
     projectOwnership: demoProjectOwnership,
     warranties: demoWarranties,
     serviceTickets: demoServiceTickets,
+    integrations: demoIntegrations,
+    syncRuns: demoSyncRuns,
   }
   localStorage.setItem(STORAGE_KEY, JSON.stringify(initial))
   return initial
@@ -1109,4 +1113,24 @@ export async function updateServiceTicket(id, payload) {
 export async function getAnalytics() {
   try { return await backendRequest('/analytics') }
   catch (error) { if (error.status) throw error; await delay(); return { ...getLocalDb().analytics || demoAnalytics, mode: 'demo' } }
+}
+
+export async function getIntegrations() {
+  try { return await backendRequest('/integrations') }
+  catch (error) { if (error.status) throw error; await delay(); const db = getLocalDb(); return { connections: db.integrations, runs: db.syncRuns, mode: 'demo' } }
+}
+
+export async function createIntegration(payload) {
+  try { return await backendRequest('/integrations', { method: 'POST', body: JSON.stringify(payload) }) }
+  catch (error) { if (error.status) throw error; const db = getLocalDb(); const item = { id: Date.now(), status: 'Connected', is_enabled: true, last_sync_at: null, ...payload }; db.integrations = [item, ...db.integrations]; saveLocalDb(db); return { item, mode: 'demo' } }
+}
+
+export async function updateIntegration(id, payload) {
+  try { return await backendRequest(`/integrations/${id}`, { method: 'PATCH', body: JSON.stringify(payload) }) }
+  catch (error) { if (error.status) throw error; const db = getLocalDb(); db.integrations = db.integrations.map((item) => Number(item.id) === Number(id) ? { ...item, ...payload } : item); saveLocalDb(db); return { item: db.integrations.find((item) => Number(item.id) === Number(id)), mode: 'demo' } }
+}
+
+export async function syncIntegration(id, entity = 'invoices') {
+  try { return await backendRequest(`/integrations/${id}/sync`, { method: 'POST', body: JSON.stringify({ entity }) }) }
+  catch (error) { if (error.status) throw error; const db = getLocalDb(); const connection = db.integrations.find((item) => Number(item.id) === Number(id)); const run = { id: Date.now(), connection_id: id, provider: connection?.provider, entity, status: 'Complete', records_synced: entity === 'invoices' ? db.invoices.length : 0, error: '', started_at: new Date().toISOString(), completed_at: new Date().toISOString() }; connection.last_sync_at = run.completed_at; connection.status = 'Synced'; db.syncRuns = [run, ...db.syncRuns]; saveLocalDb(db); return { item: run, connection, mode: 'demo' } }
 }

@@ -1,6 +1,6 @@
 from werkzeug.security import generate_password_hash
 from .extensions import db
-from .models import AccessPermission, ApprovalRequest, AuditLog, BomItem, Contract, CreditNote, Customer, CustomerPricing, Department, DeliverySchedule, EInvoice, InventoryItem, Invoice, Lead, LeadNote, LeadTask, Notification, Order, PaymentReconciliation, Product, ProductVariant, ProductionJob, ProjectOwnership, PurchaseOrder, PurchaseOrderItem, Quote, QuoteClientAccess, QuoteItem, QuotePreset, ProjectUpdate, ReturnRequest, ServiceTicket, StockMovement, Supplier, User, UserDepartment, Warehouse, WarehouseStock, Warranty
+from .models import AccessPermission, ApprovalRequest, AuditLog, BomItem, Contract, CreditNote, Customer, CustomerPricing, Department, DeliverySchedule, EInvoice, IntegrationConnection, InventoryItem, Invoice, Lead, LeadNote, LeadTask, Notification, Order, PaymentReconciliation, Product, ProductVariant, ProductionJob, ProjectOwnership, PurchaseOrder, PurchaseOrderItem, Quote, QuoteClientAccess, QuoteItem, QuotePreset, ProjectUpdate, ReturnRequest, ServiceTicket, StockMovement, Supplier, SyncRun, User, UserDepartment, Warehouse, WarehouseStock, Warranty
 
 
 DEMO_PRODUCTS = [
@@ -67,6 +67,7 @@ def seed_database():
     seed_leads()
     seed_access_controls()
     seed_service_management()
+    seed_integrations()
 
 
 def seed_access_controls():
@@ -116,6 +117,15 @@ def seed_service_management():
     db.session.add(warranty); db.session.flush()
     db.session.add(ServiceTicket(ticket_number='SVC-8001', warranty_id=warranty.id, order_id=order.id, customer_id=customer.id if customer else None, subject='Post-installation alignment check', description='Customer requested a technician visit to verify the sofa modules after installation.', priority='High', status='Assigned', assigned_to_id=sales.id if sales else admin.id, sla_due=__import__('datetime').date(2026, 10, 24)))
     db.session.commit()
+
+
+def seed_integrations():
+    if db.session.scalar(db.select(IntegrationConnection).limit(1)):
+        return
+    admin = db.session.scalar(db.select(User).where(User.role == 'admin'))
+    if admin:
+        db.session.add(IntegrationConnection(name='Demo accounting workspace', provider='Zoho Books', external_account='Furnivo Demo Books', credentials_ref='env:ZOHO_BOOKS_TOKEN', status='Connected'))
+        db.session.commit()
 
 
 def seed_quotes():

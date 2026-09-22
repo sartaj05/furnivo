@@ -81,6 +81,7 @@ def create_app(config_object=Config):
     from .routes.access import access_bp
     from .routes.service import service_bp
     from .routes.analytics import analytics_bp
+    from .routes.integrations import integrations_bp
 
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(products_bp, url_prefix='/api/products')
@@ -110,6 +111,7 @@ def create_app(config_object=Config):
     app.register_blueprint(access_bp, url_prefix='/api/access')
     app.register_blueprint(service_bp, url_prefix='/api/service')
     app.register_blueprint(analytics_bp, url_prefix='/api/analytics')
+    app.register_blueprint(integrations_bp, url_prefix='/api/integrations')
 
     if app.config.get('AUTO_SEED'):
         with app.app_context():

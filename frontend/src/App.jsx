@@ -29,6 +29,7 @@ import DataAdminPage from './pages/DataAdminPage'
 import AccessControlPage from './pages/AccessControlPage'
 import ServicePage from './pages/ServicePage'
 import AnalyticsPage from './pages/AnalyticsPage'
+import IntegrationsPage from './pages/IntegrationsPage'
 import ProtectedRoute from './components/ProtectedRoute'
 
 export default function App() {
@@ -54,6 +55,7 @@ export default function App() {
         <Route path="/app/access-control" element={<ProtectedRoute allowedRoles={['admin']}><AccessControlPage /></ProtectedRoute>} />
         <Route path="/app/service" element={<ServicePage />} />
         <Route path="/app/analytics" element={<ProtectedRoute allowedRoles={['admin', 'sales', 'designer']}><AnalyticsPage /></ProtectedRoute>} />
+        <Route path="/app/integrations" element={<ProtectedRoute allowedRoles={['admin']}><IntegrationsPage /></ProtectedRoute>} />
         <Route path="/app/customers" element={<ProtectedRoute allowedRoles={['admin', 'sales']}><CustomersPage /></ProtectedRoute>} />
         <Route
           path="/app/leads"
