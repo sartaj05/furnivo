@@ -174,6 +174,30 @@ class QuoteItem(TimestampMixin, db.Model):
             'line_total': float(self.line_total),
         }
 
+
+class QuoteClientAccess(TimestampMixin, db.Model):
+    __tablename__ = 'quote_client_access'
+    __table_args__ = (db.UniqueConstraint('quote_id', 'user_id', name='uq_quote_client_access'),)
+
+    id = db.Column(db.Integer, primary_key=True)
+    quote_id = db.Column(db.Integer, db.ForeignKey('quotes.id', ondelete='CASCADE'), nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='CASCADE'), nullable=False, index=True)
+    last_action = db.Column(db.String(40), nullable=False, default='Pending')
+    response_comment = db.Column(db.Text, nullable=False, default='')
+    responded_at = db.Column(db.DateTime(timezone=True))
+    quote = db.relationship('Quote')
+    user = db.relationship('User')
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'quote_id': self.quote_id,
+            'user_id': self.user_id,
+            'last_action': self.last_action,
+            'response_comment': self.response_comment,
+            'responded_at': self.responded_at.isoformat() if self.responded_at else None,
+        }
+
 class Customer(TimestampMixin, db.Model):
     __tablename__ = 'customers'
 

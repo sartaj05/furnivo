@@ -1,8 +1,8 @@
-from datetime import date
+from datetime import date, datetime, timezone
 from decimal import Decimal, InvalidOperation
 from flask import Blueprint, jsonify, request
 from ..extensions import db
-from ..models import Customer, Product, ProductVariant, Quote, QuoteItem
+from ..models import Customer, Product, ProductVariant, Quote, QuoteClientAccess, QuoteItem
 from ..utils import current_user, roles_required
 
 quotes_bp = Blueprint('quotes', __name__)
@@ -53,6 +53,20 @@ def list_quotes():
     return jsonify({'items': [item.to_dict() for item in items], 'mode': 'api'})
 
 
+@quotes_bp.get('/client')
+@roles_required('client')
+def list_client_quotes():
+    accesses = db.session.scalars(
+        db.select(QuoteClientAccess).where(QuoteClientAccess.user_id == current_user().id).order_by(QuoteClientAccess.id.desc())
+    ).all()
+    items = []
+    for access in accesses:
+        item = access.quote.to_dict()
+        item['client_access'] = access.to_dict()
+        items.append(item)
+    return jsonify({'items': items, 'mode': 'api'})
+
+
 @quotes_bp.get('/<int:quote_id>')
 @roles_required('admin', 'sales', 'designer')
 def get_quote(quote_id):
@@ -98,21 +112,54 @@ def create_quote():
 def update_quote_status(quote_id):
     quote = db.get_or_404(Quote, quote_id)
     status = str((request.get_json(silent=True) or {}).get('status', '')).strip()
-    if status not in {'Draft', 'Sent', 'Approved', 'Rejected'}:
+    if status not in {'Draft', 'Sent', 'Approved', 'Rejected', 'Change Requested'}:
         return jsonify({'message': 'Invalid quote status.'}), 400
     quote.status = status
     db.session.commit()
     return jsonify({'item': quote.to_dict(), 'mode': 'api'})
 
 @quotes_bp.get('/<int:quote_id>/pdf')
-@roles_required('admin', 'sales', 'designer')
+@roles_required('admin', 'sales', 'designer', 'client')
 def quote_pdf(quote_id):
     from flask import send_file
     from ..services.quote_pdf import build_quote_pdf
     quote = db.get_or_404(Quote, quote_id)
+    if current_user().role == 'client':
+        access = db.session.scalar(db.select(QuoteClientAccess).where(
+            QuoteClientAccess.quote_id == quote.id,
+            QuoteClientAccess.user_id == current_user().id,
+        ))
+        if not access:
+            return jsonify({'message': 'You do not have access to this quotation.'}), 403
     return send_file(
         build_quote_pdf(quote),
         mimetype='application/pdf',
         as_attachment=True,
         download_name=f'{quote.quote_number}.pdf',
     )
+
+
+@quotes_bp.post('/<int:quote_id>/client-response')
+@roles_required('client')
+def client_response(quote_id):
+    access = db.session.scalar(db.select(QuoteClientAccess).where(
+        QuoteClientAccess.quote_id == quote_id,
+        QuoteClientAccess.user_id == current_user().id,
+    ))
+    if not access:
+        return jsonify({'message': 'You do not have access to this quotation.'}), 403
+    payload = request.get_json(silent=True) or {}
+    action = str(payload.get('action', '')).strip()
+    comment = str(payload.get('comment', '')).strip()
+    if action not in {'Approved', 'Rejected', 'Change Requested'}:
+        return jsonify({'message': 'Choose approve, reject or request changes.'}), 400
+    if action == 'Change Requested' and not comment:
+        return jsonify({'message': 'Add a comment when requesting changes.'}), 400
+    access.last_action = action
+    access.response_comment = comment
+    access.responded_at = datetime.now(timezone.utc)
+    access.quote.status = action
+    db.session.commit()
+    item = access.quote.to_dict()
+    item['client_access'] = access.to_dict()
+    return jsonify({'item': item, 'mode': 'api'})

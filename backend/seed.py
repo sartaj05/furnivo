@@ -1,6 +1,6 @@
 from werkzeug.security import generate_password_hash
 from .extensions import db
-from .models import Customer, Lead, LeadNote, LeadTask, Product, ProductVariant, Quote, QuoteItem, User
+from .models import Customer, Lead, LeadNote, LeadTask, Product, ProductVariant, Quote, QuoteClientAccess, QuoteItem, User
 
 
 DEMO_PRODUCTS = [
@@ -49,6 +49,7 @@ def seed_database():
 
     seed_customers()
     seed_quotes()
+    seed_client_quote_access()
     seed_leads()
 
 
@@ -100,3 +101,17 @@ def seed_leads():
             db.session.add(LeadTask(lead_id=lead.id, title="Follow up on material selection", due_date=__import__('datetime').date(2026, 9, 25), assigned_to_id=owner.id if owner else None))
         db.session.add(LeadNote(lead_id=lead.id, author_id=(owner or admin).id, body="Initial enquiry captured and qualification started."))
     db.session.commit()
+
+
+def seed_client_quote_access():
+    client = db.session.scalar(db.select(User).where(User.email == 'client@furnivo.demo'))
+    quote = db.session.scalar(db.select(Quote).where(Quote.quote_number == 'Q-1042'))
+    if not client or not quote:
+        return
+    existing = db.session.scalar(db.select(QuoteClientAccess).where(
+        QuoteClientAccess.user_id == client.id,
+        QuoteClientAccess.quote_id == quote.id,
+    ))
+    if not existing:
+        db.session.add(QuoteClientAccess(user_id=client.id, quote_id=quote.id))
+        db.session.commit()

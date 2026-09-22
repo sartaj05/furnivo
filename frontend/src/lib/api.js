@@ -164,6 +164,35 @@ export async function getQuotes() {
   }
 }
 
+export async function getClientQuotes() {
+  try {
+    return await backendRequest('/quotes/client')
+  } catch (error) {
+    if (error.status) throw error
+    await delay()
+    const db = getLocalDb()
+    return {
+      items: db.quotes.map((quote) => ({ ...quote, client_access: quote.client_access || { last_action: quote.status === 'Approved' ? 'Approved' : 'Pending', response_comment: '' } })),
+      mode: 'demo',
+    }
+  }
+}
+
+export async function respondToQuote(id, action, comment = '') {
+  try {
+    return await backendRequest(`/quotes/${id}/client-response`, { method: 'POST', body: JSON.stringify({ action, comment }) })
+  } catch (error) {
+    if (error.status) throw error
+    await delay()
+    const db = getLocalDb()
+    db.quotes = db.quotes.map((quote) => quote.database_id === id || quote.id === id
+      ? { ...quote, status: action, client_access: { ...(quote.client_access || {}), last_action: action, response_comment: comment } }
+      : quote)
+    saveLocalDb(db)
+    return { item: db.quotes.find((quote) => quote.database_id === id || quote.id === id), mode: 'demo' }
+  }
+}
+
 export async function createQuote(payload) {
   try {
     return await backendRequest('/quotes', {
