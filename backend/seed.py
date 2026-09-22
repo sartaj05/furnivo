@@ -1,6 +1,6 @@
 from werkzeug.security import generate_password_hash
 from .extensions import db
-from .models import AuditLog, BomItem, Contract, CreditNote, Customer, CustomerPricing, DeliverySchedule, EInvoice, InventoryItem, Invoice, Lead, LeadNote, LeadTask, Notification, Order, PaymentReconciliation, Product, ProductVariant, ProductionJob, PurchaseOrder, PurchaseOrderItem, Quote, QuoteClientAccess, QuoteItem, QuotePreset, ProjectUpdate, ReturnRequest, StockMovement, Supplier, User, Warehouse, WarehouseStock
+from .models import AccessPermission, ApprovalRequest, AuditLog, BomItem, Contract, CreditNote, Customer, CustomerPricing, Department, DeliverySchedule, EInvoice, InventoryItem, Invoice, Lead, LeadNote, LeadTask, Notification, Order, PaymentReconciliation, Product, ProductVariant, ProductionJob, ProjectOwnership, PurchaseOrder, PurchaseOrderItem, Quote, QuoteClientAccess, QuoteItem, QuotePreset, ProjectUpdate, ReturnRequest, StockMovement, Supplier, User, UserDepartment, Warehouse, WarehouseStock
 
 
 DEMO_PRODUCTS = [
@@ -65,6 +65,40 @@ def seed_database():
     seed_contracts()
     seed_gst()
     seed_leads()
+    seed_access_controls()
+
+
+def seed_access_controls():
+    department_data = [('Sales', 'Quotations, customer relationships, and approvals.'), ('Design', 'Design delivery and project specifications.'), ('Operations', 'Production, delivery, and service execution.')]
+    departments = {}
+    for name, description in department_data:
+        department = db.session.scalar(db.select(Department).where(Department.name == name))
+        if not department:
+            department = Department(name=name, description=description); db.session.add(department); db.session.flush()
+        departments[name] = department
+    db.session.commit()
+
+    permission_map = {
+        'admin': [('*', 'global')],
+        'sales': [('quotes.create', 'team'), ('quotes.discount', 'approval'), ('orders.manage', 'team'), ('customers.view', 'team')],
+        'designer': [('quotes.create', 'own'), ('production.manage', 'team'), ('orders.view', 'assigned')],
+        'client': [('portal.view', 'own')],
+    }
+    for role, permissions in permission_map.items():
+        for user in db.session.scalars(db.select(User).where(User.role == role)).all():
+            for permission, scope in permissions:
+                if not db.session.scalar(db.select(AccessPermission).where(AccessPermission.user_id == user.id, AccessPermission.permission == permission, AccessPermission.scope == scope)):
+                    db.session.add(AccessPermission(user_id=user.id, permission=permission, scope=scope))
+            department_name = {'admin': 'Operations', 'sales': 'Sales', 'designer': 'Design'}.get(role)
+            if department_name and not db.session.scalar(db.select(UserDepartment).where(UserDepartment.user_id == user.id, UserDepartment.department_id == departments[department_name].id)):
+                db.session.add(UserDepartment(user_id=user.id, department_id=departments[department_name].id, role_title='Administrator' if role == 'admin' else role.title()))
+    db.session.commit()
+
+    quote = db.session.scalar(db.select(Quote).where(Quote.quote_number == 'Q-1042'))
+    sales = db.session.scalar(db.select(User).where(User.role == 'sales'))
+    if quote and sales and not db.session.scalar(db.select(ApprovalRequest).where(ApprovalRequest.resource_id == quote.quote_number)):
+        db.session.add(ApprovalRequest(request_type='Discount', resource_type='quote', resource_id=quote.quote_number, amount=186400, detail='Approval required for a customer discount above the sales threshold.', requested_by_id=sales.id))
+        db.session.commit()
 
 
 def seed_quotes():

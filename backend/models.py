@@ -952,3 +952,80 @@ class LeadTask(TimestampMixin, db.Model):
             'is_done': self.is_done, 'assigned_to_id': self.assigned_to_id,
             'assigned_to': self.assigned_to.name if self.assigned_to else None,
         }
+
+
+class Department(TimestampMixin, db.Model):
+    __tablename__ = 'departments'
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), unique=True, nullable=False)
+    description = db.Column(db.String(255), nullable=False, default='')
+    is_active = db.Column(db.Boolean, nullable=False, default=True)
+
+    def to_dict(self):
+        return {'id': self.id, 'name': self.name, 'description': self.description, 'is_active': self.is_active}
+
+
+class UserDepartment(TimestampMixin, db.Model):
+    __tablename__ = 'user_departments'
+    __table_args__ = (db.UniqueConstraint('user_id', 'department_id', name='uq_user_department'),)
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='CASCADE'), nullable=False, index=True)
+    department_id = db.Column(db.Integer, db.ForeignKey('departments.id', ondelete='CASCADE'), nullable=False, index=True)
+    role_title = db.Column(db.String(100), nullable=False, default='Member')
+    user = db.relationship('User')
+    department = db.relationship('Department')
+
+    def to_dict(self):
+        return {'id': self.id, 'user_id': self.user_id, 'user': self.user.public_dict() if self.user else None, 'department_id': self.department_id, 'department': self.department.name if self.department else None, 'role_title': self.role_title}
+
+
+class AccessPermission(TimestampMixin, db.Model):
+    __tablename__ = 'access_permissions'
+    __table_args__ = (db.UniqueConstraint('user_id', 'permission', 'scope', name='uq_user_permission_scope'),)
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='CASCADE'), nullable=False, index=True)
+    permission = db.Column(db.String(120), nullable=False)
+    scope = db.Column(db.String(80), nullable=False, default='own')
+    is_enabled = db.Column(db.Boolean, nullable=False, default=True)
+    user = db.relationship('User')
+
+    def to_dict(self):
+        return {'id': self.id, 'user_id': self.user_id, 'permission': self.permission, 'scope': self.scope, 'is_enabled': self.is_enabled}
+
+
+class ProjectOwnership(TimestampMixin, db.Model):
+    __tablename__ = 'project_ownerships'
+    __table_args__ = (db.UniqueConstraint('order_id', 'user_id', name='uq_project_owner'),)
+
+    id = db.Column(db.Integer, primary_key=True)
+    order_id = db.Column(db.Integer, db.ForeignKey('orders.id', ondelete='CASCADE'), nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='CASCADE'), nullable=False, index=True)
+    assigned_by_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    order = db.relationship('Order')
+    user = db.relationship('User', foreign_keys=[user_id])
+    assigned_by = db.relationship('User', foreign_keys=[assigned_by_id])
+
+    def to_dict(self):
+        return {'id': self.id, 'order_id': self.order_id, 'order_number': self.order.order_number if self.order else None, 'customer': self.order.customer_name if self.order else None, 'user_id': self.user_id, 'owner': self.user.public_dict() if self.user else None, 'assigned_by': self.assigned_by.name if self.assigned_by else None}
+
+
+class ApprovalRequest(TimestampMixin, db.Model):
+    __tablename__ = 'approval_requests'
+
+    id = db.Column(db.Integer, primary_key=True)
+    request_type = db.Column(db.String(60), nullable=False, index=True)
+    resource_type = db.Column(db.String(60), nullable=False)
+    resource_id = db.Column(db.String(120), nullable=False)
+    amount = db.Column(db.Numeric(12, 2), nullable=False, default=0)
+    detail = db.Column(db.Text, nullable=False, default='')
+    status = db.Column(db.String(30), nullable=False, default='Requested', index=True)
+    requested_by_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    approved_by_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    requested_by = db.relationship('User', foreign_keys=[requested_by_id])
+    approved_by = db.relationship('User', foreign_keys=[approved_by_id])
+
+    def to_dict(self):
+        return {'id': self.id, 'request_type': self.request_type, 'resource_type': self.resource_type, 'resource_id': self.resource_id, 'amount': float(self.amount or 0), 'detail': self.detail, 'status': self.status, 'requested_by': self.requested_by.public_dict() if self.requested_by else None, 'approved_by': self.approved_by.public_dict() if self.approved_by else None, 'created_at': self.created_at.isoformat(), 'updated_at': self.updated_at.isoformat()}

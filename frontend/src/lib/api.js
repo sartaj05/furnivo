@@ -1,4 +1,4 @@
-import { demoAuditLogs, demoBackups, demoBackgroundJobs, demoContracts, demoCustomerPricing, demoCustomers, demoEInvoices, demoInventory, demoInvoices, demoLeads, demoNotifications, demoOpsHealth, demoOrders, demoPaymentReconciliations, demoProducts, demoProductionJobs, demoPurchaseOrders, demoQuotePresets, demoQuotes, demoReturns, demoSchedules, demoStockMovements, demoSupportTickets, demoSuppliers, demoUsers, demoWarehouseStock, demoWarehouses } from '../data/demoData'
+import { demoAccessUsers, demoApprovalRequests, demoAuditLogs, demoBackups, demoBackgroundJobs, demoContracts, demoCustomerPricing, demoCustomers, demoDepartments, demoEInvoices, demoInventory, demoInvoices, demoLeads, demoNotifications, demoOpsHealth, demoOrders, demoPaymentReconciliations, demoProducts, demoProductionJobs, demoProjectOwnership, demoPurchaseOrders, demoQuotePresets, demoQuotes, demoReturns, demoSchedules, demoStockMovements, demoSupportTickets, demoSuppliers, demoUsers, demoWarehouseStock, demoWarehouses } from '../data/demoData'
 
 const API_URL = import.meta.env.VITE_API_URL?.replace(/\/$/, '')
 const STORAGE_KEY = 'furnivo-demo-db'
@@ -72,6 +72,10 @@ function getLocalDb() {
       backups: parsed.backups || demoBackups,
       eInvoices: parsed.eInvoices || demoEInvoices,
       backgroundJobs: parsed.backgroundJobs || demoBackgroundJobs,
+      accessUsers: parsed.accessUsers || demoAccessUsers,
+      departments: parsed.departments || demoDepartments,
+      approvals: parsed.approvals || demoApprovalRequests,
+      projectOwnership: parsed.projectOwnership || demoProjectOwnership,
     }
     if (!parsed.users) localStorage.setItem(STORAGE_KEY, JSON.stringify(normalized))
     return normalized
@@ -104,6 +108,10 @@ function getLocalDb() {
     backups: demoBackups,
     eInvoices: demoEInvoices,
     backgroundJobs: demoBackgroundJobs,
+    accessUsers: demoAccessUsers,
+    departments: demoDepartments,
+    approvals: demoApprovalRequests,
+    projectOwnership: demoProjectOwnership,
   }
   localStorage.setItem(STORAGE_KEY, JSON.stringify(initial))
   return initial
@@ -1018,4 +1026,53 @@ export async function updateCustomer(id, payload) {
     const db = getLocalDb(); db.customers = db.customers.map((c) => Number(c.id) === Number(id) ? { ...c, ...payload } : c); saveLocalDb(db)
     return { item: db.customers.find((c) => Number(c.id) === Number(id)), mode: 'demo' }
   }
+}
+
+export async function getAccessUsers() {
+  try { return await backendRequest('/access/users') }
+  catch (error) { if (error.status) throw error; await delay(); return { items: getLocalDb().accessUsers, mode: 'demo' } }
+}
+
+export async function saveUserPermissions(userId, permissions) {
+  try { return await backendRequest(`/access/users/${userId}/permissions`, { method: 'PUT', body: JSON.stringify({ permissions }) }) }
+  catch (error) {
+    if (error.status) throw error
+    const db = getLocalDb(); db.accessUsers = db.accessUsers.map((entry) => Number(entry.user.id) === Number(userId) ? { ...entry, permissions } : entry); saveLocalDb(db)
+    return { item: db.accessUsers.find((entry) => Number(entry.user.id) === Number(userId)), mode: 'demo' }
+  }
+}
+
+export async function getDepartments() {
+  try { return await backendRequest('/access/departments') }
+  catch (error) { if (error.status) throw error; await delay(); return { items: getLocalDb().departments, mode: 'demo' } }
+}
+
+export async function createDepartment(payload) {
+  try { return await backendRequest('/access/departments', { method: 'POST', body: JSON.stringify(payload) }) }
+  catch (error) { if (error.status) throw error; const db = getLocalDb(); const item = { id: Date.now(), ...payload }; db.departments = [...db.departments, item]; saveLocalDb(db); return { item, mode: 'demo' } }
+}
+
+export async function getApprovalRequests() {
+  try { return await backendRequest('/access/approvals') }
+  catch (error) { if (error.status) throw error; await delay(); return { items: getLocalDb().approvals, mode: 'demo' } }
+}
+
+export async function createApprovalRequest(payload) {
+  try { return await backendRequest('/access/approvals', { method: 'POST', body: JSON.stringify(payload) }) }
+  catch (error) { if (error.status) throw error; const db = getLocalDb(); const user = JSON.parse(localStorage.getItem('furnivo-user') || '{}'); const item = { id: Date.now(), status: 'Requested', requested_by: user, approved_by: null, created_at: new Date().toISOString(), updated_at: new Date().toISOString(), ...payload }; db.approvals = [item, ...db.approvals]; saveLocalDb(db); return { item, mode: 'demo' } }
+}
+
+export async function updateApprovalRequest(id, status) {
+  try { return await backendRequest(`/access/approvals/${id}`, { method: 'PATCH', body: JSON.stringify({ status }) }) }
+  catch (error) { if (error.status) throw error; const db = getLocalDb(); const user = JSON.parse(localStorage.getItem('furnivo-user') || '{}'); db.approvals = db.approvals.map((item) => Number(item.id) === Number(id) ? { ...item, status, approved_by: user, updated_at: new Date().toISOString() } : item); saveLocalDb(db); return { item: db.approvals.find((item) => Number(item.id) === Number(id)), mode: 'demo' } }
+}
+
+export async function getProjectOwnership() {
+  try { return await backendRequest('/access/ownership') }
+  catch (error) { if (error.status) throw error; await delay(); return { items: getLocalDb().projectOwnership, mode: 'demo' } }
+}
+
+export async function assignProjectOwner(payload) {
+  try { return await backendRequest('/access/ownership', { method: 'POST', body: JSON.stringify(payload) }) }
+  catch (error) { if (error.status) throw error; const db = getLocalDb(); const order = db.orders.find((item) => Number(item.id) === Number(payload.order_id)); const owner = db.users.find((item) => Number(item.id) === Number(payload.user_id)); const item = { id: Date.now(), ...payload, order_number: order?.order_number, customer: order?.customer, owner, assigned_by: JSON.parse(localStorage.getItem('furnivo-user') || '{}').name }; db.projectOwnership = [item, ...db.projectOwnership.filter((entry) => !(Number(entry.order_id) === Number(payload.order_id) && Number(entry.user_id) === Number(payload.user_id)))]; saveLocalDb(db); return { item, mode: 'demo' } }
 }

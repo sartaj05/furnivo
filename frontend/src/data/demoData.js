@@ -5,6 +5,28 @@ export const demoUsers = [
   { id: 4, name: 'Riya Client', email: 'client@furnivo.demo', password: 'client123', role: 'client' },
 ]
 
+export const demoAccessUsers = demoUsers.map((user) => ({
+  user,
+  permissions: user.role === 'admin'
+    ? [{ id: 1, permission: '*', scope: 'global', is_enabled: true }]
+    : [{ id: 2, permission: user.role === 'sales' ? 'quotes.discount' : 'portal.view', scope: user.role === 'sales' ? 'approval' : 'own', is_enabled: true }],
+  departments: user.role === 'admin' ? [{ department: 'Operations', role_title: 'Administrator' }] : [{ department: user.role === 'sales' ? 'Sales' : user.role === 'designer' ? 'Design' : 'Client', role_title: user.role }],
+}))
+
+export const demoDepartments = [
+  { id: 1, name: 'Sales', description: 'Quotations and customer relationships.' },
+  { id: 2, name: 'Design', description: 'Design delivery and specifications.' },
+  { id: 3, name: 'Operations', description: 'Production, delivery, and service.' },
+]
+
+export const demoApprovalRequests = [
+  { id: 1, request_type: 'Discount', resource_type: 'quote', resource_id: 'Q-1042', amount: 186400, detail: 'Approval required for a customer discount above the sales threshold.', status: 'Requested', requested_by: demoUsers[1], approved_by: null, created_at: '2026-09-18T10:00:00Z', updated_at: '2026-09-18T10:00:00Z' },
+]
+
+export const demoProjectOwnership = [
+  { id: 1, order_id: 1, order_number: 'ORD-1001', customer: 'Northline Studio', user_id: 2, owner: demoUsers[1], assigned_by: 'Aarav Admin' },
+]
+
 export const demoProducts = [
   {
     id: 1,
