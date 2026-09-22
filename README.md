@@ -175,6 +175,57 @@ feat: add customer company and project address records
 feat: add lead notes tasks owners and activity timeline
 ```
 
-## Recommended next production work
+## Remaining features and deployment gaps
 
-After these ten features, the highest-value additions are automated tests, refresh-token/session strategy, rate limiting, audit logs, email/WhatsApp notifications, CSV/Excel exports, dashboard analytics from live data, quote approval/version history, server-side pagination and object-level authorization for client users.
+The main Furnivo business workflow is implemented. The remaining work is mostly production integration, operations and hardening rather than missing screens.
+
+### Ready for deployment
+
+- The frontend runs with demo data when `VITE_API_URL` is missing or the API is unavailable.
+- The frontend uses the Flask API when `VITE_API_URL` is configured and reachable.
+- Render configuration, PostgreSQL migrations, Cloudinary uploads, `/api/health`, CI checks and an optional deploy hook are included.
+- The current setup is suitable for a preview, demo or early client deployment after configuring the provider secrets in [DEPLOYMENT.md](DEPLOYMENT.md).
+
+### Remaining high-priority work
+
+1. **Real provider configuration and verification**
+   - Connect and test the selected Stripe/Razorpay account, HTTP email provider, WhatsApp provider and accounting provider.
+   - Configure signed webhook verification, live refund settings, retry delivery and failure alerts.
+   - The application safely defaults to demo providers until these values are configured.
+
+2. **Staging and production environments**
+   - Use separate Supabase databases, Render services, Cloudinary folders and secrets.
+   - Run migrations and smoke tests in staging before changing production.
+   - Add a manual production approval and rollback procedure.
+
+3. **External backup and restore automation**
+   - Schedule PostgreSQL backups outside the application filesystem.
+   - Keep retention copies and verify that a backup can be restored.
+   - The Operations screen can create/list backups, but hosted backups still need durable external storage.
+
+4. **Production security hardening**
+   - Add login lockout and stronger administrator controls.
+   - Review every client-owned record and sensitive action with production test accounts.
+   - Add secret rotation, security headers, centralized error monitoring and alerting.
+
+5. **Broader automated testing**
+   - Add end-to-end tests for login, client quote approval, order conversion, payments, uploads, field proof and portal access.
+   - Add PostgreSQL integration tests and coverage thresholds for important backend routes.
+
+6. **Reliable background processing**
+   - Move notification retries, report refreshes, catalog indexing and scheduled reminders to an external worker or scheduler when usage grows.
+   - The current in-process job runner is suitable for low-volume deployments only.
+
+7. **Advanced reporting and integrations**
+   - Add live profit-margin forecasting, capacity forecasting and customer lifetime value.
+   - Complete provider-specific accounting sync and GST/e-invoice production adapters.
+
+### Recommended order before real customer data
+
+1. Configure Supabase, Cloudinary, Render secrets and the frontend API URL.
+2. Keep `AUTO_SEED=false` and remove or change all demo credentials.
+3. Deploy and verify `/api/health`, login, database migrations, uploads and client record isolation.
+4. Configure external backups and test a restore.
+5. Enable real payment/notification providers only after their webhooks and failure paths are tested.
+
+The project does not need another business feature before the first deployment. The next best implementation is staging/production separation followed by external backups and full end-to-end deployment testing.
