@@ -16,8 +16,13 @@ The application is a working React/Vite + Flask/SQLAlchemy sales workspace. The 
 - Quotation builder with products, variants, quantities, discount, tax/GST, shipping and totals.
 - Quote PDF download through Flask/ReportLab or jsPDF in demo mode.
 - Quote status changes for admin and sales.
+- Client quotation portal with assigned quote access, PDF download, approve/reject/request-changes actions and comments.
+- Quote revision history with versioned status and client-response events.
 - Customer records with project/billing information and GSTIN.
 - Lead CRM with stage movement, owners, notes, tasks/reminders and new lead capture.
+- Order conversion from quotations with production, delivery, installation and project updates.
+- Inventory quantities, reserved stock, reorder levels, supplier/location data and low-stock indicators.
+- In-app notifications with automation triggers for quotes, leads, tasks and project updates.
 - Local demo CRUD persistence in `localStorage`.
 - Dashboard metrics sourced from the active API or demo data.
 
@@ -43,7 +48,7 @@ These are not implemented as production features yet:
 - Audit log for sensitive changes such as price, quote status and permissions.
 - Email/WhatsApp notifications and scheduled reminders.
 - CSV/Excel exports.
-- Quote version history, approval workflow and client quote approval screen.
+- External email/WhatsApp delivery providers for notifications.
 - Server-side pagination/filtering for larger catalogs and CRM data.
 - Object-level authorization for client-owned records; current access is role-level.
 - Live analytics beyond the current dashboard counts and totals.
@@ -54,4 +59,5 @@ These are not implemented as production features yet:
 - `python -m compileall -q backend` passes.
 - `npm run build` passes after installing frontend dependencies.
 - Flask API smoke test passes in the project virtual environment: health, admin login, products, quotes and leads returned successfully.
+- Additional smoke checks pass for client quote response, quote history, orders, inventory and notifications.
 - The smoke test uses development defaults; replace `SECRET_KEY` and `JWT_SECRET_KEY` with long production secrets before deployment.
