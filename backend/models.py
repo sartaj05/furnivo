@@ -517,6 +517,22 @@ class AuditLog(TimestampMixin, db.Model):
     def to_dict(self):
         return {'id': self.id, 'user': self.user.public_dict() if self.user else None, 'action': self.action, 'resource_type': self.resource_type, 'resource_id': self.resource_id, 'detail': self.detail, 'created_at': self.created_at.isoformat()}
 
+
+class PaymentIntent(TimestampMixin, db.Model):
+    __tablename__ = 'payment_intents'
+
+    id = db.Column(db.Integer, primary_key=True)
+    invoice_id = db.Column(db.Integer, db.ForeignKey('invoices.id', ondelete='CASCADE'), nullable=False, index=True)
+    provider = db.Column(db.String(30), nullable=False)
+    external_id = db.Column(db.String(180), nullable=False, unique=True)
+    checkout_url = db.Column(db.String(500), nullable=False, default='')
+    amount = db.Column(db.Numeric(12, 2), nullable=False)
+    status = db.Column(db.String(40), nullable=False, default='created')
+    invoice = db.relationship('Invoice')
+
+    def to_dict(self):
+        return {'id': self.id, 'invoice_id': self.invoice_id, 'provider': self.provider, 'external_id': self.external_id, 'checkout_url': self.checkout_url, 'amount': float(self.amount or 0), 'status': self.status}
+
 class Customer(TimestampMixin, db.Model):
     __tablename__ = 'customers'
 

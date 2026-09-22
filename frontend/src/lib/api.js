@@ -493,6 +493,11 @@ export async function recordPayment(id, payload) {
   }
 }
 
+export async function createCheckout(id) {
+  try { return await backendRequest(`/payments/invoices/${id}/checkout`, { method: 'POST' }) }
+  catch (error) { if (error.status) throw error; await delay(); const invoice = getLocalDb().invoices.find((item) => Number(item.id) === Number(id)); return { item: { provider: 'demo', external_id: `demo_${Date.now()}`, checkout_url: invoice?.payment_link || `/pay/${id}`, amount: Number(invoice?.balance || 0), status: 'demo-checkout' }, mode: 'demo' } }
+}
+
 export async function getSuppliers() {
   try { return await backendRequest('/procurement/suppliers') }
   catch (error) { if (error.status) throw error; await delay(); return { items: getLocalDb().suppliers, mode: 'demo' } }
