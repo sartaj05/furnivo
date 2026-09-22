@@ -1,4 +1,4 @@
-import { demoCustomers, demoInventory, demoLeads, demoNotifications, demoOrders, demoProducts, demoQuotes, demoUsers } from '../data/demoData'
+import { demoCustomers, demoInventory, demoInvoices, demoLeads, demoNotifications, demoOrders, demoProducts, demoQuotes, demoUsers } from '../data/demoData'
 
 const API_URL = import.meta.env.VITE_API_URL?.replace(/\/$/, '')
 const STORAGE_KEY = 'furnivo-demo-db'
@@ -54,6 +54,7 @@ function getLocalDb() {
       orders: parsed.orders || demoOrders,
       inventory: parsed.inventory || demoInventory,
       notifications: parsed.notifications || demoNotifications,
+      invoices: parsed.invoices || demoInvoices,
     }
     if (!parsed.users) localStorage.setItem(STORAGE_KEY, JSON.stringify(normalized))
     return normalized
@@ -68,6 +69,7 @@ function getLocalDb() {
     orders: demoOrders,
     inventory: demoInventory,
     notifications: demoNotifications,
+    invoices: demoInvoices,
   }
   localStorage.setItem(STORAGE_KEY, JSON.stringify(initial))
   return initial
@@ -458,6 +460,30 @@ export async function deliverNotification(id, channel, recipient = '') {
     if (error.status) throw error
     await delay()
     return { item: { id: Date.now(), notification_id: id, channel, recipient, status: 'demo-queued', error: 'Configure the provider in the backend environment for live delivery.' }, mode: 'demo' }
+  }
+}
+
+export async function getInvoices() {
+  try { return await backendRequest('/invoices') }
+  catch (error) { if (error.status) throw error; await delay(); return { items: getLocalDb().invoices, mode: 'demo' } }
+}
+
+export async function createInvoice(payload) {
+  try { return await backendRequest('/invoices', { method: 'POST', body: JSON.stringify(payload) }) }
+  catch (error) {
+    if (error.status) throw error
+    const db = getLocalDb(); const order = db.orders.find((item) => Number(item.id) === Number(payload.order_id)); if (!order) throw new Error('Choose a valid order.')
+    if (db.invoices.some((item) => Number(item.order_id) === Number(order.id))) throw new Error('An invoice already exists for this order.')
+    const invoiceNumber = `INV-${2001 + db.invoices.length}`; const invoice = { id: Date.now(), invoice_number: invoiceNumber, order_id: order.id, order_number: order.order_number, customer: order.customer, issue_date: new Date().toISOString().slice(0, 10), due_date: payload.due_date || '', status: 'Sent', subtotal: Number(order.amount || 0), tax_amount: 0, total: Number(order.amount || 0), amount_paid: 0, balance: Number(order.amount || 0), payment_link: `/pay/${invoiceNumber}`, payments: [] }; db.invoices = [invoice, ...db.invoices]; saveLocalDb(db); return { item: invoice, mode: 'demo' }
+  }
+}
+
+export async function recordPayment(id, payload) {
+  try { return await backendRequest(`/invoices/${id}/payments`, { method: 'POST', body: JSON.stringify(payload) }) }
+  catch (error) {
+    if (error.status) throw error
+    const db = getLocalDb(); const invoice = db.invoices.find((item) => Number(item.id) === Number(id)); const amount = Number(payload.amount || 0); if (!invoice || amount <= 0 || amount > Number(invoice.balance)) throw new Error('Payment amount is invalid.')
+    const payment = { id: Date.now(), amount, method: payload.method || 'Bank transfer', reference: payload.reference || '', paid_at: new Date().toISOString() }; invoice.amount_paid = Number(invoice.amount_paid || 0) + amount; invoice.balance = Math.max(Number(invoice.total) - invoice.amount_paid, 0); invoice.status = invoice.balance === 0 ? 'Paid' : 'Partially Paid'; invoice.payments = [payment, ...(invoice.payments || [])]; saveLocalDb(db); return { item: invoice, mode: 'demo' }
   }
 }
 

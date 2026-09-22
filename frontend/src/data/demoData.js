@@ -156,3 +156,7 @@ export const demoNotifications = [
   { id: 1, user_id: 1, type: 'task', title: 'Follow-up workspace ready', body: 'Review the active lead pipeline and open tasks.', related_type: 'lead', related_id: '', is_read: false, created_at: '2026-09-22T08:30:00.000Z' },
   { id: 2, user_id: 4, type: 'quote', title: 'Quotation ready for review', body: 'Q-1042 is ready in your client portal.', related_type: 'quote', related_id: '1', is_read: false, created_at: '2026-09-22T08:30:00.000Z' },
 ]
+
+export const demoInvoices = [
+  { id: 1, invoice_number: 'INV-2001', order_id: 1, order_number: 'ORD-1001', customer: 'Northline Studio', issue_date: '2026-09-18', due_date: '2026-10-03', status: 'Partially Paid', subtotal: 158000, tax_amount: 28440, total: 186440, amount_paid: 50000, balance: 136440, payment_link: '/pay/INV-2001', payments: [{ id: 1, amount: 50000, method: 'Bank transfer', reference: 'NEFT-001', paid_at: '2026-09-19T10:00:00.000Z' }] },
+]

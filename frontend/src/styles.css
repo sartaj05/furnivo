@@ -822,10 +822,17 @@ img { max-width: 100%; }
 .notification-item { display: grid; gap: 4px; width: 100%; margin-top: 10px; padding: 10px; border: 0; border-radius: 10px; background: var(--sage); color: var(--ink); text-align: left; cursor: pointer; }
 .notification-item.read { background: #f0efe9; opacity: .7; }
 .notification-item span, .notification-item small { color: var(--muted); font-size: 11px; }
+.invoice-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.invoice-card { display: grid; gap: 14px; }
+.invoice-total { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding: 14px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.invoice-total span, .invoice-total strong { display: block; }
+.invoice-total span { color: var(--muted); font-size: 12px; }
+.invoice-total strong { margin-top: 4px; font-size: 22px; }
 @media (max-width: 780px) { .customer-grid { grid-template-columns: 1fr; } }
 @media (max-width: 780px) { .client-quote-grid { grid-template-columns: 1fr; } }
 @media (max-width: 780px) { .order-grid, .order-status-grid { grid-template-columns: 1fr; } }
 @media (max-width: 780px) { .inventory-grid, .inventory-edit-grid { grid-template-columns: 1fr; } }
+@media (max-width: 780px) { .invoice-grid { grid-template-columns: 1fr; } }
 .lead-workspace { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(320px, .85fr); gap: 14px; align-items: start; }
 .lead-workspace .lead-grid { grid-template-columns: 1fr 1fr; }
 .lead-card { cursor: pointer; }

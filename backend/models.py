@@ -375,6 +375,79 @@ class NotificationDelivery(TimestampMixin, db.Model):
             'attempted_at': self.attempted_at.isoformat() if self.attempted_at else None,
         }
 
+
+class Invoice(TimestampMixin, db.Model):
+    __tablename__ = 'invoices'
+
+    id = db.Column(db.Integer, primary_key=True)
+    invoice_number = db.Column(db.String(40), unique=True, nullable=False, index=True)
+    order_id = db.Column(db.Integer, db.ForeignKey('orders.id'), nullable=False, unique=True, index=True)
+    customer_id = db.Column(db.Integer, db.ForeignKey('customers.id'), nullable=True, index=True)
+    customer_name = db.Column(db.String(180), nullable=False)
+    issue_date = db.Column(db.Date, nullable=False)
+    due_date = db.Column(db.Date)
+    status = db.Column(db.String(40), nullable=False, default='Sent')
+    subtotal = db.Column(db.Numeric(12, 2), nullable=False, default=0)
+    tax_amount = db.Column(db.Numeric(12, 2), nullable=False, default=0)
+    total = db.Column(db.Numeric(12, 2), nullable=False, default=0)
+    amount_paid = db.Column(db.Numeric(12, 2), nullable=False, default=0)
+    payment_link = db.Column(db.String(500), nullable=False, default='')
+    notes = db.Column(db.Text, nullable=False, default='')
+    created_by_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    order = db.relationship('Order')
+    customer = db.relationship('Customer')
+    payments = db.relationship('Payment', back_populates='invoice', cascade='all, delete-orphan', lazy='selectin')
+
+    @property
+    def balance(self):
+        return max((self.total or 0) - (self.amount_paid or 0), 0)
+
+    def refresh_status(self):
+        if self.amount_paid >= self.total:
+            self.status = 'Paid'
+        elif self.amount_paid > 0:
+            self.status = 'Partially Paid'
+        elif self.due_date and self.due_date < __import__('datetime').date.today():
+            self.status = 'Overdue'
+        else:
+            self.status = 'Sent'
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'invoice_number': self.invoice_number,
+            'order_id': self.order_id,
+            'order_number': self.order.order_number if self.order else None,
+            'customer_id': self.customer_id,
+            'customer': self.customer_name,
+            'issue_date': self.issue_date.isoformat(),
+            'due_date': self.due_date.isoformat() if self.due_date else None,
+            'status': self.status,
+            'subtotal': float(self.subtotal or 0),
+            'tax_amount': float(self.tax_amount or 0),
+            'total': float(self.total or 0),
+            'amount_paid': float(self.amount_paid or 0),
+            'balance': float(self.balance),
+            'payment_link': self.payment_link,
+            'notes': self.notes,
+            'payments': [payment.to_dict() for payment in sorted(self.payments, key=lambda item: item.paid_at, reverse=True)],
+        }
+
+
+class Payment(TimestampMixin, db.Model):
+    __tablename__ = 'payments'
+
+    id = db.Column(db.Integer, primary_key=True)
+    invoice_id = db.Column(db.Integer, db.ForeignKey('invoices.id', ondelete='CASCADE'), nullable=False, index=True)
+    amount = db.Column(db.Numeric(12, 2), nullable=False)
+    method = db.Column(db.String(40), nullable=False, default='Bank transfer')
+    reference = db.Column(db.String(120), nullable=False, default='')
+    paid_at = db.Column(db.DateTime(timezone=True), default=utcnow, nullable=False)
+    invoice = db.relationship('Invoice', back_populates='payments')
+
+    def to_dict(self):
+        return {'id': self.id, 'amount': float(self.amount or 0), 'method': self.method, 'reference': self.reference, 'paid_at': self.paid_at.isoformat()}
+
 class Customer(TimestampMixin, db.Model):
     __tablename__ = 'customers'
 

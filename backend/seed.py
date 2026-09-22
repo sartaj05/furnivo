@@ -1,6 +1,6 @@
 from werkzeug.security import generate_password_hash
 from .extensions import db
-from .models import Customer, InventoryItem, Lead, LeadNote, LeadTask, Notification, Order, Product, ProductVariant, Quote, QuoteClientAccess, QuoteItem, ProjectUpdate, User
+from .models import Customer, InventoryItem, Invoice, Lead, LeadNote, LeadTask, Notification, Order, Product, ProductVariant, Quote, QuoteClientAccess, QuoteItem, ProjectUpdate, User
 
 
 DEMO_PRODUCTS = [
@@ -53,6 +53,7 @@ def seed_database():
     seed_orders()
     seed_inventory()
     seed_notifications()
+    seed_invoices()
     seed_leads()
 
 
@@ -154,4 +155,15 @@ def seed_notifications():
         db.session.add(Notification(user_id=admin.id, type='task', title='Follow-up workspace ready', body='Review the active lead pipeline and open tasks.', related_type='lead', related_id=''))
     if client:
         db.session.add(Notification(user_id=client.id, type='quote', title='Quotation ready for review', body='Q-1042 is ready in your client portal.', related_type='quote', related_id='1'))
+    db.session.commit()
+
+
+def seed_invoices():
+    if db.session.scalar(db.select(Invoice).limit(1)):
+        return
+    order = db.session.scalar(db.select(Order).where(Order.order_number == 'ORD-1001'))
+    admin = db.session.scalar(db.select(User).where(User.email == 'admin@furnivo.demo'))
+    if not order or not admin:
+        return
+    db.session.add(Invoice(invoice_number='INV-2001', order_id=order.id, customer_id=order.customer_id, customer_name=order.customer_name, issue_date=__import__('datetime').date(2026, 9, 18), due_date=__import__('datetime').date(2026, 10, 3), status='Partially Paid', subtotal=order.quote.subtotal, tax_amount=order.quote.tax_amount, total=order.quote.total, amount_paid=50000, payment_link='/pay/INV-2001', created_by_id=admin.id))
     db.session.commit()
