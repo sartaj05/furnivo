@@ -502,6 +502,21 @@ class PurchaseOrderItem(TimestampMixin, db.Model):
 
     def to_dict(self): return {'id': self.id, 'product_id': self.product_id, 'description': self.description, 'quantity': float(self.quantity or 0), 'unit_cost': float(self.unit_cost or 0), 'line_total': float(self.line_total)}
 
+
+class AuditLog(TimestampMixin, db.Model):
+    __tablename__ = 'audit_logs'
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True, index=True)
+    action = db.Column(db.String(100), nullable=False)
+    resource_type = db.Column(db.String(60), nullable=False)
+    resource_id = db.Column(db.String(80), nullable=False, default='')
+    detail = db.Column(db.Text, nullable=False, default='')
+    user = db.relationship('User')
+
+    def to_dict(self):
+        return {'id': self.id, 'user': self.user.public_dict() if self.user else None, 'action': self.action, 'resource_type': self.resource_type, 'resource_id': self.resource_id, 'detail': self.detail, 'created_at': self.created_at.isoformat()}
+
 class Customer(TimestampMixin, db.Model):
     __tablename__ = 'customers'
 

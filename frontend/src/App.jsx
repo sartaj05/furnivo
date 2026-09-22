@@ -13,6 +13,7 @@ import InventoryPage from './pages/InventoryPage'
 import InvoicesPage from './pages/InvoicesPage'
 import ProcurementPage from './pages/ProcurementPage'
 import ReportsPage from './pages/ReportsPage'
+import AuditPage from './pages/AuditPage'
 import ProtectedRoute from './components/ProtectedRoute'
 
 export default function App() {
@@ -41,6 +42,7 @@ export default function App() {
         <Route path="/app/invoices" element={<InvoicesPage />} />
         <Route path="/app/procurement" element={<ProcurementPage />} />
         <Route path="/app/reports" element={<ProtectedRoute allowedRoles={['admin', 'sales']}><ReportsPage /></ProtectedRoute>} />
+        <Route path="/app/audit" element={<ProtectedRoute allowedRoles={['admin']}><AuditPage /></ProtectedRoute>} />
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />

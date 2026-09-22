@@ -3,6 +3,8 @@ from flask import Blueprint, jsonify, request
 from ..extensions import db
 from ..models import InventoryItem, Product, ProductVariant
 from ..utils import roles_required
+from ..services.audit import record_audit
+from ..utils import current_user
 
 inventory_bp = Blueprint('inventory', __name__)
 
@@ -47,6 +49,7 @@ def create_inventory():
         apply_payload(item, payload)
         db.session.add(item)
         db.session.commit()
+        record_audit(current_user().id, 'Inventory item created', 'inventory', item.id, item.product.sku); db.session.commit()
     except ValueError as exc:
         db.session.rollback()
         return jsonify({'message': str(exc)}), 400
@@ -60,6 +63,7 @@ def update_inventory(item_id):
     try:
         apply_payload(item, request.get_json(silent=True) or {})
         db.session.commit()
+        record_audit(current_user().id, 'Inventory updated', 'inventory', item.id, item.product.sku); db.session.commit()
     except ValueError as exc:
         db.session.rollback()
         return jsonify({'message': str(exc)}), 400

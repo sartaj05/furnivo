@@ -5,6 +5,7 @@ from ..extensions import db
 from ..models import Customer, Product, ProductVariant, Quote, QuoteClientAccess, QuoteItem, QuoteRevision
 from ..utils import current_user, roles_required
 from ..services.notifications import create_notification, notify_quote_client
+from ..services.audit import record_audit
 
 quotes_bp = Blueprint('quotes', __name__)
 
@@ -136,6 +137,7 @@ def update_quote_status(quote_id):
         return jsonify({'message': 'Invalid quote status.'}), 400
     quote.status = status
     record_revision(quote, f'Status changed to {status}')
+    record_audit(current_user().id, f'Quote status changed to {status}', 'quote', quote.id, quote.quote_number)
     notify_quote_client(quote, 'Quotation updated', f'{quote.quote_number} is now {status}.', 'quote')
     db.session.commit()
     return jsonify({'item': quote.to_dict(), 'mode': 'api'})
@@ -199,6 +201,7 @@ def client_response(quote_id):
     access.responded_at = datetime.now(timezone.utc)
     access.quote.status = action
     record_revision(access.quote, f'Client {action}', comment)
+    record_audit(current_user().id, f'Client {action}', 'quote', access.quote.id, comment)
     create_notification(access.quote.created_by_id, 'Client response received', f'{access.quote.quote_number}: {action}.', 'quote', 'quote', access.quote.id)
     db.session.commit()
     item = access.quote.to_dict()

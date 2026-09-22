@@ -2,6 +2,7 @@ from flask import Blueprint, jsonify, request
 from ..extensions import db
 from ..models import Notification
 from ..services.notifications import deliver_notification
+from ..services.audit import record_audit
 from ..utils import current_user, roles_required
 
 notifications_bp = Blueprint('notifications', __name__)
@@ -39,4 +40,5 @@ def deliver(notification_id):
     if channel not in {'email', 'whatsapp'} or not recipient:
         return jsonify({'message': 'Choose email or WhatsApp and provide a recipient.'}), 400
     delivery = deliver_notification(item, channel, recipient)
+    record_audit(current_user().id, 'Notification delivery requested', 'notification', item.id, f'{channel} to {recipient}'); db.session.commit()
     return jsonify({'item': delivery.to_dict(), 'mode': 'api'})

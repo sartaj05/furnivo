@@ -32,6 +32,7 @@ def create_app(config_object=Config):
     from .routes.invoices import invoices_bp
     from .routes.procurement import procurement_bp
     from .routes.reports import reports_bp
+    from .routes.audit import audit_bp
 
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(products_bp, url_prefix='/api/products')
@@ -45,6 +46,7 @@ def create_app(config_object=Config):
     app.register_blueprint(invoices_bp, url_prefix='/api/invoices')
     app.register_blueprint(procurement_bp, url_prefix='/api/procurement')
     app.register_blueprint(reports_bp, url_prefix='/api/reports')
+    app.register_blueprint(audit_bp, url_prefix='/api/audit-logs')
 
     if app.config.get('AUTO_SEED'):
         with app.app_context():

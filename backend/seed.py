@@ -1,6 +1,6 @@
 from werkzeug.security import generate_password_hash
 from .extensions import db
-from .models import Customer, InventoryItem, Invoice, Lead, LeadNote, LeadTask, Notification, Order, Product, ProductVariant, PurchaseOrder, PurchaseOrderItem, Quote, QuoteClientAccess, QuoteItem, ProjectUpdate, Supplier, User
+from .models import AuditLog, Customer, InventoryItem, Invoice, Lead, LeadNote, LeadTask, Notification, Order, Product, ProductVariant, PurchaseOrder, PurchaseOrderItem, Quote, QuoteClientAccess, QuoteItem, ProjectUpdate, Supplier, User
 
 
 DEMO_PRODUCTS = [
@@ -55,6 +55,7 @@ def seed_database():
     seed_notifications()
     seed_invoices()
     seed_procurement()
+    seed_audit_logs()
     seed_leads()
 
 
@@ -182,3 +183,12 @@ def seed_procurement():
         po.items.append(PurchaseOrderItem(product_id=product.id, description=product.name, quantity=4, unit_cost=65000))
         db.session.add(po)
     db.session.commit()
+
+
+def seed_audit_logs():
+    if db.session.scalar(db.select(AuditLog).limit(1)):
+        return
+    admin = db.session.scalar(db.select(User).where(User.email == 'admin@furnivo.demo'))
+    if admin:
+        db.session.add(AuditLog(user_id=admin.id, action='Seeded demo workspace', resource_type='system', detail='Furnivo demo records were initialized.'))
+        db.session.commit()

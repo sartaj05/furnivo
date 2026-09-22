@@ -1,4 +1,4 @@
-import { demoCustomers, demoInventory, demoInvoices, demoLeads, demoNotifications, demoOrders, demoProducts, demoPurchaseOrders, demoQuotes, demoSuppliers, demoUsers } from '../data/demoData'
+import { demoAuditLogs, demoCustomers, demoInventory, demoInvoices, demoLeads, demoNotifications, demoOrders, demoProducts, demoPurchaseOrders, demoQuotes, demoSuppliers, demoUsers } from '../data/demoData'
 
 const API_URL = import.meta.env.VITE_API_URL?.replace(/\/$/, '')
 const STORAGE_KEY = 'furnivo-demo-db'
@@ -57,6 +57,7 @@ function getLocalDb() {
       invoices: parsed.invoices || demoInvoices,
       suppliers: parsed.suppliers || demoSuppliers,
       purchaseOrders: parsed.purchaseOrders || demoPurchaseOrders,
+      auditLogs: parsed.auditLogs || demoAuditLogs,
     }
     if (!parsed.users) localStorage.setItem(STORAGE_KEY, JSON.stringify(normalized))
     return normalized
@@ -74,6 +75,7 @@ function getLocalDb() {
     invoices: demoInvoices,
     suppliers: demoSuppliers,
     purchaseOrders: demoPurchaseOrders,
+    auditLogs: demoAuditLogs,
   }
   localStorage.setItem(STORAGE_KEY, JSON.stringify(initial))
   return initial
@@ -524,6 +526,11 @@ export async function getReportSummary() {
     const db = getLocalDb(); const quotes = db.quotes; const leads = db.leads; const orders = db.orders; const invoices = db.invoices; const payments = invoices.flatMap((item) => item.payments || [])
     return { data: { quotes: { count: quotes.length, value: quotes.reduce((sum, item) => sum + Number(item.amount || 0), 0) }, leads: { count: leads.length, value: leads.reduce((sum, item) => sum + Number(item.value || 0), 0), won: leads.filter((item) => item.stage === 'Won').length }, orders: { count: orders.length, value: orders.reduce((sum, item) => sum + Number(item.amount || 0), 0) }, invoices: { count: invoices.length, value: invoices.reduce((sum, item) => sum + Number(item.total || 0), 0), paid: invoices.reduce((sum, item) => sum + Number(item.amount_paid || 0), 0), balance: invoices.reduce((sum, item) => sum + Number(item.balance || 0), 0) }, payments: { count: payments.length, value: payments.reduce((sum, item) => sum + Number(item.amount || 0), 0) }, inventory: { items: db.inventory.length, low_stock: db.inventory.filter((item) => item.is_low_stock).length, available_units: db.inventory.reduce((sum, item) => sum + Number(item.available_quantity || 0), 0) } }, mode: 'demo' }
   }
+}
+
+export async function getAuditLogs(resource = '') {
+  try { return await backendRequest(`/audit-logs${resource ? `?resource=${encodeURIComponent(resource)}` : ''}`) }
+  catch (error) { if (error.status) throw error; await delay(); return { items: getLocalDb().auditLogs, mode: 'demo' } }
 }
 
 

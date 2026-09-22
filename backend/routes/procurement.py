@@ -4,6 +4,7 @@ from flask import Blueprint, jsonify, request
 from ..extensions import db
 from ..models import Product, PurchaseOrder, PurchaseOrderItem, Supplier
 from ..utils import current_user, roles_required
+from ..services.audit import record_audit
 
 procurement_bp = Blueprint('procurement', __name__)
 
@@ -31,7 +32,7 @@ def create_supplier():
     if not name: return jsonify({'message': 'Supplier name is required.'}), 400
     if db.session.scalar(db.select(Supplier).where(Supplier.name == name)): return jsonify({'message': 'Supplier already exists.'}), 409
     item = Supplier(name=name, email=str(payload.get('email', '')).strip(), phone=str(payload.get('phone', '')).strip(), notes=str(payload.get('notes', '')).strip())
-    db.session.add(item); db.session.commit(); return jsonify({'item': item.to_dict(), 'mode': 'api'}), 201
+    db.session.add(item); db.session.commit(); record_audit(current_user().id, 'Supplier created', 'supplier', item.id, item.name); db.session.commit(); return jsonify({'item': item.to_dict(), 'mode': 'api'}), 201
 
 
 @procurement_bp.get('/purchase-orders')
@@ -57,6 +58,7 @@ def create_purchase_order():
             if quantity <= 0 or unit_cost < 0: raise ValueError('Purchase quantity and cost are invalid.')
             po.items.append(PurchaseOrderItem(product_id=product.id, description=product.name, quantity=quantity, unit_cost=unit_cost))
         db.session.add(po); db.session.commit()
+        record_audit(current_user().id, 'Purchase order created', 'purchase_order', po.id, po.po_number); db.session.commit()
     except (ValueError, InvalidOperation) as exc:
         db.session.rollback(); return jsonify({'message': str(exc)}), 400
     return jsonify({'item': po.to_dict(), 'mode': 'api'}), 201
@@ -68,4 +70,4 @@ def update_purchase_order(po_id):
     item = db.get_or_404(PurchaseOrder, po_id); payload = request.get_json(silent=True) or {}
     if 'status' in payload: item.status = str(payload['status']).strip()
     if 'expected_date' in payload: item.expected_date = date.fromisoformat(payload['expected_date']) if payload['expected_date'] else None
-    db.session.commit(); return jsonify({'item': item.to_dict(), 'mode': 'api'})
+    db.session.commit(); record_audit(current_user().id, 'Purchase order updated', 'purchase_order', item.id, item.po_number); db.session.commit(); return jsonify({'item': item.to_dict(), 'mode': 'api'})

@@ -163,3 +163,5 @@ export const demoInvoices = [
 
 export const demoSuppliers = [{ id: 1, name: 'Oak & Co. Furnishings', email: 'orders@oakco.demo', phone: '+91 98000 10001', notes: 'Primary timber and furniture supplier' }]
 export const demoPurchaseOrders = [{ id: 1, po_number: 'PO-3001', supplier_id: 1, supplier: 'Oak & Co. Furnishings', status: 'Confirmed', order_date: '2026-09-19', expected_date: '2026-10-05', total: 260000, items: [{ id: 1, product_id: 1, description: 'Aster Modular Sofa', quantity: 4, unit_cost: 65000, line_total: 260000 }] }]
+
+export const demoAuditLogs = [{ id: 1, user: { name: 'Aarav Admin', email: 'admin@furnivo.demo', role: 'admin' }, action: 'Seeded demo workspace', resource_type: 'system', resource_id: '', detail: 'Furnivo demo records were initialized.', created_at: '2026-09-22T08:30:00.000Z' }]
