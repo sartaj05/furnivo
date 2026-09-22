@@ -6,6 +6,23 @@ const REQUEST_TIMEOUT_MS = 8000
 
 const delay = (ms = 180) => new Promise((resolve) => setTimeout(resolve, ms))
 
+function addDemoQuoteRevision(quote, action, comment = '') {
+  const history = quote.history || []
+  return {
+    ...quote,
+    history: [{
+      id: Date.now(),
+      version: history.length + 1,
+      action,
+      status: quote.status,
+      subtotal: Number(quote.subtotal || 0),
+      amount: Number(quote.amount || 0),
+      comment,
+      created_at: new Date().toISOString(),
+    }, ...history],
+  }
+}
+
 function setDataMode(mode) {
   localStorage.setItem('furnivo-mode', mode)
   window.dispatchEvent(new CustomEvent('furnivo-mode-change', { detail: mode }))
@@ -178,6 +195,20 @@ export async function getClientQuotes() {
   }
 }
 
+export async function getQuoteHistory(id) {
+  try {
+    return await backendRequest(`/quotes/${id}/history`)
+  } catch (error) {
+    if (error.status) throw error
+    await delay()
+    const quote = getLocalDb().quotes.find((item) => item.database_id === id || item.id === id)
+    return {
+      items: quote?.history || [{ id: `${id}-1`, version: 1, action: 'Created', status: quote?.status || 'Draft', amount: quote?.amount || 0, subtotal: quote?.subtotal || quote?.amount || 0, comment: '', created_at: quote?.date }],
+      mode: 'demo',
+    }
+  }
+}
+
 export async function respondToQuote(id, action, comment = '') {
   try {
     return await backendRequest(`/quotes/${id}/client-response`, { method: 'POST', body: JSON.stringify({ action, comment }) })
@@ -186,7 +217,7 @@ export async function respondToQuote(id, action, comment = '') {
     await delay()
     const db = getLocalDb()
     db.quotes = db.quotes.map((quote) => quote.database_id === id || quote.id === id
-      ? { ...quote, status: action, client_access: { ...(quote.client_access || {}), last_action: action, response_comment: comment } }
+      ? addDemoQuoteRevision({ ...quote, status: action, client_access: { ...(quote.client_access || {}), last_action: action, response_comment: comment } }, `Client ${action}`, comment)
       : quote)
     saveLocalDb(db)
     return { item: db.quotes.find((quote) => quote.database_id === id || quote.id === id), mode: 'demo' }
@@ -225,7 +256,9 @@ export async function createQuote(payload) {
       status: 'Draft',
       date: new Date().toISOString().slice(0, 10),
       notes: payload.notes || '',
+      history: [],
     }
+    quote.history = [addDemoQuoteRevision(quote, 'Created').history[0]]
     db.quotes = [quote, ...db.quotes]
     saveLocalDb(db)
     return { item: quote, mode: 'demo' }
@@ -243,7 +276,7 @@ export async function updateQuoteStatus(id, status) {
     await delay()
     const db = getLocalDb()
     db.quotes = db.quotes.map((quote) => quote.database_id === id || quote.id === id
-      ? { ...quote, status }
+      ? addDemoQuoteRevision({ ...quote, status }, `Status changed to ${status}`)
       : quote)
     saveLocalDb(db)
     return { item: db.quotes.find((quote) => quote.database_id === id || quote.id === id), mode: 'demo' }

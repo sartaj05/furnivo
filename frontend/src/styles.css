@@ -385,6 +385,8 @@ tr:last-child td { border-bottom: 0; }
 .status-sent { background: #e7edf4; color: #456078; }
 .status-draft { background: #efede6; color: #7b7460; }
 .status-approved { background: #e1eee5; color: #366848; }
+.status-rejected { background: #f4e4e1; color: #8d4438; }
+.status-change-requested { background: #f8ead8; color: #8d6332; }
 
 .crm-summary { display: grid; grid-template-columns: repeat(4,1fr); margin-bottom: 16px; background: var(--paper-2); border: 1px solid var(--line); border-radius: 16px; overflow: hidden; }
 .crm-summary > div { padding: 18px; border-right: 1px solid var(--line); }
@@ -790,7 +792,19 @@ img { max-width: 100%; }
 .customer-card h3 { margin: 0; }
 .customer-card p { margin: 5px 0 0; color: var(--muted); }
 .customer-meta { display: grid; gap: 7px; margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--line); color: var(--muted); font-size: 12px; }
+.client-quote-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.client-quote-card { display: grid; gap: 14px; }
+.client-quote-card textarea { width: 100%; resize: vertical; }
+.client-quote-total { display: flex; justify-content: space-between; align-items: end; padding: 14px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.client-quote-total span { color: var(--muted); font-size: 13px; }
+.client-quote-total strong { font-size: 24px; }
+.history-panel { margin-top: 14px; }
+.history-list { display: grid; gap: 10px; }
+.history-item { display: grid; gap: 4px; padding: 12px 0; border-bottom: 1px solid var(--line); }
+.history-item span, .history-item small { color: var(--muted); }
+.empty-state { text-align: center; padding: 42px; }
 @media (max-width: 780px) { .customer-grid { grid-template-columns: 1fr; } }
+@media (max-width: 780px) { .client-quote-grid { grid-template-columns: 1fr; } }
 .lead-workspace { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(320px, .85fr); gap: 14px; align-items: start; }
 .lead-workspace .lead-grid { grid-template-columns: 1fr 1fr; }
 .lead-card { cursor: pointer; }

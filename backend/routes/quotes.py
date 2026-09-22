@@ -2,10 +2,27 @@ from datetime import date, datetime, timezone
 from decimal import Decimal, InvalidOperation
 from flask import Blueprint, jsonify, request
 from ..extensions import db
-from ..models import Customer, Product, ProductVariant, Quote, QuoteClientAccess, QuoteItem
+from ..models import Customer, Product, ProductVariant, Quote, QuoteClientAccess, QuoteItem, QuoteRevision
 from ..utils import current_user, roles_required
 
 quotes_bp = Blueprint('quotes', __name__)
+
+
+def record_revision(quote, action, comment=''):
+    latest = db.session.scalar(
+        db.select(db.func.max(QuoteRevision.version)).where(QuoteRevision.quote_id == quote.id)
+    ) or 0
+    revision = QuoteRevision(
+        quote_id=quote.id,
+        version=latest + 1,
+        action=action,
+        status=quote.status,
+        subtotal=quote.subtotal,
+        amount=quote.total,
+        comment=comment,
+        changed_by_id=current_user().id if current_user() else None,
+    )
+    db.session.add(revision)
 
 
 def next_quote_number():
@@ -101,6 +118,8 @@ def create_quote():
         quote.items = [build_item(item) for item in line_items]
         db.session.add(quote)
         db.session.commit()
+        record_revision(quote, 'Created')
+        db.session.commit()
     except ValueError as exc:
         db.session.rollback()
         return jsonify({'message': str(exc)}), 400
@@ -115,8 +134,26 @@ def update_quote_status(quote_id):
     if status not in {'Draft', 'Sent', 'Approved', 'Rejected', 'Change Requested'}:
         return jsonify({'message': 'Invalid quote status.'}), 400
     quote.status = status
+    record_revision(quote, f'Status changed to {status}')
     db.session.commit()
     return jsonify({'item': quote.to_dict(), 'mode': 'api'})
+
+
+@quotes_bp.get('/<int:quote_id>/history')
+@roles_required('admin', 'sales', 'designer', 'client')
+def quote_history(quote_id):
+    quote = db.get_or_404(Quote, quote_id)
+    if current_user().role == 'client':
+        access = db.session.scalar(db.select(QuoteClientAccess).where(
+            QuoteClientAccess.quote_id == quote.id,
+            QuoteClientAccess.user_id == current_user().id,
+        ))
+        if not access:
+            return jsonify({'message': 'You do not have access to this quotation.'}), 403
+    revisions = db.session.scalars(
+        db.select(QuoteRevision).where(QuoteRevision.quote_id == quote.id).order_by(QuoteRevision.version.desc())
+    ).all()
+    return jsonify({'items': [revision.to_dict() for revision in revisions], 'mode': 'api'})
 
 @quotes_bp.get('/<int:quote_id>/pdf')
 @roles_required('admin', 'sales', 'designer', 'client')
@@ -159,6 +196,7 @@ def client_response(quote_id):
     access.response_comment = comment
     access.responded_at = datetime.now(timezone.utc)
     access.quote.status = action
+    record_revision(access.quote, f'Client {action}', comment)
     db.session.commit()
     item = access.quote.to_dict()
     item['client_access'] = access.to_dict()

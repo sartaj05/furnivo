@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import AppShell from '../components/AppShell'
 import { useAuth } from '../context/AuthContext'
-import { createQuote, downloadQuotePdf, getCustomers, getProducts, getQuotes, updateQuoteStatus } from '../lib/api'
+import { createQuote, downloadQuotePdf, getCustomers, getProducts, getQuoteHistory, getQuotes, updateQuoteStatus } from '../lib/api'
 
 const emptyLine = () => ({ product_id: '', variant_id: '', description: '', sku: '', quantity: 1, unit: 'piece', unit_price: 0 })
 
@@ -13,6 +13,8 @@ export default function QuotesPage() {
   const [form, setForm] = useState({ customer_id: '', customer: '', notes: '', discount_percent: 0, tax_percent: 18, shipping_amount: 0, items: [emptyLine()] })
   const [showForm, setShowForm] = useState(false)
   const [error, setError] = useState('')
+  const [historyQuote, setHistoryQuote] = useState(null)
+  const [history, setHistory] = useState([])
 
   async function load() {
     const [quoteResult, productResult, customerResult] = await Promise.all([getQuotes(), getProducts(), getCustomers().catch(() => ({ items: [] }))])
@@ -68,6 +70,11 @@ export default function QuotesPage() {
     await load()
   }
 
+  async function openHistory(quote) {
+    setHistoryQuote(quote)
+    setHistory((await getQuoteHistory(quote.database_id || quote.id)).items || [])
+  }
+
   return (
     <AppShell title="Quotations" eyebrow="Commercial documents" actions={<button className="button button-small" onClick={() => setShowForm(!showForm)}>{showForm ? 'Close' : 'New quotation'}</button>}>
       {showForm && (
@@ -101,7 +108,8 @@ export default function QuotesPage() {
         </form>
       )}
 
-      <section className="panel table-panel"><div className="table-wrap"><table><thead><tr><th>Quote</th><th>Customer</th><th>Lines</th><th>Date</th><th>Status</th><th className="align-right">Amount</th><th>PDF</th></tr></thead><tbody>{quotes.map((quote) => <tr key={quote.id}><td data-label="Quote"><strong>{quote.id}</strong></td><td data-label="Customer">{quote.customer}</td><td data-label="Lines">{quote.items?.length || '—'}</td><td data-label="Date">{quote.date}</td><td data-label="Status">{user.role === 'admin' || user.role === 'sales' ? <select className="status-select" value={quote.status} onChange={(e) => changeStatus(quote, e.target.value)}><option>Draft</option><option>Sent</option><option>Approved</option><option>Rejected</option></select> : <span className={`status status-${quote.status.toLowerCase()}`}>{quote.status}</span>}</td><td data-label="Amount" className="align-right">₹{Number(quote.amount).toLocaleString('en-IN')}</td><td data-label="PDF"><button className="button-link" onClick={() => downloadQuotePdf(quote)}>Download</button></td></tr>)}</tbody></table></div></section>
+      <section className="panel table-panel"><div className="table-wrap"><table><thead><tr><th>Quote</th><th>Customer</th><th>Lines</th><th>Date</th><th>Status</th><th className="align-right">Amount</th><th>Actions</th></tr></thead><tbody>{quotes.map((quote) => <tr key={quote.id}><td data-label="Quote"><strong>{quote.id}</strong></td><td data-label="Customer">{quote.customer}</td><td data-label="Lines">{quote.items?.length || '—'}</td><td data-label="Date">{quote.date}</td><td data-label="Status">{user.role === 'admin' || user.role === 'sales' ? <select className="status-select" value={quote.status} onChange={(e) => changeStatus(quote, e.target.value)}><option>Draft</option><option>Sent</option><option>Approved</option><option>Rejected</option><option>Change Requested</option></select> : <span className={`status status-${quote.status.toLowerCase()}`}>{quote.status}</span>}</td><td data-label="Amount" className="align-right">₹{Number(quote.amount).toLocaleString('en-IN')}</td><td data-label="Actions"><button className="button-link" onClick={() => openHistory(quote)}>History</button> <button className="button-link" onClick={() => downloadQuotePdf(quote)}>PDF</button></td></tr>)}</tbody></table></div></section>
+      {historyQuote && <section className="panel history-panel"><div className="panel-heading"><div><p className="eyebrow">Revision history</p><h3>{historyQuote.id}</h3></div><button className="text-button dark-text-button" onClick={() => setHistoryQuote(null)}>Close</button></div><div className="history-list">{history.map((item) => <div key={item.id} className="history-item"><strong>Version {item.version}</strong><span>{item.action} · {item.status}</span><small>{item.comment || 'No comment'} · {item.created_at ? new Date(item.created_at).toLocaleString() : ''}</small></div>)}</div></section>}
     </AppShell>
   )
 }

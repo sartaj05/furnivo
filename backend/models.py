@@ -198,6 +198,36 @@ class QuoteClientAccess(TimestampMixin, db.Model):
             'responded_at': self.responded_at.isoformat() if self.responded_at else None,
         }
 
+
+class QuoteRevision(TimestampMixin, db.Model):
+    __tablename__ = 'quote_revisions'
+
+    id = db.Column(db.Integer, primary_key=True)
+    quote_id = db.Column(db.Integer, db.ForeignKey('quotes.id', ondelete='CASCADE'), nullable=False, index=True)
+    version = db.Column(db.Integer, nullable=False)
+    action = db.Column(db.String(80), nullable=False)
+    status = db.Column(db.String(40), nullable=False)
+    subtotal = db.Column(db.Numeric(12, 2), nullable=False, default=0)
+    amount = db.Column(db.Numeric(12, 2), nullable=False, default=0)
+    comment = db.Column(db.Text, nullable=False, default='')
+    changed_by_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    quote = db.relationship('Quote')
+    changed_by = db.relationship('User')
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'quote_id': self.quote_id,
+            'version': self.version,
+            'action': self.action,
+            'status': self.status,
+            'subtotal': float(self.subtotal or 0),
+            'amount': float(self.amount or 0),
+            'comment': self.comment,
+            'changed_by': self.changed_by.public_dict() if self.changed_by else None,
+            'created_at': self.created_at.isoformat(),
+        }
+
 class Customer(TimestampMixin, db.Model):
     __tablename__ = 'customers'
 
