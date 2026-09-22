@@ -533,6 +533,25 @@ class PaymentIntent(TimestampMixin, db.Model):
     def to_dict(self):
         return {'id': self.id, 'invoice_id': self.invoice_id, 'provider': self.provider, 'external_id': self.external_id, 'checkout_url': self.checkout_url, 'amount': float(self.amount or 0), 'status': self.status}
 
+
+class DeliverySchedule(TimestampMixin, db.Model):
+    __tablename__ = 'delivery_schedules'
+
+    id = db.Column(db.Integer, primary_key=True)
+    order_id = db.Column(db.Integer, db.ForeignKey('orders.id', ondelete='CASCADE'), nullable=False, index=True)
+    schedule_type = db.Column(db.String(30), nullable=False, default='Delivery')
+    scheduled_date = db.Column(db.Date, nullable=False)
+    time_slot = db.Column(db.String(80), nullable=False, default='Morning')
+    assigned_team = db.Column(db.String(160), nullable=False, default='')
+    status = db.Column(db.String(40), nullable=False, default='Scheduled')
+    proof_url = db.Column(db.String(500), nullable=False, default='')
+    notes = db.Column(db.Text, nullable=False, default='')
+    created_by_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    order = db.relationship('Order')
+
+    def to_dict(self):
+        return {'id': self.id, 'order_id': self.order_id, 'order_number': self.order.order_number if self.order else None, 'customer': self.order.customer_name if self.order else None, 'schedule_type': self.schedule_type, 'scheduled_date': self.scheduled_date.isoformat(), 'time_slot': self.time_slot, 'assigned_team': self.assigned_team, 'status': self.status, 'proof_url': self.proof_url, 'notes': self.notes}
+
 class Customer(TimestampMixin, db.Model):
     __tablename__ = 'customers'
 

@@ -1,4 +1,4 @@
-import { demoAuditLogs, demoCustomers, demoInventory, demoInvoices, demoLeads, demoNotifications, demoOrders, demoProducts, demoPurchaseOrders, demoQuotes, demoSuppliers, demoUsers } from '../data/demoData'
+import { demoAuditLogs, demoCustomers, demoInventory, demoInvoices, demoLeads, demoNotifications, demoOrders, demoProducts, demoPurchaseOrders, demoQuotes, demoSchedules, demoSuppliers, demoUsers } from '../data/demoData'
 
 const API_URL = import.meta.env.VITE_API_URL?.replace(/\/$/, '')
 const STORAGE_KEY = 'furnivo-demo-db'
@@ -58,6 +58,7 @@ function getLocalDb() {
       suppliers: parsed.suppliers || demoSuppliers,
       purchaseOrders: parsed.purchaseOrders || demoPurchaseOrders,
       auditLogs: parsed.auditLogs || demoAuditLogs,
+      schedules: parsed.schedules || demoSchedules,
     }
     if (!parsed.users) localStorage.setItem(STORAGE_KEY, JSON.stringify(normalized))
     return normalized
@@ -76,6 +77,7 @@ function getLocalDb() {
     suppliers: demoSuppliers,
     purchaseOrders: demoPurchaseOrders,
     auditLogs: demoAuditLogs,
+    schedules: demoSchedules,
   }
   localStorage.setItem(STORAGE_KEY, JSON.stringify(initial))
   return initial
@@ -536,6 +538,21 @@ export async function getReportSummary() {
 export async function getAuditLogs(resource = '') {
   try { return await backendRequest(`/audit-logs${resource ? `?resource=${encodeURIComponent(resource)}` : ''}`) }
   catch (error) { if (error.status) throw error; await delay(); return { items: getLocalDb().auditLogs, mode: 'demo' } }
+}
+
+export async function getSchedules() {
+  try { return await backendRequest('/schedules') }
+  catch (error) { if (error.status) throw error; await delay(); return { items: getLocalDb().schedules, mode: 'demo' } }
+}
+
+export async function createSchedule(payload) {
+  try { return await backendRequest('/schedules', { method: 'POST', body: JSON.stringify(payload) }) }
+  catch (error) { if (error.status) throw error; const db = getLocalDb(); const order = db.orders.find((item) => Number(item.id) === Number(payload.order_id)); const item = { id: Date.now(), order_id: order?.id, order_number: order?.order_number, customer: order?.customer, status: 'Scheduled', ...payload }; db.schedules = [item, ...db.schedules]; saveLocalDb(db); return { item, mode: 'demo' } }
+}
+
+export async function updateSchedule(id, payload) {
+  try { return await backendRequest(`/schedules/${id}`, { method: 'PATCH', body: JSON.stringify(payload) }) }
+  catch (error) { if (error.status) throw error; const db = getLocalDb(); db.schedules = db.schedules.map((item) => Number(item.id) === Number(id) ? { ...item, ...payload } : item); saveLocalDb(db); return { item: db.schedules.find((item) => Number(item.id) === Number(id)), mode: 'demo' } }
 }
 
 

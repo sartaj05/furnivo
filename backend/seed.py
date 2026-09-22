@@ -1,6 +1,6 @@
 from werkzeug.security import generate_password_hash
 from .extensions import db
-from .models import AuditLog, Customer, InventoryItem, Invoice, Lead, LeadNote, LeadTask, Notification, Order, Product, ProductVariant, PurchaseOrder, PurchaseOrderItem, Quote, QuoteClientAccess, QuoteItem, ProjectUpdate, Supplier, User
+from .models import AuditLog, Customer, DeliverySchedule, InventoryItem, Invoice, Lead, LeadNote, LeadTask, Notification, Order, Product, ProductVariant, PurchaseOrder, PurchaseOrderItem, Quote, QuoteClientAccess, QuoteItem, ProjectUpdate, Supplier, User
 
 
 DEMO_PRODUCTS = [
@@ -56,6 +56,7 @@ def seed_database():
     seed_invoices()
     seed_procurement()
     seed_audit_logs()
+    seed_schedules()
     seed_leads()
 
 
@@ -191,4 +192,15 @@ def seed_audit_logs():
     admin = db.session.scalar(db.select(User).where(User.email == 'admin@furnivo.demo'))
     if admin:
         db.session.add(AuditLog(user_id=admin.id, action='Seeded demo workspace', resource_type='system', detail='Furnivo demo records were initialized.'))
+        db.session.commit()
+
+
+def seed_schedules():
+    if db.session.scalar(db.select(DeliverySchedule).limit(1)):
+        return
+    order = db.session.scalar(db.select(Order).where(Order.order_number == 'ORD-1001'))
+    admin = db.session.scalar(db.select(User).where(User.email == 'admin@furnivo.demo'))
+    if order and admin:
+        db.session.add(DeliverySchedule(order_id=order.id, schedule_type='Delivery', scheduled_date=__import__('datetime').date(2026, 10, 18), time_slot='10:00–12:00', assigned_team='North Delhi delivery team', status='Scheduled', created_by_id=admin.id))
+        db.session.add(DeliverySchedule(order_id=order.id, schedule_type='Installation', scheduled_date=__import__('datetime').date(2026, 10, 20), time_slot='09:00–13:00', assigned_team='Furnivo installation team', status='Scheduled', created_by_id=admin.id))
         db.session.commit()
