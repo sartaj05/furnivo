@@ -614,6 +614,25 @@ class EInvoice(TimestampMixin, db.Model):
         return {'id': self.id, 'invoice_id': self.invoice_id, 'invoice_number': self.invoice.invoice_number if self.invoice else None, 'customer': self.invoice.customer_name if self.invoice else None, 'gstin': self.gstin, 'place_of_supply': self.place_of_supply, 'tax_mode': self.tax_mode, 'hsn_summary': hsn_summary, 'cgst_amount': float(self.cgst_amount or 0), 'sgst_amount': float(self.sgst_amount or 0), 'igst_amount': float(self.igst_amount or 0), 'irn': self.irn, 'acknowledgement_number': self.acknowledgement_number, 'status': self.status, 'eway_bill_number': self.eway_bill_number, 'created_at': self.created_at.isoformat()}
 
 
+class PaymentOperation(TimestampMixin, db.Model):
+    __tablename__ = 'payment_operations'
+
+    id = db.Column(db.Integer, primary_key=True)
+    operation_key = db.Column(db.String(180), nullable=False, unique=True, index=True)
+    operation_type = db.Column(db.String(40), nullable=False)
+    invoice_id = db.Column(db.Integer, db.ForeignKey('invoices.id', ondelete='CASCADE'), nullable=False, index=True)
+    reconciliation_id = db.Column(db.Integer, db.ForeignKey('payment_reconciliations.id', ondelete='SET NULL'), nullable=True)
+    provider = db.Column(db.String(40), nullable=False, default='demo')
+    external_id = db.Column(db.String(180), nullable=False, default='')
+    amount = db.Column(db.Numeric(12, 2), nullable=False, default=0)
+    status = db.Column(db.String(40), nullable=False, default='created')
+    message = db.Column(db.Text, nullable=False, default='')
+    invoice = db.relationship('Invoice')
+    reconciliation = db.relationship('PaymentReconciliation')
+
+    def to_dict(self): return {'id': self.id, 'operation_key': self.operation_key, 'operation_type': self.operation_type, 'invoice_id': self.invoice_id, 'reconciliation_id': self.reconciliation_id, 'provider': self.provider, 'external_id': self.external_id, 'amount': float(self.amount or 0), 'status': self.status, 'message': self.message, 'created_at': self.created_at.isoformat()}
+
+
 class Contract(TimestampMixin, db.Model):
     __tablename__ = 'contracts'
 

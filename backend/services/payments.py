@@ -6,7 +6,7 @@ import urllib.request
 from uuid import uuid4
 from decimal import Decimal
 from ..extensions import db
-from ..models import Invoice, Payment, PaymentIntent
+from ..models import Invoice, Payment, PaymentIntent, PaymentReconciliation
 
 
 def create_checkout(invoice):
@@ -42,3 +42,18 @@ def settle_payment(external_id, status='paid'):
         db.session.add(Payment(invoice_id=invoice.id, amount=intent.amount, method=intent.provider.title(), reference=external_id))
     db.session.commit()
     return invoice
+
+
+def request_provider_refund(reconciliation, amount):
+    provider = (reconciliation.provider or 'demo').lower()
+    if os.getenv('PAYMENT_LIVE_REFUNDS', 'false').lower() != 'true' or provider in {'demo', 'manual', 'bank transfer'}:
+        return f'demo_refund_{uuid4().hex}'
+    if provider == 'stripe' and os.getenv('STRIPE_SECRET_KEY'):
+        data = urllib.parse.urlencode({'payment_intent': reconciliation.external_id, 'amount': int(amount * 100)}).encode()
+        request = urllib.request.Request('https://api.stripe.com/v1/refunds', data=data, headers={'Authorization': f"Bearer {os.getenv('STRIPE_SECRET_KEY')}", 'Content-Type': 'application/x-www-form-urlencoded'}, method='POST')
+        with urllib.request.urlopen(request, timeout=15) as response: return json.loads(response.read().decode())['id']
+    if provider == 'razorpay' and os.getenv('RAZORPAY_KEY_ID') and os.getenv('RAZORPAY_KEY_SECRET'):
+        credentials = base64.b64encode(f"{os.getenv('RAZORPAY_KEY_ID')}:{os.getenv('RAZORPAY_KEY_SECRET')}".encode()).decode()
+        data = json.dumps({'amount': int(amount * 100), 'speed': 'normal'}).encode(); request = urllib.request.Request(f'https://api.razorpay.com/v1/payments/{reconciliation.external_id}/refund', data=data, headers={'Authorization': f'Basic {credentials}', 'Content-Type': 'application/json'}, method='POST')
+        with urllib.request.urlopen(request, timeout=15) as response: return json.loads(response.read().decode())['id']
+    raise RuntimeError('Live refund provider credentials are not configured.')

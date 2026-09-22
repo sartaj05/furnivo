@@ -596,8 +596,8 @@ export async function recordPayment(id, payload) {
   }
 }
 
-export async function createCheckout(id) {
-  try { return await backendRequest(`/payments/invoices/${id}/checkout`, { method: 'POST' }) }
+export async function createCheckout(id, idempotencyKey = `checkout-${id}-${Date.now()}`) {
+  try { return await backendRequest(`/payments/invoices/${id}/checkout`, { method: 'POST', headers: { 'Idempotency-Key': idempotencyKey } }) }
   catch (error) { if (error.status) throw error; await delay(); const invoice = getLocalDb().invoices.find((item) => Number(item.id) === Number(id)); return { item: { provider: 'demo', external_id: `demo_${Date.now()}`, checkout_url: invoice?.payment_link || `/pay/${id}`, amount: Number(invoice?.balance || 0), status: 'demo-checkout' }, mode: 'demo' } }
 }
 
@@ -722,11 +722,16 @@ export async function reconcilePayment(payload) {
 }
 
 export async function refundReconciledPayment(id, payload = {}) {
-  try { return await backendRequest(`/payment-reconciliation/${id}/refund`, { method: 'POST', body: JSON.stringify(payload) }) }
+  try { return await backendRequest(`/payments/reconciliation/${id}/refund`, { method: 'POST', headers: { 'Idempotency-Key': payload.idempotency_key || `refund-${id}-${payload.amount || 'full'}` }, body: JSON.stringify(payload) }) }
   catch (error) {
     if (error.status) throw error
     const db = getLocalDb(); const item = db.paymentReconciliations.find((entry) => Number(entry.id) === Number(id)); const amount = Number(payload.amount || item?.refundable_amount || 0); if (!item || amount <= 0 || amount > Number(item.refundable_amount)) throw new Error('Refund amount exceeds the refundable balance.'); item.refunded_amount += amount; item.refundable_amount -= amount; item.refund_status = item.refundable_amount === 0 ? 'Refunded' : 'Partially refunded'; const invoice = db.invoices.find((entry) => Number(entry.id) === Number(item.invoice_id)); if (invoice) { invoice.amount_paid = Math.max(Number(invoice.amount_paid) - amount, 0); invoice.balance = Math.max(Number(invoice.total) - invoice.amount_paid, 0) } saveLocalDb(db); return { item, mode: 'demo' }
   }
+}
+
+export async function downloadPaymentReceipt(id, invoiceNumber = 'payment-receipt') {
+  if (API_URL) { const token = localStorage.getItem('furnivo-token'); const response = await fetch(`${API_URL}/payments/reconciliation/${id}/receipt`, { headers: token ? { Authorization: `Bearer ${token}` } : {} }); if (!response.ok) throw new Error('Could not download receipt.'); const url = URL.createObjectURL(await response.blob()); const anchor = document.createElement('a'); anchor.href = url; anchor.download = `${invoiceNumber}-receipt.pdf`; anchor.click(); URL.revokeObjectURL(url); return { mode: 'api' } }
+  const item = getLocalDb().paymentReconciliations.find((entry) => Number(entry.id) === Number(id)); const url = URL.createObjectURL(new Blob([`FURNIVO PAYMENT RECEIPT\n${item?.invoice_number}\nAmount: INR ${item?.amount}\nStatus: ${item?.status}`], { type: 'text/plain' })); const anchor = document.createElement('a'); anchor.href = url; anchor.download = `${invoiceNumber}-receipt.txt`; anchor.click(); URL.revokeObjectURL(url); return { mode: 'demo' }
 }
 
 export async function getContracts() {
