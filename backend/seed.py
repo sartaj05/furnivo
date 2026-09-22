@@ -1,6 +1,6 @@
 from werkzeug.security import generate_password_hash
 from .extensions import db
-from .models import AuditLog, CreditNote, Customer, DeliverySchedule, InventoryItem, Invoice, Lead, LeadNote, LeadTask, Notification, Order, Product, ProductVariant, PurchaseOrder, PurchaseOrderItem, Quote, QuoteClientAccess, QuoteItem, ProjectUpdate, ReturnRequest, StockMovement, Supplier, User, Warehouse, WarehouseStock
+from .models import AuditLog, CreditNote, Customer, CustomerPricing, DeliverySchedule, InventoryItem, Invoice, Lead, LeadNote, LeadTask, Notification, Order, Product, ProductVariant, PurchaseOrder, PurchaseOrderItem, Quote, QuoteClientAccess, QuoteItem, QuotePreset, ProjectUpdate, ReturnRequest, StockMovement, Supplier, User, Warehouse, WarehouseStock
 
 
 DEMO_PRODUCTS = [
@@ -59,6 +59,7 @@ def seed_database():
     seed_schedules()
     seed_warehouses()
     seed_returns()
+    seed_configurator()
     seed_leads()
 
 
@@ -232,3 +233,29 @@ def seed_returns():
     if order and invoice and admin:
         item = ReturnRequest(order_id=order.id, invoice_id=invoice.id, customer_name=order.customer_name, reason='One light fixture arrived damaged', amount=12400, status='Requested', created_by_id=admin.id)
         db.session.add(item); db.session.commit()
+
+
+def seed_configurator():
+    if not db.session.scalar(db.select(QuotePreset).limit(1)):
+        admin = db.session.scalar(db.select(User).where(User.email == 'admin@furnivo.demo'))
+        sofa = db.session.scalar(db.select(Product).where(Product.sku == 'FUR-SOF-101'))
+        light = db.session.scalar(db.select(Product).where(Product.sku == 'INT-LGT-204'))
+        panel = db.session.scalar(db.select(Product).where(Product.sku == 'BLD-PNL-310'))
+        if admin and sofa and light and panel:
+            import json
+            db.session.add_all([
+                QuotePreset(name='Living room starter', kind='Room package', room='Living room', description='Sofa and statement lighting package for a complete living room refresh.', discount_percent=5, items_json=json.dumps([
+                    {'product_id': sofa.id, 'description': sofa.name, 'sku': sofa.sku, 'quantity': 1, 'unit': sofa.unit, 'unit_price': float(sofa.price)},
+                    {'product_id': light.id, 'description': light.name, 'sku': light.sku, 'quantity': 2, 'unit': light.unit, 'unit_price': float(light.price)},
+                ]), created_by_id=admin.id),
+                QuotePreset(name='Complete office package', kind='Bundle', room='Office', description='A practical package combining modular seating, lighting and acoustic wall finish.', discount_percent=8, items_json=json.dumps([
+                    {'product_id': sofa.id, 'description': sofa.name, 'sku': sofa.sku, 'quantity': 2, 'unit': sofa.unit, 'unit_price': float(sofa.price)},
+                    {'product_id': light.id, 'description': light.name, 'sku': light.sku, 'quantity': 4, 'unit': light.unit, 'unit_price': float(light.price)},
+                    {'product_id': panel.id, 'description': panel.name, 'sku': panel.sku, 'quantity': 120, 'unit': panel.unit, 'unit_price': float(panel.price)},
+                ]), created_by_id=admin.id),
+            ])
+            db.session.commit()
+    customer = db.session.scalar(db.select(Customer).where(Customer.company == 'Northline Studio'))
+    if customer and not db.session.scalar(db.select(CustomerPricing).where(CustomerPricing.customer_id == customer.id)):
+        db.session.add(CustomerPricing(customer_id=customer.id, tier='Gold', discount_percent=10))
+        db.session.commit()

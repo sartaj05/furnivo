@@ -631,6 +631,40 @@ class CreditNote(TimestampMixin, db.Model):
     def to_dict(self): return {'id': self.id, 'credit_note_number': self.credit_note_number, 'amount': float(self.amount or 0), 'status': self.status}
 
 
+class QuotePreset(TimestampMixin, db.Model):
+    __tablename__ = 'quote_presets'
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(160), nullable=False)
+    kind = db.Column(db.String(40), nullable=False, default='Template')
+    room = db.Column(db.String(100), nullable=False, default='')
+    description = db.Column(db.Text, nullable=False, default='')
+    discount_percent = db.Column(db.Numeric(6, 2), nullable=False, default=0)
+    items_json = db.Column(db.Text, nullable=False, default='[]')
+    created_by_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    created_by = db.relationship('User')
+
+    def to_dict(self):
+        import json
+        try:
+            items = json.loads(self.items_json or '[]')
+        except (TypeError, ValueError):
+            items = []
+        return {'id': self.id, 'name': self.name, 'kind': self.kind, 'room': self.room, 'description': self.description, 'discount_percent': float(self.discount_percent or 0), 'items': items}
+
+
+class CustomerPricing(TimestampMixin, db.Model):
+    __tablename__ = 'customer_pricing'
+
+    id = db.Column(db.Integer, primary_key=True)
+    customer_id = db.Column(db.Integer, db.ForeignKey('customers.id', ondelete='CASCADE'), nullable=False, unique=True, index=True)
+    tier = db.Column(db.String(40), nullable=False, default='Standard')
+    discount_percent = db.Column(db.Numeric(6, 2), nullable=False, default=0)
+    customer = db.relationship('Customer')
+
+    def to_dict(self): return {'id': self.id, 'customer_id': self.customer_id, 'customer': self.customer.company if self.customer else None, 'tier': self.tier, 'discount_percent': float(self.discount_percent or 0)}
+
+
 class Customer(TimestampMixin, db.Model):
     __tablename__ = 'customers'
 

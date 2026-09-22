@@ -17,6 +17,7 @@ import AuditPage from './pages/AuditPage'
 import SchedulesPage from './pages/SchedulesPage'
 import WarehousesPage from './pages/WarehousesPage'
 import ReturnsPage from './pages/ReturnsPage'
+import QuoteConfiguratorPage from './pages/QuoteConfiguratorPage'
 import ProtectedRoute from './components/ProtectedRoute'
 
 export default function App() {
@@ -30,6 +31,7 @@ export default function App() {
         <Route path="/app" element={<DashboardPage />} />
         <Route path="/app/catalog" element={<CatalogPage />} />
         <Route path="/app/quotes" element={<ProtectedRoute allowedRoles={['admin', 'sales', 'designer']}><QuotesPage /></ProtectedRoute>} />
+        <Route path="/app/configurator" element={<ProtectedRoute allowedRoles={['admin', 'sales', 'designer']}><QuoteConfiguratorPage /></ProtectedRoute>} />
         <Route path="/app/customers" element={<ProtectedRoute allowedRoles={['admin', 'sales']}><CustomersPage /></ProtectedRoute>} />
         <Route
           path="/app/leads"

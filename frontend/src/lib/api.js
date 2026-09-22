@@ -1,4 +1,4 @@
-import { demoAuditLogs, demoCustomers, demoInventory, demoInvoices, demoLeads, demoNotifications, demoOrders, demoProducts, demoPurchaseOrders, demoQuotes, demoReturns, demoSchedules, demoStockMovements, demoSuppliers, demoUsers, demoWarehouseStock, demoWarehouses } from '../data/demoData'
+import { demoAuditLogs, demoCustomerPricing, demoCustomers, demoInventory, demoInvoices, demoLeads, demoNotifications, demoOrders, demoProducts, demoPurchaseOrders, demoQuotePresets, demoQuotes, demoReturns, demoSchedules, demoStockMovements, demoSuppliers, demoUsers, demoWarehouseStock, demoWarehouses } from '../data/demoData'
 
 const API_URL = import.meta.env.VITE_API_URL?.replace(/\/$/, '')
 const STORAGE_KEY = 'furnivo-demo-db'
@@ -63,6 +63,8 @@ function getLocalDb() {
       warehouseStock: parsed.warehouseStock || demoWarehouseStock,
       stockMovements: parsed.stockMovements || demoStockMovements,
       returns: parsed.returns || demoReturns,
+      quotePresets: parsed.quotePresets || demoQuotePresets,
+      customerPricing: parsed.customerPricing || demoCustomerPricing,
     }
     if (!parsed.users) localStorage.setItem(STORAGE_KEY, JSON.stringify(normalized))
     return normalized
@@ -86,6 +88,8 @@ function getLocalDb() {
     warehouseStock: demoWarehouseStock,
     stockMovements: demoStockMovements,
     returns: demoReturns,
+    quotePresets: demoQuotePresets,
+    customerPricing: demoCustomerPricing,
   }
   localStorage.setItem(STORAGE_KEY, JSON.stringify(initial))
   return initial
@@ -291,6 +295,50 @@ export async function createQuote(payload) {
     db.quotes = [quote, ...db.quotes]
     saveLocalDb(db)
     return { item: quote, mode: 'demo' }
+  }
+}
+
+export async function getQuotePresets() {
+  try { return await backendRequest('/quote-config/presets') }
+  catch (error) {
+    if (error.status) throw error
+    await delay()
+    return { items: getLocalDb().quotePresets, mode: 'demo' }
+  }
+}
+
+export async function createQuotePreset(payload) {
+  try { return await backendRequest('/quote-config/presets', { method: 'POST', body: JSON.stringify(payload) }) }
+  catch (error) {
+    if (error.status) throw error
+    await delay()
+    const db = getLocalDb()
+    const item = { ...payload, id: Math.max(0, ...db.quotePresets.map((preset) => Number(preset.id) || 0)) + 1 }
+    db.quotePresets = [item, ...db.quotePresets]
+    saveLocalDb(db)
+    return { item, mode: 'demo' }
+  }
+}
+
+export async function getCustomerPricing(customerId) {
+  try { return await backendRequest(`/quote-config/pricing/${customerId}`) }
+  catch (error) {
+    if (error.status) throw error
+    await delay()
+    return { item: getLocalDb().customerPricing.find((pricing) => Number(pricing.customer_id) === Number(customerId)) || { customer_id: customerId, tier: 'Standard', discount_percent: 0 }, mode: 'demo' }
+  }
+}
+
+export async function saveCustomerPricing(customerId, payload) {
+  try { return await backendRequest(`/quote-config/pricing/${customerId}`, { method: 'PUT', body: JSON.stringify(payload) }) }
+  catch (error) {
+    if (error.status) throw error
+    await delay()
+    const db = getLocalDb()
+    const current = { customer_id: customerId, ...payload }
+    db.customerPricing = [...db.customerPricing.filter((pricing) => Number(pricing.customer_id) !== Number(customerId)), current]
+    saveLocalDb(db)
+    return { item: current, mode: 'demo' }
   }
 }
 
