@@ -28,6 +28,8 @@ services:
         value: production
       - key: RATE_LIMIT_PER_MINUTE
         value: "120"
+      - key: DEFAULT_DEPOSIT_PERCENT
+        value: "30"
       - key: APP_VERSION
         value: furnivo-v3
 

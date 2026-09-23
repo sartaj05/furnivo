@@ -315,12 +315,22 @@ export async function respondToQuote(id, action, comment = '') {
     if (error.status) throw error
     await delay()
     const db = getLocalDb()
+    let automation = { contract: null, contract_created: false }
+    const selectedQuote = db.quotes.find((quote) => quote.database_id === id || quote.id === id)
+    if (action === 'Approved' && selectedQuote) {
+      let contract = db.contracts.find((item) => Number(item.quote_id) === Number(selectedQuote.database_id || selectedQuote.id))
+      if (!contract) {
+        contract = { id: Date.now(), contract_number: `CTR-${7000 + db.contracts.length + 1}`, quote_id: selectedQuote.database_id || selectedQuote.id, quote_number: selectedQuote.id, customer: selectedQuote.customer, title: `${selectedQuote.id} - project agreement`, terms: '1. Furnivo will deliver the approved scope and materials listed in the quotation.\n2. Production begins after written approval and the agreed advance payment.\n3. Delivery and installation dates are scheduled after material confirmation.', status: 'Sent', locked: false, signatures: [] }
+        db.contracts = [contract, ...db.contracts]
+        automation = { contract, contract_created: true }
+      } else automation.contract = contract
+    }
     db.quotes = db.quotes.map((quote) => quote.database_id === id || quote.id === id
       ? addDemoQuoteRevision({ ...quote, status: action, client_access: { ...(quote.client_access || {}), last_action: action, response_comment: comment } }, `Client ${action}`, comment)
       : quote)
     addDemoNotification(db, 1, 'Client response received', `${id}: ${action}.`, 'quote', 'quote', id)
     saveLocalDb(db)
-    return { item: db.quotes.find((quote) => quote.database_id === id || quote.id === id), mode: 'demo' }
+    return { item: db.quotes.find((quote) => quote.database_id === id || quote.id === id), automation, mode: 'demo' }
   }
 }
 
@@ -773,7 +783,33 @@ export async function createContract(payload) {
 
 export async function signContract(id, signature_text) {
   try { return await backendRequest(`/contracts/${id}/sign`, { method: 'POST', body: JSON.stringify({ signature_text }) }) }
-  catch (error) { if (error.status) throw error; const db = getLocalDb(); const item = db.contracts.find((contract) => Number(contract.id) === Number(id)); if (!item || item.locked) throw new Error('This contract is locked.'); item.status = 'Signed'; item.locked = true; item.signed_at = new Date().toISOString(); item.signatures = [{ id: Date.now(), signer_name: JSON.parse(localStorage.getItem('furnivo-user') || '{}').name || 'Client', signer_role: 'client', signature_text, signed_at: item.signed_at }]; saveLocalDb(db); return { item, mode: 'demo' } }
+  catch (error) {
+    if (error.status) throw error
+    const db = getLocalDb()
+    const item = db.contracts.find((contract) => Number(contract.id) === Number(id))
+    if (!item || item.locked) throw new Error('This contract is locked.')
+    item.status = 'Signed'
+    item.locked = true
+    item.signed_at = new Date().toISOString()
+    item.signatures = [{ id: Date.now(), signer_name: JSON.parse(localStorage.getItem('furnivo-user') || '{}').name || 'Client', signer_role: 'client', signature_text, signed_at: item.signed_at }]
+    const quote = db.quotes.find((quoteItem) => Number(quoteItem.database_id || quoteItem.id) === Number(item.quote_id))
+    let order = db.orders.find((orderItem) => Number(orderItem.quote_id) === Number(item.quote_id))
+    let invoice = order && db.invoices.find((invoiceItem) => Number(invoiceItem.order_id) === Number(order.id))
+    let created = false
+    if (!order && quote) {
+      const depositPercent = 30
+      const total = Number(quote.amount || 0)
+      const depositTotal = Math.round(total * depositPercent) / 100
+      order = { id: Date.now(), order_number: `ORD-${1001 + db.orders.length}`, quote_id: quote.database_id || quote.id, quote_number: quote.id, customer: quote.customer, status: 'Awaiting deposit', production_status: 'Not started', delivery_date: null, installation_status: 'Not scheduled', amount: total, notes: `Automatically created after signed contract. Deposit required: ${depositPercent}%.`, updates: [] }
+      const invoiceNumber = `INV-${2001 + db.invoices.length}`
+      invoice = { id: Date.now() + 1, invoice_number: invoiceNumber, order_id: order.id, order_number: order.order_number, customer: quote.customer, issue_date: new Date().toISOString().slice(0, 10), due_date: new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10), status: 'Sent', invoice_type: 'Deposit', deposit_percent: depositPercent, subtotal: Number(quote.subtotal || total) * depositPercent / 100, tax_amount: Number(quote.tax_amount || 0) * depositPercent / 100, total: depositTotal, amount_paid: 0, balance: depositTotal, payment_link: `/pay/${invoiceNumber}`, notes: `${depositPercent}% advance payment for ${quote.id}. The final balance will be invoiced separately.`, payments: [] }
+      db.orders = [order, ...db.orders]
+      db.invoices = [invoice, ...db.invoices]
+      created = true
+    }
+    saveLocalDb(db)
+    return { item, automation: { order, invoice, created }, mode: 'demo' }
+  }
 }
 
 export async function updateContract(id, payload) {
@@ -794,7 +830,7 @@ export async function getProjectPortal() {
     if (error.status) throw error
     await delay()
     const db = getLocalDb()
-    const projects = db.orders.map((order) => ({ order, production: db.productionJobs.find((job) => Number(job.order_id) === Number(order.id)), schedules: db.schedules.filter((schedule) => Number(schedule.order_id) === Number(order.id)), invoice: db.invoices.find((invoice) => Number(invoice.order_id) === Number(order.id)), contract: db.contracts.find((contract) => Number(contract.quote_id) === Number(order.quote_id || 1)) }))
+    const projects = db.orders.map((order) => ({ order, production: db.productionJobs.find((job) => Number(job.order_id) === Number(order.id)), schedules: db.schedules.filter((schedule) => Number(schedule.order_id) === Number(order.id)), invoice: db.invoices.find((invoice) => Number(invoice.order_id) === Number(order.id)), contract: db.contracts.find((contract) => String(contract.quote_id) === String(order.quote_id) || contract.quote_number === order.quote_number) }))
     return { projects, documents: db.contracts.map((contract) => ({ type: 'Contract', number: contract.contract_number, status: contract.status, id: contract.id })).concat(db.invoices.map((invoice) => ({ type: 'Invoice', number: invoice.invoice_number, status: invoice.status, amount: invoice.total }))), support_tickets: db.supportTickets, mode: 'demo' }
   }
 }

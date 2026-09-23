@@ -7,6 +7,7 @@ from uuid import uuid4
 from decimal import Decimal
 from ..extensions import db
 from ..models import Invoice, Payment, PaymentIntent, PaymentReconciliation
+from .conversion import activate_order_after_payment
 
 
 def create_checkout(invoice):
@@ -40,6 +41,7 @@ def settle_payment(external_id, status='paid'):
         invoice.amount_paid += intent.amount
         invoice.refresh_status()
         db.session.add(Payment(invoice_id=invoice.id, amount=intent.amount, method=intent.provider.title(), reference=external_id))
+        activate_order_after_payment(invoice)
     db.session.commit()
     return invoice
 

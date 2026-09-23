@@ -12,6 +12,7 @@ export default function ClientQuotesPage() {
   const [quotes, setQuotes] = useState([])
   const [comments, setComments] = useState({})
   const [error, setError] = useState('')
+  const [message, setMessage] = useState('')
 
   async function load() {
     const result = await getClientQuotes()
@@ -21,9 +22,10 @@ export default function ClientQuotesPage() {
   useEffect(() => { load() }, [])
 
   async function respond(quote, action) {
-    setError('')
+    setError(''); setMessage('')
     try {
-      await respondToQuote(quote.database_id || quote.id, action, comments[quote.id] || '')
+      const result = await respondToQuote(quote.database_id || quote.id, action, comments[quote.id] || '')
+      if (result.automation?.contract_created) setMessage('Quote approved. Your project agreement is ready in Contracts & signatures.')
       await load()
     } catch (err) {
       setError(err.message || 'Unable to update quotation')
@@ -32,6 +34,7 @@ export default function ClientQuotesPage() {
 
   return <AppShell title="My quotations" eyebrow="Review & approval">
     {error && <div className="form-error">{error}</div>}
+    {message && <div className="success-message">{message}</div>}
     <section className="client-quote-grid">
       {quotes.map((quote) => <article className="panel client-quote-card" key={quote.id}>
         <div className="panel-heading"><div><p className="eyebrow">{quote.id} · {quote.date}</p><h3>{quote.customer}</h3></div><span className={`status status-${quote.status.toLowerCase().replaceAll(' ', '-')}`}>{quote.status}</span></div>

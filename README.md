@@ -24,6 +24,7 @@ A responsive furniture / interiors / building-material sales suite built with Re
 18. **GST workflows** with CGST/SGST/IGST calculations, HSN/SAC data, e-invoice records and e-way bills.
 19. **Provider payment automation** with idempotency, dispute webhooks, live-ready refunds and payment receipts.
 20. **Scalable data administration** with pagination, search, archived records, CSV imports and asynchronous jobs.
+21. **Quote-to-payment automation** where client approval creates a contract, signing creates a deposit order/invoice, and successful payment activates the order.
 
 ## Existing experience
 
@@ -189,7 +190,7 @@ The main Furnivo business workflow is implemented. The remaining work is mostly 
 ### Remaining high-priority work
 
 1. **Real provider configuration and verification**
-   - Connect and test the selected Stripe/Razorpay account, HTTP email provider, WhatsApp provider and accounting provider.
+   - Connect and test the selected Stripe/Razorpay account, HTTP email provider, WhatsApp provider and accounting provider for the new quote-to-payment workflow.
    - Configure signed webhook verification, live refund settings, retry delivery and failure alerts.
    - The application safely defaults to demo providers until these values are configured.
 

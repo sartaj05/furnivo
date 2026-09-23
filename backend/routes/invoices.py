@@ -5,6 +5,7 @@ from ..extensions import db
 from ..models import Invoice, Order, Payment, QuoteClientAccess
 from ..utils import current_user, roles_required
 from ..services.audit import record_audit
+from ..services.conversion import activate_order_after_payment
 
 invoices_bp = Blueprint('invoices', __name__)
 
@@ -40,7 +41,7 @@ def create_invoice():
     if db.session.scalar(db.select(Invoice).where(Invoice.order_id == order.id)):
         return jsonify({'message': 'An invoice already exists for this order.'}), 409
     invoice_number = next_invoice_number()
-    invoice = Invoice(invoice_number=invoice_number, order_id=order.id, customer_id=order.customer_id, customer_name=order.customer_name, issue_date=date.today(), due_date=date.today() + timedelta(days=int(payload.get('due_days', 15) or 15)), status='Sent', subtotal=order.quote.subtotal, tax_amount=order.quote.tax_amount, total=order.quote.total, payment_link=f'/pay/{invoice_number}', notes=str(payload.get('notes', '')).strip(), created_by_id=current_user().id)
+    invoice = Invoice(invoice_number=invoice_number, order_id=order.id, customer_id=order.customer_id, customer_name=order.customer_name, issue_date=date.today(), due_date=date.today() + timedelta(days=int(payload.get('due_days', 15) or 15)), status='Sent', invoice_type=str(payload.get('invoice_type', 'Final')).strip() or 'Final', deposit_percent=Decimal(str(payload.get('deposit_percent', 0) or 0)), subtotal=order.quote.subtotal, tax_amount=order.quote.tax_amount, total=order.quote.total, payment_link=f'/pay/{invoice_number}', notes=str(payload.get('notes', '')).strip(), created_by_id=current_user().id)
     db.session.add(invoice); db.session.commit()
     record_audit(current_user().id, 'Invoice created', 'invoice', invoice.id, invoice.invoice_number); db.session.commit()
     return jsonify({'item': invoice.to_dict(), 'mode': 'api'}), 201
@@ -56,6 +57,6 @@ def record_payment(invoice_id):
     if amount <= 0 or amount > invoice.balance:
         return jsonify({'message': 'Payment must be greater than zero and not exceed the balance.'}), 400
     payment = Payment(invoice_id=invoice.id, amount=amount, method=str(payload.get('method', 'Bank transfer')).strip(), reference=str(payload.get('reference', '')).strip())
-    invoice.amount_paid += amount; db.session.add(payment); invoice.refresh_status(); db.session.commit()
+    invoice.amount_paid += amount; db.session.add(payment); invoice.refresh_status(); activate_order_after_payment(invoice); db.session.commit()
     record_audit(current_user().id, 'Payment recorded', 'invoice', invoice.id, f'{amount} via {payment.method}'); db.session.commit()
     return jsonify({'item': invoice.to_dict(), 'mode': 'api'})

@@ -1,3 +1,7 @@
+from backend.extensions import db
+from backend.models import QuoteClientAccess, User
+
+
 def test_health(client):
     response = client.get('/api/health')
     assert response.status_code == 200
@@ -48,3 +52,49 @@ def test_notification_delivery_is_retryable(client, admin_headers):
     retry = client.post(f"/api/notifications/deliveries/{delivery.json['item']['id']}/retry", headers=admin_headers)
     assert retry.status_code == 200
     assert retry.json['item']['attempt_count'] == 2
+
+
+def test_quote_to_payment_automation(client, app):
+    sales_login = client.post('/api/auth/login', json={'email': 'sales@furnivo.demo', 'password': 'sales123'})
+    sales_headers = {'Authorization': f"Bearer {sales_login.json['token']}"}
+    quote_response = client.post('/api/quotes', headers=sales_headers, json={
+        'customer': 'Automation Studio',
+        'items': [{'product_id': 1, 'quantity': 1}],
+        'tax_percent': 18,
+    })
+    assert quote_response.status_code == 201
+    quote_id = quote_response.json['item']['database_id']
+
+    with app.app_context():
+        client_user = db.session.scalar(db.select(User).where(User.email == 'client@furnivo.demo'))
+        db.session.add(QuoteClientAccess(quote_id=quote_id, user_id=client_user.id))
+        db.session.commit()
+
+    client_login = client.post('/api/auth/login', json={'email': 'client@furnivo.demo', 'password': 'client123'})
+    client_headers = {'Authorization': f"Bearer {client_login.json['token']}"}
+    approved = client.post(f'/api/quotes/{quote_id}/client-response', headers=client_headers, json={'action': 'Approved'})
+    assert approved.status_code == 200
+    assert approved.json['automation']['contract_created'] is True
+    contract_id = approved.json['automation']['contract']['id']
+
+    signed = client.post(f'/api/contracts/{contract_id}/sign', headers=client_headers, json={'signature_text': 'Riya Client'})
+    assert signed.status_code == 200
+    assert signed.json['automation']['created'] is True
+    invoice = signed.json['automation']['invoice']
+    assert invoice['invoice_type'] == 'Deposit'
+    assert invoice['deposit_percent'] == 30
+    assert invoice['status'] == 'Sent'
+
+    checkout_headers = {**client_headers, 'Idempotency-Key': 'automation-checkout-1'}
+    checkout = client.post(f"/api/payments/invoices/{invoice['id']}/checkout", headers=checkout_headers)
+    assert checkout.status_code == 200
+    external_id = checkout.json['item']['external_id']
+    webhook = client.post('/api/payments/webhook/demo', json={'external_id': external_id, 'status': 'paid'})
+    assert webhook.status_code == 200
+
+    orders = client.get('/api/orders', headers=client_headers)
+    matching_order = next(item for item in orders.json['items'] if item['quote_id'] == quote_id)
+    assert matching_order['status'] == 'Confirmed'
+    invoices = client.get('/api/invoices', headers=client_headers)
+    matching_invoice = next(item for item in invoices.json['items'] if item['id'] == invoice['id'])
+    assert matching_invoice['status'] == 'Paid'

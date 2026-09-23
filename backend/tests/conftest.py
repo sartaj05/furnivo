@@ -14,6 +14,7 @@ class TestConfig:
     FRONTEND_ORIGINS = ['*']
     AUTO_SEED = True
     RATE_LIMIT_PER_MINUTE = 1000
+    DEFAULT_DEPOSIT_PERCENT = 30
     APP_VERSION = 'test'
     ENVIRONMENT = 'test'
     REFRESH_TOKEN_DAYS = 30

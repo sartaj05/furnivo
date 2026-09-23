@@ -6,6 +6,7 @@ from ..models import Customer, Product, ProductVariant, Quote, QuoteClientAccess
 from ..utils import current_user, roles_required
 from ..services.notifications import create_notification, notify_quote_client
 from ..services.audit import record_audit
+from ..services.conversion import ensure_contract_for_approved_quote
 
 quotes_bp = Blueprint('quotes', __name__)
 
@@ -200,10 +201,21 @@ def client_response(quote_id):
     access.response_comment = comment
     access.responded_at = datetime.now(timezone.utc)
     access.quote.status = action
+    contract = None
+    contract_created = False
+    if action == 'Approved':
+        contract, contract_created = ensure_contract_for_approved_quote(access.quote, current_user().id)
     record_revision(access.quote, f'Client {action}', comment)
     record_audit(current_user().id, f'Client {action}', 'quote', access.quote.id, comment)
     create_notification(access.quote.created_by_id, 'Client response received', f'{access.quote.quote_number}: {action}.', 'quote', 'quote', access.quote.id)
     db.session.commit()
     item = access.quote.to_dict()
     item['client_access'] = access.to_dict()
-    return jsonify({'item': item, 'mode': 'api'})
+    return jsonify({
+        'item': item,
+        'automation': {
+            'contract': contract.to_dict() if contract else None,
+            'contract_created': contract_created,
+        },
+        'mode': 'api',
+    })

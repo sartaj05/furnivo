@@ -1,11 +1,12 @@
 from io import BytesIO
 from datetime import datetime, timezone
-from flask import Blueprint, jsonify, request, send_file
+from flask import Blueprint, current_app, jsonify, request, send_file
 from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
 from ..extensions import db
 from ..models import Contract, ContractSignature, Quote, QuoteClientAccess
 from ..services.audit import record_audit
+from ..services.conversion import create_deposit_order_and_invoice
 from ..utils import current_user, roles_required
 
 contracts_bp = Blueprint('contracts', __name__)
@@ -51,11 +52,27 @@ def sign_contract(contract_id):
     item = db.get_or_404(Contract, contract_id)
     if not can_view(item): return jsonify({'message': 'You do not have access to this contract.'}), 403
     if item.status == 'Voided' or item.locked: return jsonify({'message': 'This contract is locked and cannot be signed again.'}), 400
+    if item.quote.status != 'Approved': return jsonify({'message': 'The quotation must be approved before the contract can be signed.'}), 400
     payload = request.get_json(silent=True) or {}; signature_text = str(payload.get('signature_text', '')).strip()
     if len(signature_text) < 2: return jsonify({'message': 'Enter a valid signature name.'}), 400
     signature = ContractSignature(contract_id=item.id, signer_name=current_user().name, signer_email=current_user().email, signer_role=current_user().role, signature_text=signature_text, ip_address=request.headers.get('X-Forwarded-For', request.remote_addr or ''))
-    item.status = 'Signed'; item.locked = True; item.signed_at = datetime.now(timezone.utc); db.session.add(signature); db.session.commit(); record_audit(current_user().id, 'Contract signed', 'contract', item.id, item.contract_number); db.session.commit()
-    return jsonify({'item': item.to_dict(), 'mode': 'api'})
+    item.status = 'Signed'; item.locked = True; item.signed_at = datetime.now(timezone.utc); db.session.add(signature)
+    try:
+        order, invoice, created = create_deposit_order_and_invoice(item.quote, current_user().id, current_app.config.get('DEFAULT_DEPOSIT_PERCENT', 30))
+    except ValueError as exc:
+        db.session.rollback()
+        return jsonify({'message': str(exc)}), 400
+    record_audit(current_user().id, 'Contract signed', 'contract', item.id, item.contract_number)
+    db.session.commit()
+    return jsonify({
+        'item': item.to_dict(),
+        'automation': {
+            'order': order.to_dict() if order else None,
+            'invoice': invoice.to_dict() if invoice else None,
+            'created': created,
+        },
+        'mode': 'api',
+    })
 
 
 @contracts_bp.patch('/<int:contract_id>')

@@ -429,6 +429,8 @@ class Invoice(TimestampMixin, db.Model):
     issue_date = db.Column(db.Date, nullable=False)
     due_date = db.Column(db.Date)
     status = db.Column(db.String(40), nullable=False, default='Sent')
+    invoice_type = db.Column(db.String(30), nullable=False, default='Final')
+    deposit_percent = db.Column(db.Numeric(6, 2), nullable=False, default=0)
     subtotal = db.Column(db.Numeric(12, 2), nullable=False, default=0)
     tax_amount = db.Column(db.Numeric(12, 2), nullable=False, default=0)
     total = db.Column(db.Numeric(12, 2), nullable=False, default=0)
@@ -465,6 +467,8 @@ class Invoice(TimestampMixin, db.Model):
             'issue_date': self.issue_date.isoformat(),
             'due_date': self.due_date.isoformat() if self.due_date else None,
             'status': self.status,
+            'invoice_type': self.invoice_type,
+            'deposit_percent': float(self.deposit_percent or 0),
             'subtotal': float(self.subtotal or 0),
             'tax_amount': float(self.tax_amount or 0),
             'total': float(self.total or 0),
