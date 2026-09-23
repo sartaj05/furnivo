@@ -23,9 +23,16 @@ def project_portal():
         schedules = db.session.scalars(db.select(DeliverySchedule).where(DeliverySchedule.order_id == order.id).order_by(DeliverySchedule.scheduled_date)).all()
         invoice = db.session.scalar(db.select(Invoice).where(Invoice.order_id == order.id))
         contract = db.session.scalar(db.select(Contract).where(Contract.quote_id == order.quote_id))
+        timeline = [{'type': 'project', 'label': 'Project created', 'status': order.status, 'date': order.created_at.isoformat(), 'detail': order.notes or 'Project workspace opened.'}]
+        timeline.extend({'type': 'update', 'label': 'Project update', 'status': 'Posted', 'date': update.created_at.isoformat(), 'detail': update.body} for update in order.updates)
+        if production: timeline.append({'type': 'production', 'label': 'Production', 'status': production.status, 'date': production.updated_at.isoformat(), 'detail': production.job_number})
+        for schedule in schedules: timeline.append({'type': 'schedule', 'label': schedule.schedule_type, 'status': schedule.status, 'date': schedule.scheduled_date.isoformat(), 'detail': f'{schedule.assigned_team} · {schedule.time_slot}'})
+        if contract: timeline.append({'type': 'contract', 'label': 'Contract', 'status': contract.status, 'date': contract.signed_at.isoformat() if contract.signed_at else contract.created_at.isoformat(), 'detail': contract.contract_number})
+        if invoice: timeline.append({'type': 'invoice', 'label': 'Invoice', 'status': invoice.status, 'date': invoice.issue_date.isoformat(), 'detail': invoice.invoice_number})
+        timeline.sort(key=lambda item: item['date'], reverse=True)
         if invoice: documents.append({'type': 'Invoice', 'number': invoice.invoice_number, 'status': invoice.status, 'amount': float(invoice.total or 0)})
         if contract: documents.append({'type': 'Contract', 'number': contract.contract_number, 'status': contract.status, 'id': contract.id})
-        projects.append({'order': order.to_dict(), 'production': production.to_dict() if production else None, 'schedules': [schedule.to_dict() for schedule in schedules], 'invoice': invoice.to_dict() if invoice else None, 'contract': contract.to_dict() if contract else None})
+        projects.append({'order': order.to_dict(), 'production': production.to_dict() if production else None, 'schedules': [schedule.to_dict() for schedule in schedules], 'invoice': invoice.to_dict() if invoice else None, 'contract': contract.to_dict() if contract else None, 'timeline': timeline})
     tickets = db.session.scalars(db.select(ProjectSupportTicket).where(ProjectSupportTicket.user_id == current_user().id).order_by(ProjectSupportTicket.id.desc())).all()
     return jsonify({'projects': projects, 'documents': documents, 'support_tickets': [ticket.to_dict() for ticket in tickets], 'mode': 'api'})
 

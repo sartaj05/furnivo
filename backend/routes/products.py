@@ -25,6 +25,12 @@ def product_from_payload(product, payload):
         product.price = Decimal(str(payload.get('price', product.price or 0)))
     except (InvalidOperation, ValueError):
         raise ValueError('price must be a valid number')
+    try:
+        product.cost_price = Decimal(str(payload.get('cost_price', product.cost_price or 0)))
+    except (InvalidOperation, ValueError):
+        raise ValueError('cost_price must be a valid number')
+    if product.cost_price < 0:
+        raise ValueError('cost_price cannot be negative')
     return product
 
 

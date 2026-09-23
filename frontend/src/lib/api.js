@@ -1,4 +1,4 @@
-import { demoAccessUsers, demoAnalytics, demoApprovalRequests, demoAuditLogs, demoBackups, demoBackgroundJobs, demoContracts, demoCustomerPricing, demoCustomers, demoDepartments, demoEInvoices, demoFieldVisits, demoFurnitureConfigurations, demoIntegrations, demoInventory, demoInvoices, demoLeads, demoNotifications, demoOpsHealth, demoOrders, demoPaymentReconciliations, demoProducts, demoProductionJobs, demoProjectOwnership, demoPurchaseOrders, demoQuotePresets, demoQuotes, demoReturns, demoSchedules, demoServiceTickets, demoStockMovements, demoSupportTickets, demoSuppliers, demoSyncRuns, demoUsers, demoWarehouseStock, demoWarehouses, demoWarranties } from '../data/demoData'
+import { demoAccessUsers, demoAnalytics, demoApprovalRequests, demoAuditLogs, demoAutomationTemplates, demoBackups, demoBackgroundJobs, demoContracts, demoCustomerPricing, demoCustomers, demoDepartments, demoEInvoices, demoFieldVisits, demoFurnitureConfigurations, demoIntegrations, demoInventory, demoInvoices, demoLeads, demoNotifications, demoOpsHealth, demoOrders, demoPaymentReconciliations, demoPlanning, demoProducts, demoProductionJobs, demoProjectOwnership, demoPurchaseOrders, demoQuotePresets, demoQuotes, demoReturns, demoSchedules, demoServiceTickets, demoStockMovements, demoSupportTickets, demoSuppliers, demoSyncRuns, demoUsers, demoWarehouseStock, demoWarehouses, demoWarranties } from '../data/demoData'
 
 const API_URL = import.meta.env.VITE_API_URL?.replace(/\/$/, '')
 const STORAGE_KEY = 'furnivo-demo-db'
@@ -82,6 +82,8 @@ function getLocalDb() {
       syncRuns: parsed.syncRuns || demoSyncRuns,
       fieldVisits: parsed.fieldVisits || demoFieldVisits,
       furnitureConfigurations: parsed.furnitureConfigurations || demoFurnitureConfigurations,
+      planning: parsed.planning || demoPlanning,
+      automationTemplates: parsed.automationTemplates || demoAutomationTemplates,
     }
     if (!parsed.users) localStorage.setItem(STORAGE_KEY, JSON.stringify(normalized))
     return normalized
@@ -124,6 +126,8 @@ function getLocalDb() {
     syncRuns: demoSyncRuns,
     fieldVisits: demoFieldVisits,
     furnitureConfigurations: demoFurnitureConfigurations,
+    planning: demoPlanning,
+    automationTemplates: demoAutomationTemplates,
   }
   localStorage.setItem(STORAGE_KEY, JSON.stringify(initial))
   return initial
@@ -893,7 +897,11 @@ export async function getProjectPortal() {
     if (error.status) throw error
     await delay()
     const db = getLocalDb()
-    const projects = db.orders.map((order) => ({ order, production: db.productionJobs.find((job) => Number(job.order_id) === Number(order.id)), schedules: db.schedules.filter((schedule) => Number(schedule.order_id) === Number(order.id)), invoice: db.invoices.find((invoice) => Number(invoice.order_id) === Number(order.id)), contract: db.contracts.find((contract) => String(contract.quote_id) === String(order.quote_id) || contract.quote_number === order.quote_number) }))
+    const projects = db.orders.map((order) => {
+      const production = db.productionJobs.find((job) => Number(job.order_id) === Number(order.id)); const schedules = db.schedules.filter((schedule) => Number(schedule.order_id) === Number(order.id)); const invoice = db.invoices.find((entry) => Number(entry.order_id) === Number(order.id)); const contract = db.contracts.find((entry) => String(entry.quote_id) === String(order.quote_id) || entry.quote_number === order.quote_number)
+      const timeline = [{ type: 'project', label: 'Project created', status: order.status, date: order.created_at || new Date().toISOString(), detail: order.notes || 'Project workspace opened.' }, ...(order.updates || []).map((update) => ({ type: 'update', label: 'Project update', status: 'Posted', date: update.created_at, detail: update.body })), ...(production ? [{ type: 'production', label: 'Production', status: production.status, date: production.updated_at || production.scheduled_start, detail: production.job_number }] : []), ...schedules.map((schedule) => ({ type: 'schedule', label: schedule.schedule_type, status: schedule.status, date: schedule.scheduled_date, detail: `${schedule.assigned_team} · ${schedule.time_slot}` })), ...(contract ? [{ type: 'contract', label: 'Contract', status: contract.status, date: contract.signed_at || contract.created_at, detail: contract.contract_number }] : []), ...(invoice ? [{ type: 'invoice', label: 'Invoice', status: invoice.status, date: invoice.issue_date, detail: invoice.invoice_number }] : [])].sort((a, b) => String(b.date).localeCompare(String(a.date)))
+      return { order, production, schedules, invoice, contract, timeline }
+    })
     return { projects, documents: db.contracts.map((contract) => ({ type: 'Contract', number: contract.contract_number, status: contract.status, id: contract.id })).concat(db.invoices.map((invoice) => ({ type: 'Invoice', number: invoice.invoice_number, status: invoice.status, amount: invoice.total }))), support_tickets: db.supportTickets, mode: 'demo' }
   }
 }
@@ -1234,7 +1242,58 @@ export async function updateServiceTicket(id, payload) {
 
 export async function getAnalytics() {
   try { return await backendRequest('/analytics') }
-  catch (error) { if (error.status) throw error; await delay(); return { ...getLocalDb().analytics || demoAnalytics, mode: 'demo' } }
+  catch (error) { if (error.status) throw error; await delay(); return { ...demoAnalytics, ...(getLocalDb().analytics || {}), mode: 'demo' } }
+}
+
+export async function getBusinessPlanning() {
+  try { return await backendRequest('/business/planning') }
+  catch (error) { if (error.status) throw error; await delay(); return { planning: getLocalDb().planning || demoPlanning, mode: 'demo' } }
+}
+
+export async function reservePlanningStock() {
+  try { return await backendRequest('/business/planning/reserve', { method: 'POST' }) }
+  catch (error) {
+    if (error.status) throw error
+    await delay()
+    const db = getLocalDb()
+    const reserved = (db.planning.materials || []).filter((item) => item.shortage_quantity < item.required_quantity).map((item) => ({ product: item.product, quantity: Math.min(Number(item.required_quantity), Number(item.available_quantity)), job_number: item.job_number }))
+    db.planning = { ...db.planning, materials: db.planning.materials.map((item) => ({ ...item, reserved_quantity: Number(item.reserved_quantity || 0) + (reserved.find((entry) => entry.product === item.product)?.quantity || 0), available_quantity: Math.max(Number(item.available_quantity || 0) - (reserved.find((entry) => entry.product === item.product)?.quantity || 0), 0) })) }
+    saveLocalDb(db)
+    return { reserved, planning: db.planning, mode: 'demo' }
+  }
+}
+
+export async function getAutomationTemplates() {
+  try { return await backendRequest('/business/automation') }
+  catch (error) { if (error.status) throw error; await delay(); return { templates: getLocalDb().automationTemplates || demoAutomationTemplates, mode: 'demo' } }
+}
+
+export async function previewAutomation(payload) {
+  try { return await backendRequest('/business/automation/preview', { method: 'POST', body: JSON.stringify(payload) }) }
+  catch (error) {
+    if (error.status) throw error
+    await delay()
+    const template = (getLocalDb().automationTemplates || demoAutomationTemplates).find((item) => item.event === payload.event)
+    if (!template) throw new Error('Choose a valid automation event.')
+    let body = template.body
+    Object.entries(payload.variables || {}).forEach(([key, value]) => { body = body.replaceAll(`{{${key}}}`, String(value)) })
+    return { preview: { event: template.event, title: template.title, body, channels: template.channels }, mode: 'demo' }
+  }
+}
+
+export async function sendAutomation(payload) {
+  try { return await backendRequest('/business/automation/send', { method: 'POST', body: JSON.stringify(payload) }) }
+  catch (error) {
+    if (error.status) throw error
+    await delay()
+    const template = (getLocalDb().automationTemplates || demoAutomationTemplates).find((item) => item.event === payload.event)
+    if (!template) throw new Error('Choose a valid automation event.')
+    let body = template.body
+    Object.entries(payload.variables || {}).forEach(([key, value]) => { body = body.replaceAll(`{{${key}}}`, String(value)) })
+    const db = getLocalDb(); const item = { id: Date.now(), user_id: payload.user_id, type: 'automation', title: template.title, body, related_type: payload.related_type || '', related_id: String(payload.related_id || ''), is_read: false, delivery_status: payload.channel === 'in_app' ? 'delivered' : 'demo-queued', created_at: new Date().toISOString() }
+    db.notifications = [item, ...db.notifications]; saveLocalDb(db)
+    return { item, delivery: payload.channel && payload.channel !== 'in_app' ? { id: Date.now() + 1, channel: payload.channel, recipient: payload.recipient || '', status: 'demo-queued', error: 'Configure the provider in the backend environment for live delivery.' } : null, mode: 'demo' }
+  }
 }
 
 export async function getIntegrations() {

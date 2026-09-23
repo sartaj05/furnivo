@@ -26,6 +26,8 @@ A responsive furniture / interiors / building-material sales suite built with Re
 20. **Scalable data administration** with pagination, search, archived records, CSV imports and asynchronous jobs.
 21. **Quote-to-payment automation** where client approval creates a contract, signing creates a deposit order/invoice, and successful payment activates the order.
 22. **Furniture visual configurator MVP** with selectable materials, fabrics, colors, finishes, dimensions, live server-validated pricing, saved specifications and direct quotation handoff.
+23. **Business control center** with BOM costing, wastage-aware material planning, stock reservations, shortage and purchase-order suggestions, project profitability, timeline events and notification automation templates.
+23. **Business control center** with BOM costing, wastage-aware material planning, stock reservations, shortage and purchase-order suggestions, project profitability, timeline events and notification automation templates.
 
 ## Existing experience
 

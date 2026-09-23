@@ -31,6 +31,7 @@ import ServicePage from './pages/ServicePage'
 import AnalyticsPage from './pages/AnalyticsPage'
 import IntegrationsPage from './pages/IntegrationsPage'
 import FieldOperationsPage from './pages/FieldOperationsPage'
+import BusinessControlPage from './pages/BusinessControlPage'
 import ProtectedRoute from './components/ProtectedRoute'
 
 export default function App() {
@@ -56,6 +57,7 @@ export default function App() {
         <Route path="/app/access-control" element={<ProtectedRoute allowedRoles={['admin']}><AccessControlPage /></ProtectedRoute>} />
         <Route path="/app/service" element={<ServicePage />} />
         <Route path="/app/analytics" element={<ProtectedRoute allowedRoles={['admin', 'sales', 'designer']}><AnalyticsPage /></ProtectedRoute>} />
+        <Route path="/app/business-control" element={<ProtectedRoute allowedRoles={['admin', 'sales', 'designer']}><BusinessControlPage /></ProtectedRoute>} />
         <Route path="/app/integrations" element={<ProtectedRoute allowedRoles={['admin']}><IntegrationsPage /></ProtectedRoute>} />
         <Route path="/app/field-operations" element={<FieldOperationsPage />} />
         <Route path="/app/customers" element={<ProtectedRoute allowedRoles={['admin', 'sales']}><CustomersPage /></ProtectedRoute>} />

@@ -74,6 +74,7 @@ class Product(TimestampMixin, db.Model):
     name = db.Column(db.String(180), nullable=False)
     category = db.Column(db.String(100), nullable=False, index=True)
     price = db.Column(db.Numeric(12, 2), nullable=False, default=0)
+    cost_price = db.Column(db.Numeric(12, 2), nullable=False, default=0)
     unit = db.Column(db.String(40), nullable=False, default='piece')
     material = db.Column(db.String(255), nullable=False, default='')
     description = db.Column(db.Text, nullable=False, default='')
@@ -916,12 +917,15 @@ class BomItem(TimestampMixin, db.Model):
     quantity = db.Column(db.Numeric(12, 2), nullable=False, default=1)
     unit = db.Column(db.String(40), nullable=False, default='piece')
     wastage_percent = db.Column(db.Numeric(6, 2), nullable=False, default=0)
+    unit_cost = db.Column(db.Numeric(12, 2), nullable=False, default=0)
+    labor_cost = db.Column(db.Numeric(12, 2), nullable=False, default=0)
     status = db.Column(db.String(40), nullable=False, default='Required')
     production_job = db.relationship('ProductionJob', back_populates='bom_items')
     product = db.relationship('Product')
 
     def to_dict(self):
-        return {'id': self.id, 'product_id': self.product_id, 'product': self.product.name if self.product else None, 'description': self.description, 'quantity': float(self.quantity or 0), 'unit': self.unit, 'wastage_percent': float(self.wastage_percent or 0), 'planned_quantity': float((self.quantity or 0) * (1 + (self.wastage_percent or 0) / 100)), 'status': self.status}
+        planned_quantity = (self.quantity or 0) * (1 + (self.wastage_percent or 0) / 100)
+        return {'id': self.id, 'product_id': self.product_id, 'product': self.product.name if self.product else None, 'description': self.description, 'quantity': float(self.quantity or 0), 'unit': self.unit, 'wastage_percent': float(self.wastage_percent or 0), 'planned_quantity': float(planned_quantity), 'unit_cost': float(self.unit_cost or 0), 'labor_cost': float(self.labor_cost or 0), 'material_cost': float(planned_quantity * (self.unit_cost or 0)), 'total_cost': float((planned_quantity * (self.unit_cost or 0)) + (self.labor_cost or 0)), 'status': self.status}
 
 
 class Customer(TimestampMixin, db.Model):

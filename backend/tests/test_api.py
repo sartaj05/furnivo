@@ -93,6 +93,31 @@ def test_furniture_visual_configuration_can_be_saved_and_quoted(client, admin_he
     assert linked['quote_id'] == quote.json['item']['id']
 
 
+def test_planning_profitability_timeline_and_automation(client, admin_headers):
+    planning = client.get('/api/business/planning', headers=admin_headers)
+    assert planning.status_code == 200
+    assert planning.json['planning']['summary']['jobs'] >= 1
+    assert planning.json['planning']['summary']['estimated_cost'] > 0
+
+    reserved = client.post('/api/business/planning/reserve', headers=admin_headers)
+    assert reserved.status_code == 200
+    analytics = client.get('/api/analytics', headers=admin_headers)
+    assert analytics.status_code == 200
+    assert analytics.json['profitability']['gross_profit'] >= 0
+
+    templates = client.get('/api/business/automation', headers=admin_headers)
+    assert templates.status_code == 200
+    preview = client.post('/api/business/automation/preview', headers=admin_headers, json={'event': 'production_update', 'variables': {'order_number': 'ORD-1001', 'status': 'Ready'}})
+    assert preview.status_code == 200
+    assert 'ORD-1001' in preview.json['preview']['body']
+
+    portal_login = client.post('/api/auth/login', json={'email': 'client@furnivo.demo', 'password': 'client123'})
+    portal_headers = {'Authorization': f"Bearer {portal_login.json['token']}"}
+    portal = client.get('/api/portal', headers=portal_headers)
+    assert portal.status_code == 200
+    assert portal.json['projects'][0]['timeline']
+
+
 def test_quote_to_payment_automation(client, app):
     sales_login = client.post('/api/auth/login', json={'email': 'sales@furnivo.demo', 'password': 'sales123'})
     sales_headers = {'Authorization': f"Bearer {sales_login.json['token']}"}

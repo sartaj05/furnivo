@@ -42,6 +42,7 @@ The application is a working React/Vite + Flask/SQLAlchemy sales workspace. The 
 - Paginated searchable catalog/customer/lead APIs, CSV imports, archived-record filters and background jobs.
 - Quote-to-payment automation: client quote approval creates a contract, contract signing creates a deposit order/invoice, and a paid deposit confirms the order.
 - Furniture visual configurator MVP: material, fabric, color, finish, dimensions, quantity, live pricing, saved configurations and direct quote handoff.
+- Business control center: BOM costing with labor estimates, wastage-aware inventory planning, reservation actions, shortage/purchase suggestions, project profitability, timeline events and notification automation templates.
 
 ## Offline/demo behavior
 
@@ -68,7 +69,7 @@ These are not implemented as production features yet:
 - Provider-specific refund calls require `PAYMENT_LIVE_REFUNDS=true` plus live Stripe/Razorpay credentials; demo mode remains the safe default.
 - External distributed job queue and worker scaling beyond the in-process background job runner.
 - Object-level authorization for client-owned records; current access is role-level.
-- Live analytics beyond the current dashboard counts and totals.
+- Provider-backed delivery and fully automated scheduling still require production email/WhatsApp credentials; the control center provides demo-safe previews and queued fallback behavior.
 - Secret rotation, external backup storage, centralized log shipping and full production deployment automation.
 
 ## Verification

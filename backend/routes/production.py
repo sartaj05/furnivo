@@ -48,7 +48,7 @@ def create_job():
         job = ProductionJob(order_id=order.id, job_number=next_job_number(), status='Planned', scheduled_start=parse_date(payload.get('scheduled_start')), due_date=parse_date(payload.get('due_date')), assigned_team=str(payload.get('assigned_team', '')).strip(), wastage_percent=wastage, notes=str(payload.get('notes', '')).strip(), created_by_id=current_user().id)
         for row in payload.get('bom_items') or []:
             item_wastage = Decimal(str(row.get('wastage_percent', wastage)))
-            job.bom_items.append(BomItem(product_id=row.get('product_id') or None, description=str(row.get('description', '')).strip(), quantity=Decimal(str(row.get('quantity', 1))), unit=str(row.get('unit', 'piece')).strip() or 'piece', wastage_percent=item_wastage))
+            job.bom_items.append(BomItem(product_id=row.get('product_id') or None, description=str(row.get('description', '')).strip(), quantity=Decimal(str(row.get('quantity', 1))), unit=str(row.get('unit', 'piece')).strip() or 'piece', wastage_percent=item_wastage, unit_cost=Decimal(str(row.get('unit_cost', 0) or 0)), labor_cost=Decimal(str(row.get('labor_cost', 0) or 0))))
         if not job.bom_items: return jsonify({'message': 'At least one BOM material is required.'}), 400
     except (InvalidOperation, ValueError):
         return jsonify({'message': 'Production quantities, wastage, or dates are invalid.'}), 400
