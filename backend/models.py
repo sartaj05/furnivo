@@ -1,3 +1,4 @@
+import json
 from datetime import datetime, timezone
 from .extensions import db
 
@@ -208,6 +209,47 @@ class QuoteItem(TimestampMixin, db.Model):
             'unit': self.unit,
             'unit_price': float(self.unit_price or 0),
             'line_total': float(self.line_total),
+        }
+
+
+class FurnitureConfiguration(TimestampMixin, db.Model):
+    __tablename__ = 'furniture_configurations'
+
+    id = db.Column(db.Integer, primary_key=True)
+    configuration_number = db.Column(db.String(40), unique=True, nullable=False, index=True)
+    name = db.Column(db.String(180), nullable=False)
+    room = db.Column(db.String(120), nullable=False, default='')
+    customer_id = db.Column(db.Integer, db.ForeignKey('customers.id'), nullable=True, index=True)
+    quote_id = db.Column(db.Integer, db.ForeignKey('quotes.id'), nullable=True, index=True)
+    created_by_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    status = db.Column(db.String(30), nullable=False, default='Saved')
+    items_json = db.Column(db.Text, nullable=False, default='[]')
+    subtotal = db.Column(db.Numeric(12, 2), nullable=False, default=0)
+    customer = db.relationship('Customer')
+    quote = db.relationship('Quote', foreign_keys=[quote_id])
+    created_by = db.relationship('User', foreign_keys=[created_by_id])
+
+    @property
+    def items(self):
+        try:
+            return json.loads(self.items_json or '[]')
+        except (TypeError, ValueError):
+            return []
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'configuration_number': self.configuration_number,
+            'name': self.name,
+            'room': self.room,
+            'customer_id': self.customer_id,
+            'customer': self.customer.company if self.customer else None,
+            'quote_id': self.quote.quote_number if self.quote else None,
+            'status': self.status,
+            'items': self.items,
+            'subtotal': float(self.subtotal or 0),
+            'created_at': self.created_at.isoformat(),
+            'updated_at': self.updated_at.isoformat(),
         }
 
 

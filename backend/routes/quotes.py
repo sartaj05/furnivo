@@ -2,7 +2,7 @@ from datetime import date, datetime, timezone
 from decimal import Decimal, InvalidOperation
 from flask import Blueprint, jsonify, request
 from ..extensions import db
-from ..models import Customer, Product, ProductVariant, Quote, QuoteClientAccess, QuoteItem, QuoteRevision
+from ..models import Customer, FurnitureConfiguration, Product, ProductVariant, Quote, QuoteClientAccess, QuoteItem, QuoteRevision
 from ..utils import current_user, roles_required
 from ..services.notifications import create_notification, notify_quote_client
 from ..services.audit import record_audit
@@ -101,7 +101,18 @@ def create_quote():
     customer_id = payload.get('customer_id') or None
     customer_record = db.session.get(Customer, int(customer_id)) if customer_id else None
     customer = str(payload.get('customer') or (customer_record.company if customer_record else '')).strip()
-    line_items = payload.get('items') or []
+    configuration = None
+    configuration_id = payload.get('configuration_id')
+    if configuration_id:
+        configuration = db.session.get(FurnitureConfiguration, int(configuration_id))
+        if not configuration:
+            return jsonify({'message': 'Furniture configuration was not found.'}), 404
+        line_items = configuration.items
+        if not customer_record and configuration.customer_id:
+            customer_record = db.session.get(Customer, configuration.customer_id)
+            customer = customer_record.company if customer_record else customer
+    else:
+        line_items = payload.get('items') or []
     if not customer or not line_items:
         return jsonify({'message': 'Customer and at least one quote line are required.'}), 400
 
@@ -121,6 +132,10 @@ def create_quote():
         quote.items = [build_item(item) for item in line_items]
         db.session.add(quote)
         db.session.commit()
+        if configuration:
+            configuration.quote_id = quote.id
+            configuration.status = 'Quoted'
+            db.session.commit()
         record_revision(quote, 'Created')
         db.session.commit()
     except ValueError as exc:

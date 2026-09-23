@@ -932,6 +932,16 @@ img { max-width: 100%; }
 .configurator-line label { display: grid; gap: 6px; font-size: 10px; font-weight: 800; text-transform: uppercase; color: var(--muted); }
 .configurator-line input, .configurator-line select, .preset-name-input { min-width: 0; width: 100%; border: 1px solid #d7dbd5; background: white; padding: 10px; border-radius: 9px; color: var(--ink); }
 .configurator-line-total { white-space: nowrap; padding-bottom: 9px; }
+.visual-config-card { display: grid; grid-template-columns: 130px minmax(0, 1fr); gap: 14px; padding: 14px; background: #f4f2eb; border-radius: 12px; }
+.visual-config-preview { width: 130px; height: 130px; border-radius: 10px; background: #e2dfd5; color: var(--muted); display: grid; place-items: center; object-fit: cover; font-size: 11px; }
+img.visual-config-preview { object-fit: cover; }
+.visual-config-heading { display: flex; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
+.visual-config-heading span, .visual-config-footer span { color: var(--muted); font-size: 11px; }
+.visual-config-footer { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 10px; }
+.visual-config-footer span { flex: 1; min-width: 180px; }
+.visual-config-footer strong { color: var(--green); white-space: nowrap; }
+.configurator-button-group { display: flex; gap: 9px; flex-wrap: wrap; }
+.configurator-info p { color: var(--muted); font-size: 13px; line-height: 1.6; }
 .configurator-actions { display: flex; justify-content: space-between; gap: 12px; margin-top: 16px; }
 .configurator-sidebar { display: grid; gap: 14px; position: sticky; top: 24px; }
 .preset-list { display: grid; gap: 9px; margin-top: 14px; }
@@ -970,7 +980,7 @@ img { max-width: 100%; }
 .field-toolbar { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 14px; }.field-offline-chip { color: var(--green); font-size: 12px; font-weight: 700; }.field-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px; }.qr-form, .field-schedule-form, .gps-row { display: flex; gap: 8px; }.qr-form input, .field-schedule-form input, .field-schedule-form select, .gps-row input, .proof-form input { min-width: 0; width: 100%; border: 1px solid #d7dbd5; background: white; padding: 10px; border-radius: 9px; font: inherit; }.field-visit-list { display: grid; gap: 8px; margin-top: 16px; }.field-visit { display: flex; justify-content: space-between; gap: 12px; width: 100%; padding: 11px; border: 1px solid transparent; border-radius: 9px; background: #f5f3ed; color: var(--ink); text-align: left; cursor: pointer; }.field-visit.selected { border-color: #86a290; background: #eef3ed; }.field-visit span, .field-visit small { display: block; }.field-visit small { color: var(--muted); margin-top: 4px; font-size: 11px; }.field-visit b { color: var(--green); }.field-token { display: flex; justify-content: space-between; gap: 10px; padding: 12px; border-radius: 9px; background: #f5f3ed; color: var(--muted); font-size: 11px; }.field-token strong { color: var(--ink); letter-spacing: .08em; }.field-actions { display: flex; gap: 12px; margin: 16px 0; }.proof-form { display: grid; gap: 10px; }.proof-form label { display: grid; gap: 6px; color: var(--muted); font-size: 11px; font-weight: 800; text-transform: uppercase; }.proof-preview { width: 100%; max-height: 180px; object-fit: cover; border-radius: 9px; }.field-schedule-panel { margin-bottom: 14px; }.field-schedule-form select, .field-schedule-form input { flex: 1; }.field-schedule-form button { white-space: nowrap; }
 @media (max-width: 780px) { .field-toolbar, .field-layout, .field-schedule-form { display: grid; grid-template-columns: 1fr; }.qr-form, .gps-row { display: grid; grid-template-columns: 1fr; }.field-schedule-form button { width: 100%; } }
 @media (max-width: 980px) { .configurator-layout { grid-template-columns: 1fr; } .configurator-sidebar { position: static; grid-template-columns: 1fr 1fr; } }
-@media (max-width: 780px) { .configurator-line { grid-template-columns: 1fr 1fr; } .configurator-sidebar { grid-template-columns: 1fr; } }
+@media (max-width: 780px) { .configurator-line { grid-template-columns: 1fr 1fr; } .visual-config-card { grid-template-columns: 1fr; }.visual-config-preview { width: 100%; height: 170px; }.configurator-sidebar { grid-template-columns: 1fr; } }
 @media (max-width: 520px) { .configurator-line { grid-template-columns: 1fr; } .configurator-actions { flex-direction: column; } }
 @media (max-width: 780px) { .customer-grid { grid-template-columns: 1fr; } }
 @media (max-width: 780px) { .client-quote-grid { grid-template-columns: 1fr; } }

@@ -10,3 +10,4 @@ feat: add tax discount shipping and quote totals
 feat: add customer company and project address records
 feat: add lead notes tasks owners and activity timeline
 feat: automate approved quotes through signed contracts deposits and order activation
+feat: add furniture visual configurator with saved specifications and quote handoff

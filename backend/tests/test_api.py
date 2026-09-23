@@ -54,6 +54,45 @@ def test_notification_delivery_is_retryable(client, admin_headers):
     assert retry.json['item']['attempt_count'] == 2
 
 
+def test_furniture_visual_configuration_can_be_saved_and_quoted(client, admin_headers):
+    options = client.get('/api/quote-config/options', headers=admin_headers)
+    assert options.status_code == 200
+    assert options.json['options']['dimension_surcharge_percent'] == 8
+
+    customers = client.get('/api/customers', headers=admin_headers)
+    customer_id = customers.json['items'][0]['id']
+    saved = client.post('/api/quote-config/configurations', headers=admin_headers, json={
+        'name': 'Visual living room set',
+        'room': 'Living room',
+        'customer_id': customer_id,
+        'items': [{
+            'product_id': 1,
+            'variant_id': 1,
+            'quantity': 2,
+            'options': {'material': 'Walnut', 'fabric': 'Velvet', 'color': 'Sage', 'finish': 'Natural oil'},
+            'dimensions': {'width': 2800, 'height': 800, 'depth': 980},
+        }],
+    })
+    assert saved.status_code == 201
+    configuration = saved.json['item']
+    assert configuration['configuration_number'].startswith('CFG-')
+    assert configuration['items'][0]['options']['material'] == 'Walnut'
+    assert configuration['items'][0]['unit_price'] > 78500
+
+    quote = client.post('/api/quotes', headers=admin_headers, json={
+        'configuration_id': configuration['id'],
+        'customer_id': customer_id,
+        'discount_percent': 0,
+        'tax_percent': 18,
+    })
+    assert quote.status_code == 201
+    assert quote.json['item']['items'][0]['description'].startswith('Aster Modular Sofa')
+    configurations = client.get('/api/quote-config/configurations', headers=admin_headers)
+    linked = next(item for item in configurations.json['items'] if item['id'] == configuration['id'])
+    assert linked['status'] == 'Quoted'
+    assert linked['quote_id'] == quote.json['item']['id']
+
+
 def test_quote_to_payment_automation(client, app):
     sales_login = client.post('/api/auth/login', json={'email': 'sales@furnivo.demo', 'password': 'sales123'})
     sales_headers = {'Authorization': f"Bearer {sales_login.json['token']}"}

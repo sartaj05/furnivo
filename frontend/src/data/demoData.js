@@ -94,6 +94,23 @@ export const demoProducts = [
   },
 ]
 
+export const demoFurnitureConfigurations = [
+  {
+    id: 1,
+    configuration_number: 'CFG-2001',
+    name: 'Northline living room concept',
+    room: 'Living room',
+    customer_id: 1,
+    customer: 'Northline Studio',
+    quote_id: 'Q-1042',
+    status: 'Quoted',
+    subtotal: 186400,
+    items: [{ product_id: 1, variant_id: 101, product: 'Aster Modular Sofa', sku: 'FUR-SOF-101-SAND', description: 'Aster Modular Sofa · Oak · Sand boucle · Natural · Matte · 2600 x 780 x 980 mm', quantity: 2, unit: 'set', unit_price: 78500, line_total: 157000, options: { material: 'Oak', fabric: 'Sand boucle', color: 'Natural', finish: 'Matte' }, dimensions: { width: 2600, height: 780, depth: 980 } }],
+    created_at: '2026-09-18T10:00:00Z',
+    updated_at: '2026-09-18T10:00:00Z',
+  },
+]
+
 export const demoQuotes = [
   {
     id: 'Q-1042',

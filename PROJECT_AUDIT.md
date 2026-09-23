@@ -41,6 +41,7 @@ The application is a working React/Vite + Flask/SQLAlchemy sales workspace. The 
 - Payment idempotency, dispute webhook handling, provider-ready refunds and downloadable receipts.
 - Paginated searchable catalog/customer/lead APIs, CSV imports, archived-record filters and background jobs.
 - Quote-to-payment automation: client quote approval creates a contract, contract signing creates a deposit order/invoice, and a paid deposit confirms the order.
+- Furniture visual configurator MVP: material, fabric, color, finish, dimensions, quantity, live pricing, saved configurations and direct quote handoff.
 
 ## Offline/demo behavior
 
@@ -59,7 +60,7 @@ Demo accounts:
 
 These are not implemented as production features yet:
 
-- Broader automated frontend/backend unit and end-to-end coverage beyond the current API workflow suite.
+- Broader automated frontend/backend unit and end-to-end coverage beyond the current API workflow suite and configurator coverage.
 - Audit log for sensitive changes such as price, quote status and permissions.
 - Email/WhatsApp notifications and scheduled reminders.
 - More advanced accounting exports beyond the current reports and CSV/Excel exports.

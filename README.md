@@ -25,6 +25,7 @@ A responsive furniture / interiors / building-material sales suite built with Re
 19. **Provider payment automation** with idempotency, dispute webhooks, live-ready refunds and payment receipts.
 20. **Scalable data administration** with pagination, search, archived records, CSV imports and asynchronous jobs.
 21. **Quote-to-payment automation** where client approval creates a contract, signing creates a deposit order/invoice, and successful payment activates the order.
+22. **Furniture visual configurator MVP** with selectable materials, fabrics, colors, finishes, dimensions, live server-validated pricing, saved specifications and direct quotation handoff.
 
 ## Existing experience
 

@@ -1,4 +1,4 @@
-import { demoAccessUsers, demoAnalytics, demoApprovalRequests, demoAuditLogs, demoBackups, demoBackgroundJobs, demoContracts, demoCustomerPricing, demoCustomers, demoDepartments, demoEInvoices, demoFieldVisits, demoIntegrations, demoInventory, demoInvoices, demoLeads, demoNotifications, demoOpsHealth, demoOrders, demoPaymentReconciliations, demoProducts, demoProductionJobs, demoProjectOwnership, demoPurchaseOrders, demoQuotePresets, demoQuotes, demoReturns, demoSchedules, demoServiceTickets, demoStockMovements, demoSupportTickets, demoSuppliers, demoSyncRuns, demoUsers, demoWarehouseStock, demoWarehouses, demoWarranties } from '../data/demoData'
+import { demoAccessUsers, demoAnalytics, demoApprovalRequests, demoAuditLogs, demoBackups, demoBackgroundJobs, demoContracts, demoCustomerPricing, demoCustomers, demoDepartments, demoEInvoices, demoFieldVisits, demoFurnitureConfigurations, demoIntegrations, demoInventory, demoInvoices, demoLeads, demoNotifications, demoOpsHealth, demoOrders, demoPaymentReconciliations, demoProducts, demoProductionJobs, demoProjectOwnership, demoPurchaseOrders, demoQuotePresets, demoQuotes, demoReturns, demoSchedules, demoServiceTickets, demoStockMovements, demoSupportTickets, demoSuppliers, demoSyncRuns, demoUsers, demoWarehouseStock, demoWarehouses, demoWarranties } from '../data/demoData'
 
 const API_URL = import.meta.env.VITE_API_URL?.replace(/\/$/, '')
 const STORAGE_KEY = 'furnivo-demo-db'
@@ -81,6 +81,7 @@ function getLocalDb() {
       integrations: parsed.integrations || demoIntegrations,
       syncRuns: parsed.syncRuns || demoSyncRuns,
       fieldVisits: parsed.fieldVisits || demoFieldVisits,
+      furnitureConfigurations: parsed.furnitureConfigurations || demoFurnitureConfigurations,
     }
     if (!parsed.users) localStorage.setItem(STORAGE_KEY, JSON.stringify(normalized))
     return normalized
@@ -122,6 +123,7 @@ function getLocalDb() {
     integrations: demoIntegrations,
     syncRuns: demoSyncRuns,
     fieldVisits: demoFieldVisits,
+    furnitureConfigurations: demoFurnitureConfigurations,
   }
   localStorage.setItem(STORAGE_KEY, JSON.stringify(initial))
   return initial
@@ -270,6 +272,62 @@ export async function getProducts(options = {}) {
   }
 }
 
+const demoConfigurationOptions = {
+  materials: [{ value: 'Oak', label: 'Oak', price_delta: 0 }, { value: 'Ash', label: 'Ash', price_delta: 2800 }, { value: 'Walnut', label: 'Walnut', price_delta: 6500 }, { value: 'Engineered wood', label: 'Engineered wood', price_delta: -1800 }],
+  fabrics: [{ value: 'Performance fabric', label: 'Performance fabric', price_delta: 0 }, { value: 'Sand boucle', label: 'Sand boucle', price_delta: 3200 }, { value: 'Velvet', label: 'Velvet', price_delta: 4200 }, { value: 'Leather', label: 'Leather', price_delta: 9800 }],
+  colors: [{ value: 'Natural', label: 'Natural', price_delta: 0, swatch: '#c7ab83' }, { value: 'Sage', label: 'Sage', price_delta: 900, swatch: '#879b87' }, { value: 'Terracotta', label: 'Terracotta', price_delta: 1200, swatch: '#bd745b' }, { value: 'Charcoal', label: 'Charcoal', price_delta: 1500, swatch: '#454946' }],
+  finishes: [{ value: 'Matte', label: 'Matte', price_delta: 0 }, { value: 'Natural oil', label: 'Natural oil', price_delta: 1800 }, { value: 'High gloss', label: 'High gloss', price_delta: 2600 }],
+  dimension_surcharge_percent: 8,
+}
+
+export async function getFurnitureConfigurationOptions() {
+  try { return await backendRequest('/quote-config/options') }
+  catch (error) {
+    if (error.status) throw error
+    await delay()
+    return { options: demoConfigurationOptions, mode: 'demo' }
+  }
+}
+
+export async function getFurnitureConfigurations() {
+  try { return await backendRequest('/quote-config/configurations') }
+  catch (error) {
+    if (error.status) throw error
+    await delay()
+    return { items: getLocalDb().furnitureConfigurations, mode: 'demo' }
+  }
+}
+
+export async function saveFurnitureConfiguration(payload) {
+  try { return await backendRequest('/quote-config/configurations', { method: 'POST', body: JSON.stringify(payload) }) }
+  catch (error) {
+    if (error.status) throw error
+    await delay()
+    const db = getLocalDb()
+    const items = (payload.items || []).map((item) => ({
+      ...item,
+      line_total: Number(item.quantity || 0) * Number(item.unit_price || 0),
+    }))
+    const item = {
+      id: Math.max(0, ...db.furnitureConfigurations.map((configuration) => Number(configuration.id) || 0)) + 1,
+      configuration_number: `CFG-${2000 + db.furnitureConfigurations.length + 1}`,
+      name: payload.name,
+      room: payload.room || '',
+      customer_id: payload.customer_id || null,
+      customer: db.customers.find((customer) => Number(customer.id) === Number(payload.customer_id))?.company || null,
+      quote_id: null,
+      status: 'Saved',
+      items,
+      subtotal: items.reduce((sum, line) => sum + Number(line.line_total || 0), 0),
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    }
+    db.furnitureConfigurations = [item, ...db.furnitureConfigurations]
+    saveLocalDb(db)
+    return { item, mode: 'demo' }
+  }
+}
+
 export async function getQuotes() {
   try {
     return await backendRequest('/quotes')
@@ -370,6 +428,11 @@ export async function createQuote(payload) {
     }
     quote.history = [addDemoQuoteRevision(quote, 'Created').history[0]]
     db.quotes = [quote, ...db.quotes]
+    if (payload.configuration_id) {
+      db.furnitureConfigurations = db.furnitureConfigurations.map((configuration) => Number(configuration.id) === Number(payload.configuration_id)
+        ? { ...configuration, quote_id: quote.id, status: 'Quoted', updated_at: new Date().toISOString() }
+        : configuration)
+    }
     saveLocalDb(db)
     return { item: quote, mode: 'demo' }
   }
