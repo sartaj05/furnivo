@@ -32,6 +32,10 @@ import AnalyticsPage from './pages/AnalyticsPage'
 import IntegrationsPage from './pages/IntegrationsPage'
 import FieldOperationsPage from './pages/FieldOperationsPage'
 import BusinessControlPage from './pages/BusinessControlPage'
+import AccountingCenterPage from './pages/AccountingCenterPage'
+import BranchSecurityPage from './pages/BranchSecurityPage'
+import NotificationAutomationPage from './pages/NotificationAutomationPage'
+import RoutePlanningPage from './pages/RoutePlanningPage'
 import ProtectedRoute from './components/ProtectedRoute'
 
 export default function App() {
@@ -58,6 +62,10 @@ export default function App() {
         <Route path="/app/service" element={<ServicePage />} />
         <Route path="/app/analytics" element={<ProtectedRoute allowedRoles={['admin', 'sales', 'designer']}><AnalyticsPage /></ProtectedRoute>} />
         <Route path="/app/business-control" element={<ProtectedRoute allowedRoles={['admin', 'sales', 'designer']}><BusinessControlPage /></ProtectedRoute>} />
+        <Route path="/app/accounting-center" element={<ProtectedRoute allowedRoles={['admin', 'sales']}><AccountingCenterPage /></ProtectedRoute>} />
+        <Route path="/app/branch-security" element={<ProtectedRoute allowedRoles={['admin']}><BranchSecurityPage /></ProtectedRoute>} />
+        <Route path="/app/notification-automation" element={<ProtectedRoute allowedRoles={['admin', 'sales']}><NotificationAutomationPage /></ProtectedRoute>} />
+        <Route path="/app/route-planning" element={<ProtectedRoute allowedRoles={['admin', 'sales', 'designer']}><RoutePlanningPage /></ProtectedRoute>} />
         <Route path="/app/integrations" element={<ProtectedRoute allowedRoles={['admin']}><IntegrationsPage /></ProtectedRoute>} />
         <Route path="/app/field-operations" element={<FieldOperationsPage />} />
         <Route path="/app/customers" element={<ProtectedRoute allowedRoles={['admin', 'sales']}><CustomersPage /></ProtectedRoute>} />

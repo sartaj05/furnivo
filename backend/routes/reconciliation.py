@@ -1,8 +1,10 @@
+from datetime import datetime, timezone
 from decimal import Decimal, InvalidOperation
 from flask import Blueprint, jsonify, request
 from ..extensions import db
 from ..models import Invoice, Payment, PaymentReconciliation, Order, QuoteClientAccess
 from ..services.audit import record_audit
+from ..services.notifications import notify_roles
 from ..utils import current_user, roles_required
 
 reconciliation_bp = Blueprint('reconciliation', __name__)
@@ -55,3 +57,23 @@ def refund_payment(reconciliation_id):
     item.invoice.amount_paid = max(item.invoice.amount_paid - amount, 0); item.invoice.refresh_status()
     db.session.commit(); record_audit(current_user().id, 'Payment refund recorded', 'payment_reconciliation', item.id, f'{amount} / {item.provider_refund_id}'); db.session.commit()
     return jsonify({'item': item.to_dict(), 'invoice': item.invoice.to_dict(), 'mode': 'api'})
+
+
+@reconciliation_bp.get('/summary')
+@roles_required('admin', 'sales')
+def accounting_summary():
+    invoices = db.session.scalars(db.select(Invoice)).all(); reconciliations = db.session.scalars(db.select(PaymentReconciliation)).all()
+    overdue = [item for item in invoices if item.status == 'Overdue']
+    return jsonify({'summary': {'invoice_count': len(invoices), 'invoiced': float(sum((item.total or 0) for item in invoices)), 'collected': float(sum((item.amount_paid or 0) for item in invoices)), 'outstanding': float(sum((item.balance for item in invoices))), 'overdue_count': len(overdue), 'overdue_value': float(sum((item.balance for item in overdue)))}, 'overdue': [item.to_dict() for item in overdue], 'reconciled_count': len(reconciliations), 'mode': 'api'})
+
+
+@reconciliation_bp.post('/reminders')
+@roles_required('admin', 'sales')
+def send_payment_reminders():
+    invoices = db.session.scalars(db.select(Invoice).where(Invoice.status.in_(['Sent', 'Partially Paid', 'Overdue']))).all(); sent = []
+    for invoice in invoices:
+        if invoice.balance <= 0: continue
+        notifications = notify_roles(['admin', 'sales'], 'Payment reminder ready', f'{invoice.invoice_number} for {invoice.customer_name} has INR {float(invoice.balance):,.2f} outstanding.', 'payment', related_type='invoice', related_id=invoice.id)
+        invoice.reminder_sent_at = datetime.now(timezone.utc); sent.extend(notifications)
+    db.session.commit(); record_audit(current_user().id, 'Payment reminders generated', 'invoice', '', f'{len(sent)} notification(s)'); db.session.commit()
+    return jsonify({'sent': len(sent), 'items': [item.to_dict() for item in sent], 'mode': 'api'})

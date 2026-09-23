@@ -1394,3 +1394,53 @@ export async function syncFieldQueue() {
   }
   const remaining = queue.slice(synced); saveFieldQueue(remaining); return { synced, remaining: remaining.length, mode: 'api' }
 }
+
+export async function getAccountingSummary() {
+  try { return await backendRequest('/payment-reconciliation/summary') }
+  catch (error) { if (error.status) throw error; const invoices = getLocalDb().invoices; const overdue = invoices.filter((item) => item.status === 'Overdue'); return { summary: { invoice_count: invoices.length, invoiced: invoices.reduce((sum, item) => sum + Number(item.total || 0), 0), collected: invoices.reduce((sum, item) => sum + Number(item.amount_paid || 0), 0), outstanding: invoices.reduce((sum, item) => sum + Number(item.balance || 0), 0), overdue_count: overdue.length, overdue_value: overdue.reduce((sum, item) => sum + Number(item.balance || 0), 0) }, overdue, reconciled_count: 0, mode: 'demo' } }
+}
+
+export async function sendPaymentReminders() {
+  try { return await backendRequest('/payment-reconciliation/reminders', { method: 'POST' }) }
+  catch (error) { if (error.status) throw error; const db = getLocalDb(); const open = db.invoices.filter((item) => Number(item.balance || 0) > 0); open.forEach((invoice) => addDemoNotification(db, 1, 'Payment reminder ready', `${invoice.invoice_number} has INR ${Number(invoice.balance).toLocaleString('en-IN')} outstanding.`, 'payment', 'invoice', invoice.id)); saveLocalDb(db); return { sent: open.length, items: [], mode: 'demo' } }
+}
+
+export async function broadcastNotification(payload) {
+  try { return await backendRequest('/notifications/broadcast', { method: 'POST', body: JSON.stringify(payload) }) }
+  catch (error) { if (error.status) throw error; const db = getLocalDb(); const users = db.users.filter((item) => (payload.roles || ['admin', 'sales', 'designer']).includes(item.role)); const items = users.map((user) => ({ id: Date.now() + user.id, user_id: user.id, type: 'broadcast', title: payload.title, body: payload.body, channel: payload.channel || 'in_app', is_read: false, delivery_status: payload.channel === 'in_app' ? 'delivered' : 'demo-queued', created_at: new Date().toISOString() })); db.notifications = [...items, ...db.notifications]; saveLocalDb(db); return { items, deliveries: [], mode: 'demo' } }
+}
+
+export async function getNotificationDeliverySummary() {
+  try { return await backendRequest('/notifications/delivery-summary') }
+  catch (error) { if (error.status) throw error; return { summary: { sent: 0, pending: 0, pending_configuration: 0, failed: 0 }, items: [], mode: 'demo' } }
+}
+
+export async function getBranches() {
+  try { return await backendRequest('/branches') }
+  catch (error) { if (error.status) throw error; const db = getLocalDb(); db.branches = db.branches || [{ id: 1, name: 'Delhi Studio', code: 'DEL', address: 'New Delhi', manager: 'Aarav Admin', is_active: true }]; saveLocalDb(db); return { items: db.branches, mode: 'demo' } }
+}
+
+export async function createBranch(payload) {
+  try { return await backendRequest('/branches', { method: 'POST', body: JSON.stringify(payload) }) }
+  catch (error) { if (error.status) throw error; const db = getLocalDb(); db.branches = db.branches || []; const item = { id: Date.now(), is_active: true, ...payload }; db.branches = [item, ...db.branches]; saveLocalDb(db); return { item, mode: 'demo' } }
+}
+
+export async function assignBranchUser(branchId, payload) {
+  try { return await backendRequest(`/branches/${branchId}/users`, { method: 'POST', body: JSON.stringify(payload) }) }
+  catch (error) { if (error.status) throw error; const user = getLocalDb().users.find((item) => Number(item.id) === Number(payload.user_id)); return { item: { id: Date.now(), user_id: payload.user_id, branch_id: branchId, branch: getLocalDb().branches?.find((item) => Number(item.id) === Number(branchId)), user, is_primary: Boolean(payload.is_primary) }, mode: 'demo' } }
+}
+
+export async function getRoutePlan(date = '') {
+  try { return await backendRequest(`/schedules/route-plan${date ? `?date=${encodeURIComponent(date)}` : ''}`) }
+  catch (error) { if (error.status) throw error; const route = getLocalDb().schedules.filter((item) => !['Completed', 'Cancelled'].includes(item.status)).sort((a, b) => Number(a.route_order || 0) - Number(b.route_order || 0)); return { route, stops: route.length, total_distance_km: Math.max(route.length - 1, 0) * 7.5, mode: 'demo' } }
+}
+
+export async function optimizeRoutePlan(scheduleIds = []) {
+  try { return await backendRequest('/schedules/route-plan/optimize', { method: 'POST', body: JSON.stringify({ schedule_ids: scheduleIds }) }) }
+  catch (error) { if (error.status) throw error; const db = getLocalDb(); const route = db.schedules.filter((item) => !['Completed', 'Cancelled'].includes(item.status)).map((item, index) => ({ ...item, route_order: index + 1 })); db.schedules = db.schedules.map((item) => route.find((entry) => entry.id === item.id) || item); saveLocalDb(db); return { route, stops: route.length, mode: 'demo' } }
+}
+
+export async function saveServiceFeedback(id, payload) {
+  try { return await backendRequest(`/service/tickets/${id}/feedback`, { method: 'POST', body: JSON.stringify(payload) }) }
+  catch (error) { if (error.status) throw error; const db = getLocalDb(); db.serviceTickets = db.serviceTickets.map((item) => Number(item.id) === Number(id) ? { ...item, customer_rating: Number(payload.rating), customer_feedback: payload.feedback || '' } : item); saveLocalDb(db); return { item: db.serviceTickets.find((item) => Number(item.id) === Number(id)), mode: 'demo' } }
+}

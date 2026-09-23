@@ -1,0 +1,10 @@
+import { useEffect, useState } from 'react'
+import AppShell from '../components/AppShell'
+import { broadcastNotification, getNotificationDeliverySummary } from '../lib/api'
+
+export default function NotificationAutomationPage() {
+  const [form, setForm] = useState({ title: '', body: '', channel: 'in_app' }); const [summary, setSummary] = useState({}); const [message, setMessage] = useState('')
+  useEffect(() => { getNotificationDeliverySummary().then((result) => setSummary(result.summary || {})) }, [])
+  async function submit(event) { event.preventDefault(); const result = await broadcastNotification(form); setMessage(`${result.items?.length || 0} recipient(s) notified.`); setForm({ ...form, title: '', body: '' }) }
+  return <AppShell title="Notification automation" eyebrow="Email, WhatsApp & in-app communications"><section className="panel"><div className="panel-heading"><div><p className="eyebrow">Broadcast</p><h3>Send an operational update</h3></div></div><form className="service-form" onSubmit={submit}><label>Title<input required value={form.title} onChange={(event) => setForm({ ...form, title: event.target.value })} /></label><label>Message<textarea required rows="4" value={form.body} onChange={(event) => setForm({ ...form, body: event.target.value })} /></label><label>Channel<select value={form.channel} onChange={(event) => setForm({ ...form, channel: event.target.value })}><option value="in_app">In-app</option><option value="email">Email</option><option value="whatsapp">WhatsApp</option></select></label><button className="button">Send notification</button></form></section><section className="metrics-grid"><article className="metric-card"><span>Sent</span><strong>{summary.sent || 0}</strong></article><article className="metric-card"><span>Pending</span><strong>{summary.pending || 0}</strong></article><article className="metric-card"><span>Provider setup needed</span><strong>{summary.pending_configuration || 0}</strong></article></section>{message && <div className="success-message">{message}</div>}</AppShell>
+}

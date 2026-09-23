@@ -12,3 +12,5 @@ feat: add lead notes tasks owners and activity timeline
 feat: automate approved quotes through signed contracts deposits and order activation
 feat: add furniture visual configurator with saved specifications and quote handoff
 feat: add planning profitability timeline and notification automation controls
+feat: add mobile execution procurement and delivery workflows
+feat: add accounting security notifications routing and service operations

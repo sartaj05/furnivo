@@ -115,6 +115,36 @@ def test_execution_procurement_and_delivery_workflows(client, admin_headers):
     assert proof.status_code == 200
     assert proof.json['item']['status'] == 'Completed'
 
+
+def test_accounting_security_notifications_routes_and_service_feedback(client, admin_headers):
+    summary = client.get('/api/payment-reconciliation/summary', headers=admin_headers)
+    assert summary.status_code == 200
+    assert summary.json['summary']['invoice_count'] >= 1
+    reminders = client.post('/api/payment-reconciliation/reminders', headers=admin_headers)
+    assert reminders.status_code == 200
+
+    branch = client.post('/api/branches', headers=admin_headers, json={'name': 'Mumbai Studio', 'code': 'MUM', 'address': 'Mumbai', 'manager': 'Demo Manager'})
+    assert branch.status_code == 201
+    users = client.get('/api/access/users', headers=admin_headers)
+    assigned = client.post(f"/api/branches/{branch.json['item']['id']}/users", headers=admin_headers, json={'user_id': users.json['items'][0]['user']['id'], 'is_primary': True})
+    assert assigned.status_code == 201
+
+    broadcast = client.post('/api/notifications/broadcast', headers=admin_headers, json={'title': 'Production update', 'body': 'Workshop schedule refreshed.', 'channel': 'in_app', 'roles': ['admin']})
+    assert broadcast.status_code == 200
+    delivery_summary = client.get('/api/notifications/delivery-summary', headers=admin_headers)
+    assert delivery_summary.status_code == 200
+
+    route = client.get('/api/schedules/route-plan', headers=admin_headers)
+    assert route.status_code == 200
+    optimized = client.post('/api/schedules/route-plan/optimize', headers=admin_headers)
+    assert optimized.status_code == 200
+
+    tickets = client.get('/api/service/tickets', headers=admin_headers)
+    ticket_id = tickets.json['items'][0]['id']
+    feedback = client.post(f'/api/service/tickets/{ticket_id}/feedback', headers=admin_headers, json={'rating': 5, 'feedback': 'Fast resolution.'})
+    assert feedback.status_code == 200
+    assert feedback.json['item']['customer_rating'] == 5
+
 def test_planning_profitability_timeline_and_automation(client, admin_headers):
     planning = client.get('/api/business/planning', headers=admin_headers)
     assert planning.status_code == 200

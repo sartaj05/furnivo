@@ -46,6 +46,11 @@ The application is a working React/Vite + Flask/SQLAlchemy sales workspace. The 
 - Mobile production execution: QR visit workflow, check-in/check-out timestamps, worker time tracking, GPS/proof capture, material issue/return records and offline sync queue.
 - Supplier procurement automation: planning shortage conversion to purchase orders, supplier quote/landed-cost tracking, delivery and quality fields, and supplier performance metrics.
 - Delivery and installation management: ETA, customer confirmation, completion proof and dispatch status workflows.
+- Accounting and GST control center: invoice collection/overdue summaries, payment reminder generation, reconciliation counts and accounting sync support.
+- Enterprise branch security: branch records, user-to-branch assignments, branch-linked warehouses and admin-protected access routes.
+- Notification automation: role broadcasts across in-app/email/WhatsApp channels and delivery-status summaries.
+- Delivery route planning: driver fields, stop sequencing, route optimization and distance estimates.
+- Warranty service operations: technician minutes, visit date, parts used, customer ratings and service feedback.
 
 ## Offline/demo behavior
 

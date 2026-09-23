@@ -479,6 +479,8 @@ class Invoice(TimestampMixin, db.Model):
     total = db.Column(db.Numeric(12, 2), nullable=False, default=0)
     amount_paid = db.Column(db.Numeric(12, 2), nullable=False, default=0)
     payment_link = db.Column(db.String(500), nullable=False, default='')
+    accounting_status = db.Column(db.String(40), nullable=False, default='Pending')
+    reminder_sent_at = db.Column(db.DateTime(timezone=True))
     notes = db.Column(db.Text, nullable=False, default='')
     created_by_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     order = db.relationship('Order')
@@ -518,6 +520,8 @@ class Invoice(TimestampMixin, db.Model):
             'amount_paid': float(self.amount_paid or 0),
             'balance': float(self.balance),
             'payment_link': self.payment_link,
+            'accounting_status': self.accounting_status,
+            'reminder_sent_at': self.reminder_sent_at.isoformat() if self.reminder_sent_at else None,
             'notes': self.notes,
             'payments': [payment.to_dict() for payment in sorted(self.payments, key=lambda item: item.paid_at, reverse=True)],
         }
@@ -770,6 +774,9 @@ class DeliverySchedule(TimestampMixin, db.Model):
     time_slot = db.Column(db.String(80), nullable=False, default='Morning')
     assigned_team = db.Column(db.String(160), nullable=False, default='')
     eta = db.Column(db.String(80), nullable=False, default='')
+    driver_name = db.Column(db.String(120), nullable=False, default='')
+    driver_phone = db.Column(db.String(60), nullable=False, default='')
+    route_order = db.Column(db.Integer, nullable=False, default=0)
     customer_confirmed = db.Column(db.Boolean, nullable=False, default=False)
     status = db.Column(db.String(40), nullable=False, default='Scheduled')
     proof_url = db.Column(db.String(500), nullable=False, default='')
@@ -778,18 +785,47 @@ class DeliverySchedule(TimestampMixin, db.Model):
     order = db.relationship('Order')
 
     def to_dict(self):
-        return {'id': self.id, 'order_id': self.order_id, 'order_number': self.order.order_number if self.order else None, 'customer': self.order.customer_name if self.order else None, 'schedule_type': self.schedule_type, 'scheduled_date': self.scheduled_date.isoformat(), 'time_slot': self.time_slot, 'assigned_team': self.assigned_team, 'eta': self.eta, 'customer_confirmed': self.customer_confirmed, 'status': self.status, 'proof_url': self.proof_url, 'notes': self.notes}
+        return {'id': self.id, 'order_id': self.order_id, 'order_number': self.order.order_number if self.order else None, 'customer': self.order.customer_name if self.order else None, 'schedule_type': self.schedule_type, 'scheduled_date': self.scheduled_date.isoformat(), 'time_slot': self.time_slot, 'assigned_team': self.assigned_team, 'eta': self.eta, 'driver_name': self.driver_name, 'driver_phone': self.driver_phone, 'route_order': self.route_order, 'customer_confirmed': self.customer_confirmed, 'status': self.status, 'proof_url': self.proof_url, 'notes': self.notes}
+
+
+class Branch(TimestampMixin, db.Model):
+    __tablename__ = 'branches'
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(160), nullable=False, unique=True)
+    code = db.Column(db.String(30), nullable=False, unique=True)
+    address = db.Column(db.String(255), nullable=False, default='')
+    manager = db.Column(db.String(120), nullable=False, default='')
+    is_active = db.Column(db.Boolean, nullable=False, default=True)
+
+    def to_dict(self): return {'id': self.id, 'name': self.name, 'code': self.code, 'address': self.address, 'manager': self.manager, 'is_active': self.is_active}
+
+
+class UserBranch(TimestampMixin, db.Model):
+    __tablename__ = 'user_branches'
+    __table_args__ = (db.UniqueConstraint('user_id', 'branch_id', name='uq_user_branch'),)
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='CASCADE'), nullable=False, index=True)
+    branch_id = db.Column(db.Integer, db.ForeignKey('branches.id', ondelete='CASCADE'), nullable=False, index=True)
+    is_primary = db.Column(db.Boolean, nullable=False, default=False)
+    user = db.relationship('User')
+    branch = db.relationship('Branch')
+
+    def to_dict(self): return {'id': self.id, 'user_id': self.user_id, 'branch_id': self.branch_id, 'branch': self.branch.to_dict() if self.branch else None, 'is_primary': self.is_primary}
 
 class Warehouse(TimestampMixin, db.Model):
     __tablename__ = 'warehouses'
 
     id = db.Column(db.Integer, primary_key=True)
+    branch_id = db.Column(db.Integer, db.ForeignKey('branches.id'), nullable=True, index=True)
     name = db.Column(db.String(160), nullable=False, unique=True)
     address = db.Column(db.String(255), nullable=False, default='')
     manager = db.Column(db.String(120), nullable=False, default='')
     is_active = db.Column(db.Boolean, nullable=False, default=True)
+    branch = db.relationship('Branch')
 
-    def to_dict(self): return {'id': self.id, 'name': self.name, 'address': self.address, 'manager': self.manager, 'is_active': self.is_active}
+    def to_dict(self): return {'id': self.id, 'name': self.name, 'address': self.address, 'manager': self.manager, 'branch_id': self.branch_id, 'branch': self.branch.name if self.branch else None, 'is_active': self.is_active}
 
 
 class WarehouseStock(TimestampMixin, db.Model):
@@ -1139,6 +1175,11 @@ class ServiceTicket(TimestampMixin, db.Model):
     status = db.Column(db.String(40), nullable=False, default='Open', index=True)
     assigned_to_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
     sla_due = db.Column(db.Date)
+    visit_date = db.Column(db.Date)
+    parts_used = db.Column(db.Text, nullable=False, default='')
+    technician_minutes = db.Column(db.Integer, nullable=False, default=0)
+    customer_rating = db.Column(db.Integer, nullable=False, default=0)
+    customer_feedback = db.Column(db.Text, nullable=False, default='')
     resolution = db.Column(db.Text, nullable=False, default='')
     warranty = db.relationship('Warranty')
     order = db.relationship('Order')
@@ -1146,7 +1187,7 @@ class ServiceTicket(TimestampMixin, db.Model):
     assigned_to = db.relationship('User')
 
     def to_dict(self):
-        return {'id': self.id, 'ticket_number': self.ticket_number, 'warranty_id': self.warranty_id, 'warranty_number': self.warranty.warranty_number if self.warranty else None, 'order_id': self.order_id, 'order_number': self.order.order_number if self.order else None, 'customer': self.customer.company if self.customer else (self.order.customer_name if self.order else None), 'subject': self.subject, 'description': self.description, 'priority': self.priority, 'status': self.status, 'assigned_to_id': self.assigned_to_id, 'assigned_to': self.assigned_to.public_dict() if self.assigned_to else None, 'sla_due': self.sla_due.isoformat() if self.sla_due else None, 'resolution': self.resolution, 'created_at': self.created_at.isoformat(), 'updated_at': self.updated_at.isoformat()}
+        return {'id': self.id, 'ticket_number': self.ticket_number, 'warranty_id': self.warranty_id, 'warranty_number': self.warranty.warranty_number if self.warranty else None, 'order_id': self.order_id, 'order_number': self.order.order_number if self.order else None, 'customer': self.customer.company if self.customer else (self.order.customer_name if self.order else None), 'subject': self.subject, 'description': self.description, 'priority': self.priority, 'status': self.status, 'assigned_to_id': self.assigned_to_id, 'assigned_to': self.assigned_to.public_dict() if self.assigned_to else None, 'sla_due': self.sla_due.isoformat() if self.sla_due else None, 'visit_date': self.visit_date.isoformat() if self.visit_date else None, 'parts_used': self.parts_used, 'technician_minutes': self.technician_minutes, 'customer_rating': self.customer_rating, 'customer_feedback': self.customer_feedback, 'resolution': self.resolution, 'created_at': self.created_at.isoformat(), 'updated_at': self.updated_at.isoformat()}
 
 
 class Department(TimestampMixin, db.Model):

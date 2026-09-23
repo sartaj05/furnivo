@@ -30,6 +30,16 @@ A responsive furniture / interiors / building-material sales suite built with Re
 24. **Mobile production execution** with QR visit check-in/out, GPS/proof capture, worker time tracking, material issue/return records and offline sync.
 25. **Supplier procurement automation** with planning-shortage-to-PO conversion, supplier quote references, landed cost, delivery dates, quality ratings and supplier performance.
 26. **Delivery and installation management** with ETA, assigned teams, customer confirmation, completion proof and delivery status workflows.
+27. **Accounting control center** with invoice collection summaries, overdue tracking, payment reminder generation and accounting integration support.
+28. **Enterprise branch security** with branches, user assignments, branch-linked warehouses and protected access boundaries.
+29. **Notification automation** with role broadcasts, provider delivery tracking, retry visibility and demo-safe fallback.
+30. **Delivery route planning** with driver data, stop ordering, route optimization and estimated route distance.
+31. **Warranty service operations** with technician work fields, parts used, visit scheduling, SLA follow-up and customer feedback ratings.
+27. **Accounting control center** with invoice collection summaries, overdue tracking, payment reminder generation and accounting integration support.
+28. **Enterprise branch security** with branches, user assignments, branch-linked warehouses and protected access boundaries.
+29. **Notification automation** with role broadcasts, provider delivery tracking, retry visibility and demo-safe fallback.
+30. **Delivery route planning** with driver data, stop ordering, route optimization and estimated route distance.
+31. **Warranty service operations** with technician work fields, parts used, visit scheduling, SLA follow-up and customer feedback ratings.
 
 ## Existing experience
 

@@ -1,6 +1,6 @@
 from flask import Blueprint, jsonify, request
 from ..extensions import db
-from ..models import Notification, NotificationDelivery
+from ..models import Notification, NotificationDelivery, User
 from ..services.notifications import deliver_notification, retry_pending_deliveries
 from ..services.audit import record_audit
 from ..utils import current_user, roles_required
@@ -64,3 +64,27 @@ def retry_delivery(delivery_id):
 def retry_pending():
     items = retry_pending_deliveries()
     return jsonify({'items': [item.to_dict() for item in items], 'count': len(items), 'mode': 'api'})
+
+
+@notifications_bp.post('/broadcast')
+@roles_required('admin', 'sales')
+def broadcast_notification():
+    payload = request.get_json(silent=True) or {}; title = str(payload.get('title', '')).strip(); body = str(payload.get('body', '')).strip(); channel = str(payload.get('channel', 'in_app')).lower()
+    if not title or not body: return jsonify({'message': 'Title and body are required.'}), 400
+    if channel not in {'in_app', 'email', 'whatsapp'}: return jsonify({'message': 'Channel must be in_app, email, or whatsapp.'}), 400
+    roles = payload.get('roles') if isinstance(payload.get('roles'), list) else ['admin', 'sales', 'designer']
+    users = db.session.scalars(db.select(User).where(User.role.in_(roles), User.is_active.is_(True))).all(); items = []; deliveries = []
+    for user in users:
+        item = Notification(user_id=user.id, type='broadcast', channel=channel, title=title, body=body, related_type=str(payload.get('related_type', '')).strip(), related_id=str(payload.get('related_id', '')).strip())
+        db.session.add(item); db.session.flush(); items.append(item)
+        if channel != 'in_app': deliveries.append(deliver_notification(item, channel, user.email if channel == 'email' else str(payload.get('recipient') or user.email)))
+    db.session.commit(); record_audit(current_user().id, 'Notification broadcast sent', 'notification', '', f'{len(items)} recipients via {channel}'); db.session.commit()
+    return jsonify({'items': [item.to_dict() for item in items], 'deliveries': [item.to_dict() for item in deliveries], 'mode': 'api'})
+
+
+@notifications_bp.get('/delivery-summary')
+@roles_required('admin', 'sales')
+def delivery_summary():
+    deliveries = db.session.scalars(db.select(NotificationDelivery).order_by(NotificationDelivery.id.desc()).limit(500)).all()
+    statuses = ['sent', 'pending', 'pending_configuration', 'failed']
+    return jsonify({'summary': {status: sum(item.status == status for item in deliveries) for status in statuses}, 'items': [item.to_dict() for item in deliveries[:50]], 'mode': 'api'})

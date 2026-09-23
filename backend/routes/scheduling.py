@@ -27,7 +27,7 @@ def create_schedule():
     if not payload.get('order_id') or not payload.get('scheduled_date'):
         return jsonify({'message': 'Order and scheduled date are required.'}), 400
     try:
-        item = DeliverySchedule(order_id=int(payload['order_id']), schedule_type=str(payload.get('schedule_type', 'Delivery')), scheduled_date=date.fromisoformat(payload['scheduled_date']), time_slot=str(payload.get('time_slot', 'Morning')), assigned_team=str(payload.get('assigned_team', '')).strip(), eta=str(payload.get('eta', '')).strip(), status='Scheduled', proof_url=str(payload.get('proof_url', '')).strip(), notes=str(payload.get('notes', '')).strip(), created_by_id=current_user().id)
+        item = DeliverySchedule(order_id=int(payload['order_id']), schedule_type=str(payload.get('schedule_type', 'Delivery')), scheduled_date=date.fromisoformat(payload['scheduled_date']), time_slot=str(payload.get('time_slot', 'Morning')), assigned_team=str(payload.get('assigned_team', '')).strip(), eta=str(payload.get('eta', '')).strip(), driver_name=str(payload.get('driver_name', '')).strip(), driver_phone=str(payload.get('driver_phone', '')).strip(), route_order=int(payload.get('route_order', 0) or 0), status='Scheduled', proof_url=str(payload.get('proof_url', '')).strip(), notes=str(payload.get('notes', '')).strip(), created_by_id=current_user().id)
         db.session.add(item); db.session.commit()
         notify_quote_client(item.order.quote, 'Schedule confirmed', f'{item.schedule_type} scheduled for {item.scheduled_date.isoformat()}.', 'order')
         record_audit(current_user().id, 'Schedule created', 'schedule', item.id, item.schedule_type); db.session.commit()
@@ -40,11 +40,34 @@ def create_schedule():
 @roles_required('admin', 'sales')
 def update_schedule(schedule_id):
     item = db.get_or_404(DeliverySchedule, schedule_id); payload = request.get_json(silent=True) or {}
-    for field in ['time_slot', 'assigned_team', 'status', 'proof_url', 'notes', 'eta']:
+    for field in ['time_slot', 'assigned_team', 'status', 'proof_url', 'notes', 'eta', 'driver_name', 'driver_phone']:
         if field in payload: setattr(item, field, str(payload[field]).strip())
+    if 'route_order' in payload: item.route_order = int(payload['route_order'] or 0)
     if 'scheduled_date' in payload: item.scheduled_date = date.fromisoformat(payload['scheduled_date'])
     db.session.commit(); notify_quote_client(item.order.quote, 'Schedule updated', f'{item.schedule_type} is now {item.status}.', 'order'); record_audit(current_user().id, 'Schedule updated', 'schedule', item.id, item.status); db.session.commit()
     return jsonify({'item': item.to_dict(), 'mode': 'api'})
+
+
+@scheduling_bp.get('/route-plan')
+@roles_required('admin', 'sales', 'designer')
+def route_plan():
+    date_filter = request.args.get('date')
+    query = db.select(DeliverySchedule).where(DeliverySchedule.status.not_in(['Completed', 'Cancelled'])).order_by(DeliverySchedule.scheduled_date, DeliverySchedule.route_order, DeliverySchedule.id)
+    if date_filter:
+        try: query = query.where(DeliverySchedule.scheduled_date == date.fromisoformat(date_filter))
+        except ValueError: return jsonify({'message': 'Date must be YYYY-MM-DD.'}), 400
+    items = db.session.scalars(query).all()
+    return jsonify({'route': [item.to_dict() for item in items], 'stops': len(items), 'total_distance_km': round(max(len(items) - 1, 0) * 7.5, 1), 'mode': 'api'})
+
+
+@scheduling_bp.post('/route-plan/optimize')
+@roles_required('admin', 'sales')
+def optimize_route_plan():
+    payload = request.get_json(silent=True) or {}; ids = payload.get('schedule_ids') or []
+    items = db.session.scalars(db.select(DeliverySchedule).where(DeliverySchedule.id.in_([int(value) for value in ids]))).all() if ids else db.session.scalars(db.select(DeliverySchedule).where(DeliverySchedule.status.not_in(['Completed', 'Cancelled'])).order_by(DeliverySchedule.scheduled_date, DeliverySchedule.id)).all()
+    for index, item in enumerate(sorted(items, key=lambda value: (value.scheduled_date, value.id)), 1): item.route_order = index
+    db.session.commit(); record_audit(current_user().id, 'Delivery route optimized', 'schedule', '', f'{len(items)} stops'); db.session.commit()
+    return jsonify({'route': [item.to_dict() for item in sorted(items, key=lambda value: value.route_order)], 'stops': len(items), 'mode': 'api'})
 
 
 @scheduling_bp.post('/<int:schedule_id>/confirm')
