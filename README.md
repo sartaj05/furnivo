@@ -205,6 +205,26 @@ feat: add lead notes tasks owners and activity timeline
 
 The main Furnivo business workflow is implemented. The remaining work is mostly production integration, operations and hardening rather than missing screens.
 
+The latest feature update adds:
+
+- AI design assistant briefs with room/style/material/color inputs, optional image URL, product recommendations, a deterministic demo fallback, and an optional `OPENAI_API_KEY` provider hook.
+- Drag-and-drop production Gantt dependencies backed by production task APIs.
+- Live collaboration activity feed backed by audit events and demo-safe polling.
+- Predictive supplier lead times, quality defect/rework metrics, and purchase recommendations.
+- Multi-tenant workspace creation/switching with membership, subscription-plan foundations, and active workspace tracking.
+
+The AI assistant works in demo mode without credentials. Configure `OPENAI_API_KEY` and `OPENAI_DESIGN_MODEL` only when the OpenAI provider is ready; the key is read server-side and is never returned by the API.
+
+The latest feature update adds:
+
+- AI design assistant briefs with room/style/material/color inputs, optional image URL, product recommendations, a deterministic demo fallback, and an optional `OPENAI_API_KEY` provider hook.
+- Drag-and-drop production Gantt dependencies backed by production task APIs.
+- Live collaboration activity feed backed by audit events and demo-safe polling.
+- Predictive supplier lead times, quality defect/rework metrics, and purchase recommendations.
+- Multi-tenant workspace creation/switching with membership, subscription-plan foundations, and active workspace tracking.
+
+The AI assistant works in demo mode without credentials. Configure `OPENAI_API_KEY` and `OPENAI_DESIGN_MODEL` only when the OpenAI provider is ready; the key is read server-side and is never returned by the API.
+
 ### Ready for deployment
 
 - The frontend runs with demo data when `VITE_API_URL` is missing or the API is unavailable.

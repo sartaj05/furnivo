@@ -238,3 +238,28 @@ def test_quote_to_payment_automation(client, app):
     invoices = client.get('/api/invoices', headers=client_headers)
     matching_invoice = next(item for item in invoices.json['items'] if item['id'] == invoice['id'])
     assert matching_invoice['status'] == 'Paid'
+
+
+def test_ai_collaboration_predictive_and_tenant_features(client, admin_headers):
+    design = client.post('/api/design-assistant', headers=admin_headers, json={'room': 'Bedroom', 'style': 'Japandi', 'color': 'Ivory', 'budget': 120000})
+    assert design.status_code == 200
+    assert design.json['brief']['layout']
+    assert design.json['brief']['provider'] == 'demo-fallback'
+
+    live = client.get('/api/live/updates', headers=admin_headers)
+    assert live.status_code == 200
+    assert 'items' in live.json
+
+    predictive = client.get('/api/analytics/predictive', headers=admin_headers)
+    assert predictive.status_code == 200
+    assert 'purchase_recommendations' in predictive.json
+    assert 'quality' in predictive.json
+
+    tenant = client.post('/api/tenants', headers=admin_headers, json={'name': 'Jaipur Studio'})
+    assert tenant.status_code == 201
+    tenant_id = tenant.json['tenant']['id']
+    listed = client.get('/api/tenants', headers=admin_headers)
+    assert any(item['tenant']['id'] == tenant_id for item in listed.json['memberships'])
+    switched = client.post(f'/api/tenants/{tenant_id}/switch', headers=admin_headers)
+    assert switched.status_code == 200
+    assert switched.json['active_tenant_id'] == tenant_id

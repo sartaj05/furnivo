@@ -107,7 +107,11 @@ def update_production_task(task_id):
     task = db.get_or_404(ProductionTask, task_id); payload = request.get_json(silent=True) or {}
     for field in ('name', 'stage', 'assigned_worker', 'machine', 'status'):
         if field in payload: setattr(task, field, str(payload[field]).strip())
-    if 'dependency_id' in payload: task.dependency_id = payload['dependency_id'] or None
+    if 'dependency_id' in payload:
+        dependency_id = payload['dependency_id'] or None
+        if dependency_id is not None and int(dependency_id) == task.id:
+            return jsonify({'message': 'A task cannot depend on itself.'}), 400
+        task.dependency_id = dependency_id
     if 'actual_minutes' in payload: task.actual_minutes = max(int(payload['actual_minutes'] or 0), 0)
     try:
         if 'planned_start' in payload: task.planned_start = parse_datetime(payload['planned_start'])
@@ -146,6 +150,9 @@ def create_inspection(job_id):
     job = db.get_or_404(ProductionJob, job_id); payload = request.get_json(silent=True) or {}; status = str(payload.get('status', 'Pending')).strip()
     if status not in {'Pending', 'Passed', 'Failed', 'Rework'}: return jsonify({'message': 'Invalid inspection status.'}), 400
     checklist = payload.get('checklist') if isinstance(payload.get('checklist'), list) else []; defects = payload.get('defects') if isinstance(payload.get('defects'), list) else []
-    item = QualityInspection(production_job_id=job.id, inspector_id=current_user().id, status=status, checklist_json=json.dumps(checklist), defects_json=json.dumps(defects), photo_url=str(payload.get('photo_url', '')).strip(), notes=str(payload.get('notes', '')).strip(), approved_at=utcnow() if status == 'Passed' else None)
+    try: rework_cost = Decimal(str(payload.get('rework_cost', 0) or 0))
+    except InvalidOperation: return jsonify({'message': 'Rework cost must be a valid amount.'}), 400
+    if rework_cost < 0: return jsonify({'message': 'Rework cost cannot be negative.'}), 400
+    item = QualityInspection(production_job_id=job.id, inspector_id=current_user().id, status=status, checklist_json=json.dumps(checklist), defects_json=json.dumps(defects), photo_url=str(payload.get('photo_url', '')).strip(), notes=str(payload.get('notes', '')).strip(), rework_cost=rework_cost, approved_at=utcnow() if status == 'Passed' else None)
     db.session.add(item); job.status = 'Ready' if status == 'Passed' else 'Quality check' if status in {'Pending', 'Failed'} else 'On hold'; db.session.commit(); record_audit(current_user().id, 'Quality inspection recorded', 'production_job', job.id, status); db.session.commit()
     return jsonify({'item': item.to_dict(), 'job': job.to_dict(), 'mode': 'api'}), 201

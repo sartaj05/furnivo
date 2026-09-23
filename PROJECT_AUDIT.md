@@ -56,6 +56,11 @@ The application is a working React/Vite + Flask/SQLAlchemy sales workspace. The 
 - Furniture recommendation engine: deterministic room/material/color/budget recommendations with demo fallback.
 - Inventory forecasting: open BOM demand, projected availability, reorder quantity and stockout risk.
 - Quality control: inspection checklist, defects, approval/rework states and production status gates.
+- AI design assistant: room/style/material/color brief generation, optional image input, product recommendations and deterministic fallback when no provider key is configured.
+- Drag-and-drop production Gantt planner: task bars, dependency updates and capacity/deadline summaries.
+- Live collaboration feed: audit-backed workspace activity with automatic refresh and demo fallback.
+- Predictive procurement and quality analytics: supplier lead-time averages, late-rate trends, defect rate, rework cost and purchase recommendations.
+- Multi-tenant SaaS foundations: workspace creation/switching, memberships, active tenant tracking and demo subscription plans.
 
 ## Offline/demo behavior
 
@@ -84,6 +89,7 @@ These are not implemented as production features yet:
 - Object-level authorization for client-owned records; current access is role-level.
 - Provider-backed delivery and fully automated scheduling still require production email/WhatsApp credentials; the control center provides demo-safe previews and queued fallback behavior.
 - Secret rotation, external backup storage, centralized log shipping and full production deployment automation.
+- Live OpenAI-generated design briefs require a server-side `OPENAI_API_KEY`; without it, the deterministic demo assistant remains active.
 
 ## Verification
 
@@ -92,4 +98,5 @@ These are not implemented as production features yet:
 - Flask API smoke test passes in the project virtual environment: health, admin login, products, quotes and leads returned successfully.
 - Additional smoke checks pass for client quote response, quote history, orders, inventory and notifications.
 - Additional smoke checks pass for invoices/payments, procurement, reports, audit logs and notification delivery configuration handling.
+- New API tests pass for AI briefs, live updates, predictive analytics, tenant creation and tenant switching.
 - The smoke test uses development defaults; replace `SECRET_KEY` and `JWT_SECRET_KEY` with long production secrets before deployment.

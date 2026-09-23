@@ -87,6 +87,10 @@ def create_app(config_object=Config):
     from .routes.business import business_bp
     from .routes.branches import branches_bp
     from .routes.recommendations import recommendations_bp
+    from .routes.design_assistant import design_bp
+    from .routes.tenants import tenants_bp
+    from .routes.live import live_bp
+    from .routes.predictive import predictive_bp
 
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(products_bp, url_prefix='/api/products')
@@ -121,6 +125,10 @@ def create_app(config_object=Config):
     app.register_blueprint(business_bp, url_prefix='/api/business')
     app.register_blueprint(branches_bp, url_prefix='/api/branches')
     app.register_blueprint(recommendations_bp, url_prefix='/api/recommendations')
+    app.register_blueprint(design_bp, url_prefix='/api/design-assistant')
+    app.register_blueprint(tenants_bp, url_prefix='/api/tenants')
+    app.register_blueprint(live_bp, url_prefix='/api/live')
+    app.register_blueprint(predictive_bp, url_prefix='/api/analytics/predictive')
 
     if app.config.get('AUTO_SEED'):
         with app.app_context():

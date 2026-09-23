@@ -15,3 +15,4 @@ feat: add planning profitability timeline and notification automation controls
 feat: add mobile execution procurement and delivery workflows
 feat: add accounting security notifications routing and service operations
 feat: add advanced scheduling mobile portal recommendations forecasting and quality control
+feat: add AI design assistant Gantt collaboration predictive analytics and tenant foundations

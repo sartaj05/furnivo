@@ -10,7 +10,10 @@ const navItems = [
   { to: '/app/configurator', label: 'Quote configurator', shortLabel: 'Configure', roles: ['admin', 'sales', 'designer'] },
   { to: '/app/production', label: 'Production planning', shortLabel: 'Production', roles: ['admin', 'sales', 'designer'] },
   { to: '/app/production-scheduling', label: 'Production scheduling', shortLabel: 'Calendar', roles: ['admin', 'sales', 'designer'] },
+  { to: '/app/production-gantt', label: 'Drag-and-drop Gantt', shortLabel: 'Gantt', roles: ['admin', 'sales', 'designer'] },
   { to: '/app/quality-control', label: 'Quality control', shortLabel: 'Quality', roles: ['admin', 'sales', 'designer'] },
+  { to: '/app/ai-design-assistant', label: 'AI design assistant', shortLabel: 'AI design', roles: ['admin', 'sales', 'designer', 'client'] },
+  { to: '/app/live-collaboration', label: 'Live collaboration', shortLabel: 'Live feed', roles: ['admin', 'sales', 'designer', 'client'] },
   { to: '/app/customers', label: 'Customers', shortLabel: 'Clients', roles: ['admin', 'sales'] },
   { to: '/app/leads', label: 'Lead CRM', shortLabel: 'Leads', roles: ['admin', 'sales'] },
   { to: '/app/client-quotes', label: 'My quotations', shortLabel: 'Quotes', roles: ['client'] },
@@ -19,6 +22,7 @@ const navItems = [
   { to: '/app/orders', label: 'Orders & projects', shortLabel: 'Orders', roles: ['admin', 'sales', 'designer', 'client'] },
   { to: '/app/inventory', label: 'Inventory', shortLabel: 'Stock', roles: ['admin', 'sales', 'designer', 'client'] },
   { to: '/app/inventory-forecast', label: 'Inventory forecasting', shortLabel: 'Forecast', roles: ['admin', 'sales', 'designer'] },
+  { to: '/app/predictive-analytics', label: 'Predictive procurement', shortLabel: 'Predictive', roles: ['admin', 'sales', 'designer'] },
   { to: '/app/recommendations', label: 'Furniture recommendations', shortLabel: 'Suggest', roles: ['admin', 'sales', 'designer', 'client'] },
   { to: '/app/invoices', label: 'Invoices & payments', shortLabel: 'Invoices', roles: ['admin', 'sales', 'client'] },
   { to: '/app/gst', label: 'GST & e-invoicing', shortLabel: 'GST', roles: ['admin', 'sales', 'client'] },
@@ -43,6 +47,7 @@ const navItems = [
   { to: '/app/schedules', label: 'Delivery & installation', shortLabel: 'Schedule', roles: ['admin', 'sales', 'designer', 'client'] },
   { to: '/app/warehouses', label: 'Warehouses', shortLabel: 'Stock map', roles: ['admin', 'sales', 'designer'] },
   { to: '/app/returns', label: 'Returns & refunds', shortLabel: 'Returns', roles: ['admin', 'sales', 'client'] },
+  { to: '/app/tenant-workspaces', label: 'Tenant workspaces', shortLabel: 'Workspaces', roles: ['admin'] },
 ]
 
 export default function AppShell({ title, eyebrow, actions, children }) {

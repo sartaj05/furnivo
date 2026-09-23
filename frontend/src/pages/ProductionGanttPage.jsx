@@ -1,0 +1,11 @@
+import { useEffect, useState } from 'react'
+import AppShell from '../components/AppShell'
+import { getProductionCapacity, getProductionSchedule, updateProductionTask } from '../lib/api'
+
+export default function ProductionGanttPage() {
+  const [tasks, setTasks] = useState([]); const [capacity, setCapacity] = useState({}); const [dragged, setDragged] = useState(null); const [message, setMessage] = useState('')
+  async function load() { const [schedule, result] = await Promise.all([getProductionSchedule(), getProductionCapacity()]); setTasks(schedule.items || []); setCapacity(result.capacity || {}) }
+  useEffect(() => { load() }, [])
+  async function drop(target) { if (!dragged || dragged.id === target.id) return; await updateProductionTask(dragged.id, { dependency_id: target.id }); setMessage(`${dragged.name} now follows ${target.name}.`); setDragged(null); await load() }
+  return <AppShell title="Drag-and-drop production planner" eyebrow="Gantt dependencies & workshop capacity"><section className="metrics-grid"><article className="metric-card"><span>Open tasks</span><strong>{capacity.open_tasks || 0}</strong></article><article className="metric-card"><span>Worker minutes</span><strong>{Object.values(capacity.worker_minutes || {}).reduce((a, b) => a + b, 0)}</strong></article><article className="metric-card"><span>Deadline alerts</span><strong>{capacity.alert_count || 0}</strong></article></section><section className="panel"><p className="muted-copy">Drag a task onto another task to create a dependency. The API stores the relationship for scheduling and deadline planning.</p><div className="gantt-list">{tasks.map((task) => <div className="gantt-row" draggable onDragStart={() => setDragged(task)} onDragOver={(e) => e.preventDefault()} onDrop={() => drop(task)} key={task.id}><div><strong>{task.name}</strong><small>{task.job_number || 'Production job'} · {task.stage} · {task.assigned_worker || 'Unassigned'}</small></div><span className="gantt-bar" style={{ width: `${Math.max(24, Math.min(100, 24 + Number(task.actual_minutes || 0) / 4))}%` }}>{task.status}</span></div>)}{!tasks.length && <p className="muted-copy">No scheduled tasks yet.</p>}{message && <div className="success-message">{message}</div>}</div></section></AppShell>
+}

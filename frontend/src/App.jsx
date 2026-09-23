@@ -41,6 +41,11 @@ import AccountingCenterPage from './pages/AccountingCenterPage'
 import BranchSecurityPage from './pages/BranchSecurityPage'
 import NotificationAutomationPage from './pages/NotificationAutomationPage'
 import RoutePlanningPage from './pages/RoutePlanningPage'
+import AIDesignAssistantPage from './pages/AIDesignAssistantPage'
+import ProductionGanttPage from './pages/ProductionGanttPage'
+import LiveCollaborationPage from './pages/LiveCollaborationPage'
+import PredictiveAnalyticsPage from './pages/PredictiveAnalyticsPage'
+import TenantWorkspacePage from './pages/TenantWorkspacePage'
 import ProtectedRoute from './components/ProtectedRoute'
 
 export default function App() {
@@ -57,6 +62,11 @@ export default function App() {
         <Route path="/app/configurator" element={<ProtectedRoute allowedRoles={['admin', 'sales', 'designer']}><QuoteConfiguratorPage /></ProtectedRoute>} />
         <Route path="/app/production" element={<ProtectedRoute allowedRoles={['admin', 'sales', 'designer']}><ProductionPage /></ProtectedRoute>} />
         <Route path="/app/production-scheduling" element={<ProtectedRoute allowedRoles={['admin', 'sales', 'designer']}><ProductionSchedulingPage /></ProtectedRoute>} />
+        <Route path="/app/ai-design-assistant" element={<AIDesignAssistantPage />} />
+        <Route path="/app/production-gantt" element={<ProtectedRoute allowedRoles={['admin', 'sales', 'designer']}><ProductionGanttPage /></ProtectedRoute>} />
+        <Route path="/app/live-collaboration" element={<LiveCollaborationPage />} />
+        <Route path="/app/predictive-analytics" element={<ProtectedRoute allowedRoles={['admin', 'sales', 'designer']}><PredictiveAnalyticsPage /></ProtectedRoute>} />
+        <Route path="/app/tenant-workspaces" element={<ProtectedRoute allowedRoles={['admin']}><TenantWorkspacePage /></ProtectedRoute>} />
         <Route path="/app/quality-control" element={<ProtectedRoute allowedRoles={['admin', 'sales', 'designer']}><QualityControlPage /></ProtectedRoute>} />
         <Route path="/app/payment-reconciliation" element={<ProtectedRoute allowedRoles={['admin', 'sales', 'client']}><PaymentReconciliationPage /></ProtectedRoute>} />
         <Route path="/app/contracts" element={<ContractsPage />} />

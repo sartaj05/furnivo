@@ -1455,6 +1455,41 @@ export async function createProductionTask(payload) {
   catch (error) { if (error.status) throw error; const db = getLocalDb(); const job = db.productionJobs.find((item) => Number(item.id) === Number(payload.production_job_id)); const item = { id: Date.now(), ...payload, status: 'Planned', job_number: job?.job_number }; job.tasks = [...(job.tasks || []), item]; saveLocalDb(db); return { item, mode: 'demo' } }
 }
 
+export async function updateProductionTask(id, payload) {
+  try { return await backendRequest(`/production/schedule/${id}`, { method: 'PATCH', body: JSON.stringify(payload) }) }
+  catch (error) { if (error.status) throw error; const db = getLocalDb(); db.productionJobs.forEach((job) => { job.tasks = (job.tasks || []).map((task) => Number(task.id) === Number(id) ? { ...task, ...payload } : task) }); saveLocalDb(db); const item = db.productionJobs.flatMap((job) => job.tasks || []).find((task) => Number(task.id) === Number(id)); return { item, mode: 'demo' } }
+}
+
+export async function createDesignBrief(payload) {
+  try { return await backendRequest('/design-assistant', { method: 'POST', body: JSON.stringify(payload) }) }
+  catch (error) { if (error.status) throw error; const db = getLocalDb(); const products = db.products.filter((item) => !payload.budget || Number(item.price) <= Number(payload.budget)).slice(0, 6); return { brief: { title: `${String(payload.style || 'Warm modern').replace(/^./, (value) => value.toUpperCase())} ${payload.room || 'room'} concept`, layout: ['Anchor a primary seating zone.', 'Keep clear circulation around the room.', 'Layer accents through textiles and warm lighting.'], moodboard: [{ label: 'Palette', value: payload.color || 'neutral' }, { label: 'Style', value: payload.style || 'warm modern' }], recommendations: products.map((product) => ({ product, reason: 'Matches the selected room and budget.' })), provider: 'demo-fallback' }, mode: 'demo' } }
+}
+
+export async function getLiveUpdates(since = '') {
+  try { return await backendRequest(`/live/updates${since ? `?since=${encodeURIComponent(since)}` : ''}`) }
+  catch (error) { if (error.status) throw error; return { items: [], mode: 'demo' } }
+}
+
+export async function getPredictiveAnalytics() {
+  try { return await backendRequest('/analytics/predictive') }
+  catch (error) { if (error.status) throw error; return { supplier_lead_times: [], defect_rate: 0, rework_cost: 0, purchase_recommendations: [], mode: 'demo' } }
+}
+
+export async function getTenants() {
+  try { return await backendRequest('/tenants') }
+  catch (error) { if (error.status) throw error; const db = getLocalDb(); db.tenants = db.tenants || [{ id: 1, name: 'Furnivo Demo Workspace', slug: 'furnivo-demo', plan: 'Starter', status: 'Trial', branding: {} }]; saveLocalDb(db); return { memberships: db.tenants.map((tenant) => ({ tenant, role: 'Owner', status: 'Active' })), active_tenant_id: 1, mode: 'demo' } }
+}
+
+export async function createTenant(payload) {
+  try { return await backendRequest('/tenants', { method: 'POST', body: JSON.stringify(payload) }) }
+  catch (error) { if (error.status) throw error; const db = getLocalDb(); db.tenants = db.tenants || []; const item = { id: Date.now(), plan: 'Starter', status: 'Trial', branding: {}, ...payload }; db.tenants.push(item); saveLocalDb(db); return { tenant: item, subscription: { plan: 'Starter', status: 'trialing', seats: 5 }, mode: 'demo' } }
+}
+
+export async function switchTenant(id) {
+  try { return await backendRequest(`/tenants/${id}/switch`, { method: 'POST' }) }
+  catch (error) { if (error.status) throw error; localStorage.setItem('furnivo-active-tenant', String(id)); return { active_tenant_id: id, mode: 'demo' } }
+}
+
 export async function getProductionCapacity() {
   try { return await backendRequest('/production/capacity') }
   catch (error) { if (error.status) throw error; return { capacity: { planned_tasks: 0, open_tasks: 0, worker_minutes: {}, machine_minutes: {}, alert_count: 0 }, mode: 'demo' } }

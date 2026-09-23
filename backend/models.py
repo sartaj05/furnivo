@@ -21,6 +21,8 @@ class User(TimestampMixin, db.Model):
     password_hash = db.Column(db.String(255), nullable=False)
     role = db.Column(db.String(30), nullable=False, default='client', index=True)
     is_active = db.Column(db.Boolean, nullable=False, default=True)
+    active_tenant_id = db.Column(db.Integer, db.ForeignKey('tenants.id'), nullable=True, index=True)
+    active_tenant = db.relationship('Tenant', foreign_keys=[active_tenant_id])
 
     def public_dict(self):
         return {
@@ -28,6 +30,7 @@ class User(TimestampMixin, db.Model):
             'name': self.name,
             'email': self.email,
             'role': self.role,
+            'active_tenant_id': self.active_tenant_id,
         }
 
 
@@ -814,6 +817,50 @@ class UserBranch(TimestampMixin, db.Model):
 
     def to_dict(self): return {'id': self.id, 'user_id': self.user_id, 'branch_id': self.branch_id, 'branch': self.branch.to_dict() if self.branch else None, 'is_primary': self.is_primary}
 
+
+class Tenant(TimestampMixin, db.Model):
+    __tablename__ = 'tenants'
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(180), nullable=False)
+    slug = db.Column(db.String(100), nullable=False, unique=True, index=True)
+    plan = db.Column(db.String(40), nullable=False, default='Starter')
+    status = db.Column(db.String(30), nullable=False, default='Trial')
+    branding_json = db.Column(db.Text, nullable=False, default='{}')
+    is_active = db.Column(db.Boolean, nullable=False, default=True)
+    subscription = db.relationship('Subscription', back_populates='tenant', uselist=False, cascade='all, delete-orphan')
+    def to_dict(self):
+        try: branding = json.loads(self.branding_json or '{}')
+        except (TypeError, ValueError): branding = {}
+        return {'id': self.id, 'name': self.name, 'slug': self.slug, 'plan': self.plan, 'status': self.status, 'branding': branding, 'is_active': self.is_active}
+
+
+class TenantMembership(TimestampMixin, db.Model):
+    __tablename__ = 'tenant_memberships'
+    __table_args__ = (db.UniqueConstraint('tenant_id', 'user_id', name='uq_tenant_user'),)
+    id = db.Column(db.Integer, primary_key=True)
+    tenant_id = db.Column(db.Integer, db.ForeignKey('tenants.id', ondelete='CASCADE'), nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='CASCADE'), nullable=False, index=True)
+    role = db.Column(db.String(40), nullable=False, default='Member')
+    status = db.Column(db.String(30), nullable=False, default='Active')
+    tenant = db.relationship('Tenant')
+    user = db.relationship('User')
+    def to_dict(self): return {'id': self.id, 'tenant_id': self.tenant_id, 'tenant': self.tenant.to_dict() if self.tenant else None, 'user_id': self.user_id, 'user': self.user.public_dict() if self.user else None, 'role': self.role, 'status': self.status}
+
+
+class Subscription(TimestampMixin, db.Model):
+    __tablename__ = 'subscriptions'
+    id = db.Column(db.Integer, primary_key=True)
+    tenant_id = db.Column(db.Integer, db.ForeignKey('tenants.id', ondelete='CASCADE'), nullable=False, unique=True, index=True)
+    provider = db.Column(db.String(40), nullable=False, default='demo')
+    external_id = db.Column(db.String(180), nullable=False, default='')
+    plan = db.Column(db.String(40), nullable=False, default='Starter')
+    status = db.Column(db.String(30), nullable=False, default='trialing')
+    seats = db.Column(db.Integer, nullable=False, default=5)
+    monthly_amount = db.Column(db.Numeric(12, 2), nullable=False, default=0)
+    current_period_end = db.Column(db.Date)
+    tenant = db.relationship('Tenant', back_populates='subscription')
+    def to_dict(self): return {'id': self.id, 'tenant_id': self.tenant_id, 'provider': self.provider, 'external_id': self.external_id, 'plan': self.plan, 'status': self.status, 'seats': self.seats, 'monthly_amount': float(self.monthly_amount or 0), 'current_period_end': self.current_period_end.isoformat() if self.current_period_end else None}
+
 class Warehouse(TimestampMixin, db.Model):
     __tablename__ = 'warehouses'
 
@@ -1003,6 +1050,7 @@ class QualityInspection(TimestampMixin, db.Model):
     defects_json = db.Column(db.Text, nullable=False, default='[]')
     photo_url = db.Column(db.String(500), nullable=False, default='')
     notes = db.Column(db.Text, nullable=False, default='')
+    rework_cost = db.Column(db.Numeric(12, 2), nullable=False, default=0)
     approved_at = db.Column(db.DateTime(timezone=True))
     production_job = db.relationship('ProductionJob', back_populates='inspections')
     inspector = db.relationship('User')
@@ -1010,7 +1058,7 @@ class QualityInspection(TimestampMixin, db.Model):
     def to_dict(self):
         try: checklist = json.loads(self.checklist_json or '[]'); defects = json.loads(self.defects_json or '[]')
         except (TypeError, ValueError): checklist, defects = [], []
-        return {'id': self.id, 'production_job_id': self.production_job_id, 'job_number': self.production_job.job_number if self.production_job else None, 'inspector': self.inspector.public_dict() if self.inspector else None, 'status': self.status, 'checklist': checklist, 'defects': defects, 'photo_url': self.photo_url, 'notes': self.notes, 'approved_at': self.approved_at.isoformat() if self.approved_at else None}
+        return {'id': self.id, 'production_job_id': self.production_job_id, 'job_number': self.production_job.job_number if self.production_job else None, 'inspector': self.inspector.public_dict() if self.inspector else None, 'status': self.status, 'checklist': checklist, 'defects': defects, 'photo_url': self.photo_url, 'notes': self.notes, 'rework_cost': float(self.rework_cost or 0), 'approved_at': self.approved_at.isoformat() if self.approved_at else None}
 
 
 class Customer(TimestampMixin, db.Model):
