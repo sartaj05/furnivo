@@ -1,0 +1,10 @@
+import { useEffect, useState } from 'react'
+import AppShell from '../components/AppShell'
+import { createQualityInspection, getProductionJobs } from '../lib/api'
+
+export default function QualityControlPage() {
+  const [jobs, setJobs] = useState([]); const [form, setForm] = useState({ job_id: '', status: 'Passed', notes: '', defects: '' }); const [message, setMessage] = useState('')
+  useEffect(() => { getProductionJobs().then((result) => setJobs(result.items || [])) }, [])
+  async function submit(event) { event.preventDefault(); await createQualityInspection(form.job_id, { status: form.status, notes: form.notes, checklist: [{ item: 'Dimensions and finish', passed: form.status === 'Passed' }, { item: 'Packaging and fittings', passed: form.status === 'Passed' }], defects: form.defects ? [form.defects] : [] }); setMessage('Quality inspection recorded.'); setForm({ ...form, notes: '', defects: '' }) }
+  return <AppShell title="Quality control" eyebrow="Inspections, defects & approval gates"><section className="panel"><form className="service-form" onSubmit={submit}><label>Production job<select required value={form.job_id} onChange={(event) => setForm({ ...form, job_id: event.target.value })}><option value="">Choose job</option>{jobs.map((item) => <option key={item.id} value={item.id}>{item.job_number} · {item.customer}</option>)}</select></label><label>Inspection result<select value={form.status} onChange={(event) => setForm({ ...form, status: event.target.value })}><option>Passed</option><option>Failed</option><option>Rework</option><option>Pending</option></select></label><label>Defect or rework note<input value={form.defects} onChange={(event) => setForm({ ...form, defects: event.target.value })} /></label><label>Inspection notes<textarea rows="3" value={form.notes} onChange={(event) => setForm({ ...form, notes: event.target.value })} /></label><button className="button">Record inspection</button></form>{message && <div className="success-message">{message}</div>}</section></AppShell>
+}

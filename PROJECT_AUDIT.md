@@ -51,6 +51,11 @@ The application is a working React/Vite + Flask/SQLAlchemy sales workspace. The 
 - Notification automation: role broadcasts across in-app/email/WhatsApp channels and delivery-status summaries.
 - Delivery route planning: driver fields, stop sequencing, route optimization and distance estimates.
 - Warranty service operations: technician minutes, visit date, parts used, customer ratings and service feedback.
+- Advanced production scheduling: production tasks, worker/machine capacity summaries, dependencies and deadline alerts.
+- Customer mobile self-service portal: project, delivery, invoice, warranty and service snapshots.
+- Furniture recommendation engine: deterministic room/material/color/budget recommendations with demo fallback.
+- Inventory forecasting: open BOM demand, projected availability, reorder quantity and stockout risk.
+- Quality control: inspection checklist, defects, approval/rework states and production status gates.
 
 ## Offline/demo behavior
 

@@ -145,6 +145,30 @@ def test_accounting_security_notifications_routes_and_service_feedback(client, a
     assert feedback.status_code == 200
     assert feedback.json['item']['customer_rating'] == 5
 
+
+def test_scheduling_portal_recommendations_forecast_and_quality(client, admin_headers):
+    jobs = client.get('/api/production', headers=admin_headers)
+    job_id = jobs.json['items'][0]['id']
+    task = client.post('/api/production/schedule', headers=admin_headers, json={'production_job_id': job_id, 'name': 'Cutting plan', 'stage': 'Cutting', 'assigned_worker': 'Workshop A', 'machine': 'Panel saw'})
+    assert task.status_code == 201
+    capacity = client.get('/api/production/capacity', headers=admin_headers)
+    assert capacity.status_code == 200
+    inspection = client.post(f'/api/production/{job_id}/inspections', headers=admin_headers, json={'status': 'Passed', 'checklist': [{'item': 'Finish', 'passed': True}]})
+    assert inspection.status_code == 201
+    assert inspection.json['job']['status'] == 'Ready'
+
+    forecast = client.get('/api/inventory/forecast', headers=admin_headers)
+    assert forecast.status_code == 200
+    recommendations = client.post('/api/recommendations', headers=admin_headers, json={'room': 'Living room', 'budget': 200000})
+    assert recommendations.status_code == 200
+    assert recommendations.json['items']
+
+    login = client.post('/api/auth/login', json={'email': 'client@furnivo.demo', 'password': 'client123'})
+    client_headers = {'Authorization': f"Bearer {login.json['token']}"}
+    mobile = client.get('/api/portal/mobile-summary', headers=client_headers)
+    assert mobile.status_code == 200
+    assert 'next_schedules' in mobile.json
+
 def test_planning_profitability_timeline_and_automation(client, admin_headers):
     planning = client.get('/api/business/planning', headers=admin_headers)
     assert planning.status_code == 200

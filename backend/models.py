@@ -944,9 +944,11 @@ class ProductionJob(TimestampMixin, db.Model):
     created_by_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     order = db.relationship('Order')
     bom_items = db.relationship('BomItem', back_populates='production_job', cascade='all, delete-orphan', lazy='selectin')
+    tasks = db.relationship('ProductionTask', back_populates='production_job', cascade='all, delete-orphan', lazy='selectin')
+    inspections = db.relationship('QualityInspection', back_populates='production_job', cascade='all, delete-orphan', lazy='selectin')
 
     def to_dict(self):
-        return {'id': self.id, 'job_number': self.job_number, 'order_id': self.order_id, 'order_number': self.order.order_number if self.order else None, 'customer': self.order.customer_name if self.order else None, 'status': self.status, 'scheduled_start': self.scheduled_start.isoformat() if self.scheduled_start else None, 'due_date': self.due_date.isoformat() if self.due_date else None, 'assigned_team': self.assigned_team, 'wastage_percent': float(self.wastage_percent or 0), 'notes': self.notes, 'bom_items': [item.to_dict() for item in self.bom_items]}
+        return {'id': self.id, 'job_number': self.job_number, 'order_id': self.order_id, 'order_number': self.order.order_number if self.order else None, 'customer': self.order.customer_name if self.order else None, 'status': self.status, 'scheduled_start': self.scheduled_start.isoformat() if self.scheduled_start else None, 'due_date': self.due_date.isoformat() if self.due_date else None, 'assigned_team': self.assigned_team, 'wastage_percent': float(self.wastage_percent or 0), 'notes': self.notes, 'bom_items': [item.to_dict() for item in self.bom_items], 'tasks': [item.to_dict() for item in self.tasks], 'inspections': [item.to_dict() for item in self.inspections]}
 
 
 class BomItem(TimestampMixin, db.Model):
@@ -968,6 +970,47 @@ class BomItem(TimestampMixin, db.Model):
     def to_dict(self):
         planned_quantity = (self.quantity or 0) * (1 + (self.wastage_percent or 0) / 100)
         return {'id': self.id, 'product_id': self.product_id, 'product': self.product.name if self.product else None, 'description': self.description, 'quantity': float(self.quantity or 0), 'unit': self.unit, 'wastage_percent': float(self.wastage_percent or 0), 'planned_quantity': float(planned_quantity), 'unit_cost': float(self.unit_cost or 0), 'labor_cost': float(self.labor_cost or 0), 'material_cost': float(planned_quantity * (self.unit_cost or 0)), 'total_cost': float((planned_quantity * (self.unit_cost or 0)) + (self.labor_cost or 0)), 'status': self.status}
+
+
+class ProductionTask(TimestampMixin, db.Model):
+    __tablename__ = 'production_tasks'
+
+    id = db.Column(db.Integer, primary_key=True)
+    production_job_id = db.Column(db.Integer, db.ForeignKey('production_jobs.id', ondelete='CASCADE'), nullable=False, index=True)
+    name = db.Column(db.String(160), nullable=False)
+    stage = db.Column(db.String(60), nullable=False, default='Assembly')
+    assigned_worker = db.Column(db.String(120), nullable=False, default='')
+    machine = db.Column(db.String(120), nullable=False, default='')
+    dependency_id = db.Column(db.Integer, db.ForeignKey('production_tasks.id'), nullable=True)
+    planned_start = db.Column(db.DateTime(timezone=True))
+    planned_end = db.Column(db.DateTime(timezone=True))
+    actual_minutes = db.Column(db.Integer, nullable=False, default=0)
+    status = db.Column(db.String(40), nullable=False, default='Planned')
+    production_job = db.relationship('ProductionJob', back_populates='tasks')
+    dependency = db.relationship('ProductionTask', remote_side=[id])
+
+    def to_dict(self): return {'id': self.id, 'production_job_id': self.production_job_id, 'job_number': self.production_job.job_number if self.production_job else None, 'name': self.name, 'stage': self.stage, 'assigned_worker': self.assigned_worker, 'machine': self.machine, 'dependency_id': self.dependency_id, 'planned_start': self.planned_start.isoformat() if self.planned_start else None, 'planned_end': self.planned_end.isoformat() if self.planned_end else None, 'actual_minutes': self.actual_minutes, 'status': self.status}
+
+
+class QualityInspection(TimestampMixin, db.Model):
+    __tablename__ = 'quality_inspections'
+
+    id = db.Column(db.Integer, primary_key=True)
+    production_job_id = db.Column(db.Integer, db.ForeignKey('production_jobs.id', ondelete='CASCADE'), nullable=False, index=True)
+    inspector_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    status = db.Column(db.String(40), nullable=False, default='Pending')
+    checklist_json = db.Column(db.Text, nullable=False, default='[]')
+    defects_json = db.Column(db.Text, nullable=False, default='[]')
+    photo_url = db.Column(db.String(500), nullable=False, default='')
+    notes = db.Column(db.Text, nullable=False, default='')
+    approved_at = db.Column(db.DateTime(timezone=True))
+    production_job = db.relationship('ProductionJob', back_populates='inspections')
+    inspector = db.relationship('User')
+
+    def to_dict(self):
+        try: checklist = json.loads(self.checklist_json or '[]'); defects = json.loads(self.defects_json or '[]')
+        except (TypeError, ValueError): checklist, defects = [], []
+        return {'id': self.id, 'production_job_id': self.production_job_id, 'job_number': self.production_job.job_number if self.production_job else None, 'inspector': self.inspector.public_dict() if self.inspector else None, 'status': self.status, 'checklist': checklist, 'defects': defects, 'photo_url': self.photo_url, 'notes': self.notes, 'approved_at': self.approved_at.isoformat() if self.approved_at else None}
 
 
 class Customer(TimestampMixin, db.Model):

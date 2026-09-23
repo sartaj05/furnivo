@@ -35,6 +35,16 @@ A responsive furniture / interiors / building-material sales suite built with Re
 29. **Notification automation** with role broadcasts, provider delivery tracking, retry visibility and demo-safe fallback.
 30. **Delivery route planning** with driver data, stop ordering, route optimization and estimated route distance.
 31. **Warranty service operations** with technician work fields, parts used, visit scheduling, SLA follow-up and customer feedback ratings.
+32. **Advanced production scheduling** with workshop tasks, worker/machine capacity, dependencies and deadline alerts.
+33. **Customer mobile self-service portal** with project summaries, delivery ETA, invoices, warranties and service requests.
+34. **Furniture recommendation engine** with room, material, color and budget-based product suggestions.
+35. **Inventory forecasting** using open production BOM demand, reorder levels, projected stock and stockout risk.
+36. **Quality control workflow** with inspection checklists, defect notes, photo-ready evidence, approval gates and rework status.
+32. **Advanced production scheduling** with workshop tasks, worker/machine capacity, dependencies and deadline alerts.
+33. **Customer mobile self-service portal** with project summaries, delivery ETA, invoices, warranties and service requests.
+34. **Furniture recommendation engine** with room, material, color and budget-based product suggestions.
+35. **Inventory forecasting** using open production BOM demand, reorder levels, projected stock and stockout risk.
+36. **Quality control workflow** with inspection checklists, defect notes, photo-ready evidence, approval gates and rework status.
 27. **Accounting control center** with invoice collection summaries, overdue tracking, payment reminder generation and accounting integration support.
 28. **Enterprise branch security** with branches, user assignments, branch-linked warehouses and protected access boundaries.
 29. **Notification automation** with role broadcasts, provider delivery tracking, retry visibility and demo-safe fallback.

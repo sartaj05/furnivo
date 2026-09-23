@@ -32,6 +32,11 @@ import AnalyticsPage from './pages/AnalyticsPage'
 import IntegrationsPage from './pages/IntegrationsPage'
 import FieldOperationsPage from './pages/FieldOperationsPage'
 import BusinessControlPage from './pages/BusinessControlPage'
+import ProductionSchedulingPage from './pages/ProductionSchedulingPage'
+import MobilePortalPage from './pages/MobilePortalPage'
+import RecommendationsPage from './pages/RecommendationsPage'
+import InventoryForecastPage from './pages/InventoryForecastPage'
+import QualityControlPage from './pages/QualityControlPage'
 import AccountingCenterPage from './pages/AccountingCenterPage'
 import BranchSecurityPage from './pages/BranchSecurityPage'
 import NotificationAutomationPage from './pages/NotificationAutomationPage'
@@ -51,9 +56,12 @@ export default function App() {
         <Route path="/app/quotes" element={<ProtectedRoute allowedRoles={['admin', 'sales', 'designer']}><QuotesPage /></ProtectedRoute>} />
         <Route path="/app/configurator" element={<ProtectedRoute allowedRoles={['admin', 'sales', 'designer']}><QuoteConfiguratorPage /></ProtectedRoute>} />
         <Route path="/app/production" element={<ProtectedRoute allowedRoles={['admin', 'sales', 'designer']}><ProductionPage /></ProtectedRoute>} />
+        <Route path="/app/production-scheduling" element={<ProtectedRoute allowedRoles={['admin', 'sales', 'designer']}><ProductionSchedulingPage /></ProtectedRoute>} />
+        <Route path="/app/quality-control" element={<ProtectedRoute allowedRoles={['admin', 'sales', 'designer']}><QualityControlPage /></ProtectedRoute>} />
         <Route path="/app/payment-reconciliation" element={<ProtectedRoute allowedRoles={['admin', 'sales', 'client']}><PaymentReconciliationPage /></ProtectedRoute>} />
         <Route path="/app/contracts" element={<ContractsPage />} />
         <Route path="/app/project-portal" element={<ProtectedRoute allowedRoles={['client']}><ProjectPortalPage /></ProtectedRoute>} />
+        <Route path="/app/mobile-portal" element={<ProtectedRoute allowedRoles={['client']}><MobilePortalPage /></ProtectedRoute>} />
         <Route path="/app/operations" element={<ProtectedRoute allowedRoles={['admin']}><OpsPage /></ProtectedRoute>} />
         <Route path="/app/security" element={<SecurityPage />} />
         <Route path="/app/gst" element={<ProtectedRoute allowedRoles={['admin', 'sales', 'client']}><GstPage /></ProtectedRoute>} />
@@ -80,6 +88,8 @@ export default function App() {
         <Route path="/app/client-quotes" element={<ProtectedRoute allowedRoles={['client']}><ClientQuotesPage /></ProtectedRoute>} />
         <Route path="/app/orders" element={<OrdersPage />} />
         <Route path="/app/inventory" element={<InventoryPage />} />
+        <Route path="/app/inventory-forecast" element={<ProtectedRoute allowedRoles={['admin', 'sales', 'designer']}><InventoryForecastPage /></ProtectedRoute>} />
+        <Route path="/app/recommendations" element={<RecommendationsPage />} />
         <Route path="/app/invoices" element={<InvoicesPage />} />
         <Route path="/app/procurement" element={<ProcurementPage />} />
         <Route path="/app/reports" element={<ProtectedRoute allowedRoles={['admin', 'sales']}><ReportsPage /></ProtectedRoute>} />

@@ -1,7 +1,7 @@
 from decimal import Decimal, InvalidOperation
 from flask import Blueprint, jsonify, request
 from ..extensions import db
-from ..models import InventoryItem, Product, ProductVariant
+from ..models import BomItem, InventoryItem, Product, ProductVariant, ProductionJob
 from ..utils import roles_required
 from ..services.audit import record_audit
 from ..utils import current_user
@@ -68,3 +68,17 @@ def update_inventory(item_id):
         db.session.rollback()
         return jsonify({'message': str(exc)}), 400
     return jsonify({'item': item.to_dict(), 'mode': 'api'})
+
+
+@inventory_bp.get('/forecast')
+@roles_required('admin', 'sales', 'designer')
+def inventory_forecast():
+    inventory = db.session.scalars(db.select(InventoryItem)).all(); jobs = db.session.scalars(db.select(ProductionJob).where(ProductionJob.status.not_in(['Complete', 'On hold']))).all(); demand = {}
+    for job in jobs:
+        for bom in job.bom_items:
+            if bom.product_id: demand[bom.product_id] = demand.get(bom.product_id, 0) + float(bom.quantity or 0) * (1 + float(bom.wastage_percent or 0) / 100)
+    items = []
+    for item in inventory:
+        projected = float(item.available_quantity) - demand.get(item.product_id, 0); reorder = max(float(item.reorder_level or 0), demand.get(item.product_id, 0) * 0.25); suggested = max(reorder - projected, 0)
+        items.append({'inventory_id': item.id, 'product_id': item.product_id, 'product': item.product.name if item.product else None, 'available_quantity': float(item.available_quantity), 'forecast_demand': round(demand.get(item.product_id, 0), 2), 'projected_quantity': round(projected, 2), 'reorder_level': round(reorder, 2), 'suggested_order_quantity': round(suggested, 2), 'risk': 'Stockout risk' if projected < 0 else 'Watch' if projected <= reorder else 'Healthy'})
+    return jsonify({'items': items, 'horizon_days': 30, 'method': 'Open production BOM demand plus reorder level', 'mode': 'api'})

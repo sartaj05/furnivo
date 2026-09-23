@@ -1444,3 +1444,38 @@ export async function saveServiceFeedback(id, payload) {
   try { return await backendRequest(`/service/tickets/${id}/feedback`, { method: 'POST', body: JSON.stringify(payload) }) }
   catch (error) { if (error.status) throw error; const db = getLocalDb(); db.serviceTickets = db.serviceTickets.map((item) => Number(item.id) === Number(id) ? { ...item, customer_rating: Number(payload.rating), customer_feedback: payload.feedback || '' } : item); saveLocalDb(db); return { item: db.serviceTickets.find((item) => Number(item.id) === Number(id)), mode: 'demo' } }
 }
+
+export async function getProductionSchedule() {
+  try { return await backendRequest('/production/schedule') }
+  catch (error) { if (error.status) throw error; const tasks = (getLocalDb().productionJobs || []).flatMap((job) => (job.tasks || []).map((task) => ({ ...task, production_job_id: job.id, job_number: job.job_number }))); return { items: tasks, mode: 'demo' } }
+}
+
+export async function createProductionTask(payload) {
+  try { return await backendRequest('/production/schedule', { method: 'POST', body: JSON.stringify(payload) }) }
+  catch (error) { if (error.status) throw error; const db = getLocalDb(); const job = db.productionJobs.find((item) => Number(item.id) === Number(payload.production_job_id)); const item = { id: Date.now(), ...payload, status: 'Planned', job_number: job?.job_number }; job.tasks = [...(job.tasks || []), item]; saveLocalDb(db); return { item, mode: 'demo' } }
+}
+
+export async function getProductionCapacity() {
+  try { return await backendRequest('/production/capacity') }
+  catch (error) { if (error.status) throw error; return { capacity: { planned_tasks: 0, open_tasks: 0, worker_minutes: {}, machine_minutes: {}, alert_count: 0 }, mode: 'demo' } }
+}
+
+export async function createQualityInspection(jobId, payload) {
+  try { return await backendRequest(`/production/${jobId}/inspections`, { method: 'POST', body: JSON.stringify(payload) }) }
+  catch (error) { if (error.status) throw error; const db = getLocalDb(); const job = db.productionJobs.find((item) => Number(item.id) === Number(jobId)); const item = { id: Date.now(), production_job_id: jobId, job_number: job?.job_number, status: payload.status || 'Pending', checklist: payload.checklist || [], defects: payload.defects || [], notes: payload.notes || '' }; job.inspections = [item, ...(job.inspections || [])]; job.status = item.status === 'Passed' ? 'Ready' : 'Quality check'; saveLocalDb(db); return { item, job, mode: 'demo' } }
+}
+
+export async function getInventoryForecast() {
+  try { return await backendRequest('/inventory/forecast') }
+  catch (error) { if (error.status) throw error; return { items: getLocalDb().inventory.map((item) => ({ inventory_id: item.id, product_id: item.product_id, product: item.product, available_quantity: Number(item.available_quantity || 0), forecast_demand: 0, projected_quantity: Number(item.available_quantity || 0), reorder_level: Number(item.reorder_level || 0), suggested_order_quantity: Math.max(Number(item.reorder_level || 0) - Number(item.available_quantity || 0), 0), risk: item.is_low_stock ? 'Watch' : 'Healthy' })), horizon_days: 30, mode: 'demo' } }
+}
+
+export async function getRecommendations(payload) {
+  try { return await backendRequest('/recommendations', { method: 'POST', body: JSON.stringify(payload) }) }
+  catch (error) { if (error.status) throw error; const db = getLocalDb(); const budget = Number(payload.budget || 0); const items = db.products.filter((item) => !budget || Number(item.price) <= budget).slice(0, 8).map((product, index) => ({ product, score: 8 - index, reason: `Recommended for ${payload.room || 'your room'} based on catalogue and budget.`, suggested_price: Number(product.price || 0) })); return { items, profile: payload, engine: 'Demo recommendation engine', mode: 'demo' } }
+}
+
+export async function getMobilePortalSummary() {
+  try { return await backendRequest('/portal/mobile-summary') }
+  catch (error) { if (error.status) throw error; const portal = await getProjectPortal(); return { projects: (portal.projects || []).map((item) => item.order), next_schedules: (portal.projects || []).flatMap((item) => item.schedules || []).slice(0, 10), invoices: (portal.projects || []).map((item) => item.invoice).filter(Boolean), warranties: getLocalDb().warranties, service_tickets: getLocalDb().serviceTickets, mode: 'demo' } }
+}

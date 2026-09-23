@@ -1,6 +1,6 @@
 from flask import Blueprint, jsonify, request
 from ..extensions import db
-from ..models import Contract, DeliverySchedule, Invoice, Order, ProductionJob, ProjectSupportTicket, QuoteClientAccess
+from ..models import Contract, DeliverySchedule, Invoice, Order, ProductionJob, ProjectSupportTicket, QuoteClientAccess, ServiceTicket, Warranty
 from ..services.audit import record_audit
 from ..utils import current_user, roles_required
 
@@ -35,6 +35,14 @@ def project_portal():
         projects.append({'order': order.to_dict(), 'production': production.to_dict() if production else None, 'schedules': [schedule.to_dict() for schedule in schedules], 'invoice': invoice.to_dict() if invoice else None, 'contract': contract.to_dict() if contract else None, 'timeline': timeline})
     tickets = db.session.scalars(db.select(ProjectSupportTicket).where(ProjectSupportTicket.user_id == current_user().id).order_by(ProjectSupportTicket.id.desc())).all()
     return jsonify({'projects': projects, 'documents': documents, 'support_tickets': [ticket.to_dict() for ticket in tickets], 'mode': 'api'})
+
+
+@portal_bp.get('/mobile-summary')
+@roles_required('client')
+def mobile_summary():
+    quote_ids = client_quote_ids(); orders = db.session.scalars(db.select(Order).where(Order.quote_id.in_(quote_ids or [-1]))).all(); order_ids = [item.id for item in orders]
+    invoices = db.session.scalars(db.select(Invoice).where(Invoice.order_id.in_(order_ids or [-1]))).all(); schedules = db.session.scalars(db.select(DeliverySchedule).where(DeliverySchedule.order_id.in_(order_ids or [-1])).order_by(DeliverySchedule.scheduled_date)).all(); warranties = db.session.scalars(db.select(Warranty).where(Warranty.order_id.in_(order_ids or [-1]))).all(); tickets = db.session.scalars(db.select(ServiceTicket).where(ServiceTicket.order_id.in_(order_ids or [-1])).order_by(ServiceTicket.id.desc())).all()
+    return jsonify({'projects': [item.to_dict() for item in orders], 'next_schedules': [item.to_dict() for item in schedules[:10]], 'invoices': [item.to_dict() for item in invoices], 'warranties': [item.to_dict() for item in warranties], 'service_tickets': [item.to_dict() for item in tickets], 'mode': 'api'})
 
 
 @portal_bp.post('/tickets')

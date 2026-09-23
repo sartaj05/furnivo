@@ -1,0 +1,9 @@
+import { useEffect, useState } from 'react'
+import AppShell from '../components/AppShell'
+import { getMobilePortalSummary } from '../lib/api'
+
+export default function MobilePortalPage() {
+  const [data, setData] = useState({ projects: [], next_schedules: [], invoices: [], warranties: [], service_tickets: [] })
+  useEffect(() => { getMobilePortalSummary().then(setData) }, [])
+  return <AppShell title="Customer mobile portal" eyebrow="Projects, payments, delivery & service"><section className="portal-project-grid">{(data.projects || []).map((project) => <article className="panel portal-project-card" key={project.id}><div className="panel-heading"><h3>{project.order_number}</h3><span className="status status-approved">{project.status}</span></div><p>{project.customer} · Production {project.production_status}</p><strong>Delivery {project.delivery_date || 'To be scheduled'}</strong></article>)}</section><section className="panel"><div className="panel-heading"><h3>Upcoming delivery</h3></div>{(data.next_schedules || []).map((item) => <div className="order-meta" key={item.id}><span><strong>{item.schedule_type}</strong> · {item.order_number}<small>{item.scheduled_date} · ETA {item.eta || item.time_slot}</small></span><b>{item.status}</b></div>)}{!data.next_schedules?.length && <p className="muted-copy">No upcoming schedule.</p>}</section><section className="metrics-grid"><article className="metric-card"><span>Invoices</span><strong>{data.invoices?.length || 0}</strong></article><article className="metric-card"><span>Active warranties</span><strong>{data.warranties?.filter((item) => item.status === 'Active').length || 0}</strong></article><article className="metric-card"><span>Service requests</span><strong>{data.service_tickets?.length || 0}</strong></article></section></AppShell>
+}
