@@ -1,8 +1,10 @@
-from datetime import date
+import json
+from datetime import date, timezone
 from uuid import uuid4
 from flask import Blueprint, jsonify, request
 from ..extensions import db
 from ..models import FieldVisit, Order, User
+from ..models import utcnow
 from ..services.audit import record_audit
 from ..utils import client_quote_ids, current_user, roles_required
 
@@ -44,9 +46,49 @@ def update_field_visit(visit_id):
     item = db.get_or_404(FieldVisit, visit_id); payload = request.get_json(silent=True) or {}
     if 'status' in payload and payload['status'] not in {'Scheduled', 'En route', 'On site', 'Completed', 'Cancelled'}:
         return jsonify({'message': 'Invalid field visit status.'}), 400
-    for key in ('status', 'assigned_to_id', 'notes'):
+    for key in ('status', 'assigned_to_id', 'notes', 'time_minutes'):
         if key in payload: setattr(item, key, payload[key])
     db.session.commit(); record_audit(current_user().id, 'Field visit updated', 'field_visit', item.id, item.status); db.session.commit()
+    return jsonify({'item': item.to_dict(), 'mode': 'api'})
+
+
+@field_bp.post('/<int:visit_id>/check-in')
+@roles_required('admin', 'sales', 'designer')
+def check_in_field_visit(visit_id):
+    item = db.get_or_404(FieldVisit, visit_id); payload = request.get_json(silent=True) or {}
+    item.check_in_at = utcnow(); item.status = 'On site'
+    if payload.get('gps_lat') is not None: item.gps_lat = payload['gps_lat']
+    if payload.get('gps_lng') is not None: item.gps_lng = payload['gps_lng']
+    db.session.commit(); record_audit(current_user().id, 'Field visit check-in', 'field_visit', item.id, item.qr_token); db.session.commit()
+    return jsonify({'item': item.to_dict(), 'mode': 'api'})
+
+
+@field_bp.post('/<int:visit_id>/check-out')
+@roles_required('admin', 'sales', 'designer')
+def check_out_field_visit(visit_id):
+    item = db.get_or_404(FieldVisit, visit_id); payload = request.get_json(silent=True) or {}
+    item.check_out_at = utcnow(); item.status = 'Completed'
+    if item.check_in_at:
+        started = item.check_in_at if item.check_in_at.tzinfo else item.check_in_at.replace(tzinfo=timezone.utc)
+        item.time_minutes = max(int((item.check_out_at - started).total_seconds() // 60), 0)
+    if payload.get('notes') is not None: item.notes = str(payload['notes']).strip()
+    db.session.commit(); record_audit(current_user().id, 'Field visit check-out', 'field_visit', item.id, f'{item.time_minutes} minutes'); db.session.commit()
+    return jsonify({'item': item.to_dict(), 'mode': 'api'})
+
+
+@field_bp.post('/<int:visit_id>/materials')
+@roles_required('admin', 'sales', 'designer')
+def record_field_material(visit_id):
+    item = db.get_or_404(FieldVisit, visit_id); payload = request.get_json(silent=True) or {}
+    name = str(payload.get('name', '')).strip(); movement = str(payload.get('movement', 'issue')).lower()
+    try: quantity = float(payload.get('quantity', 0))
+    except (TypeError, ValueError): quantity = 0
+    if not name or quantity <= 0 or movement not in {'issue', 'return'}:
+        return jsonify({'message': 'Material name, positive quantity, and issue/return movement are required.'}), 400
+    try: materials = json.loads(item.materials_json or '[]')
+    except (TypeError, ValueError): materials = []
+    materials.insert(0, {'id': uuid4().hex[:10], 'name': name, 'product_id': payload.get('product_id'), 'quantity': quantity, 'movement': movement, 'notes': str(payload.get('notes', '')).strip(), 'created_at': utcnow().isoformat()})
+    item.materials_json = json.dumps(materials); db.session.commit(); record_audit(current_user().id, f'Material {movement}', 'field_visit', item.id, f'{name} x {quantity}'); db.session.commit()
     return jsonify({'item': item.to_dict(), 'mode': 'api'})
 
 

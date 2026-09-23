@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react'
 import AppShell from '../components/AppShell'
-import { createSchedule, getOrders, getSchedules, updateSchedule } from '../lib/api'
+import { confirmSchedule, createSchedule, getOrders, getSchedules, saveScheduleProof, updateSchedule } from '../lib/api'
 import { useAuth } from '../context/AuthContext'
 
-export default function SchedulesPage() {
+function LegacySchedulesPage() {
   const { user } = useAuth(); const canManage = ['admin', 'sales'].includes(user.role); const [items, setItems] = useState([]); const [orders, setOrders] = useState([]); const [showForm, setShowForm] = useState(false); const [form, setForm] = useState({ order_id: '', schedule_type: 'Delivery', scheduled_date: '', time_slot: 'Morning', assigned_team: '', proof_url: '', notes: '' }); const [error, setError] = useState('')
   async function load() { setItems((await getSchedules()).items || []); if (canManage) setOrders((await getOrders()).items || []) }
   useEffect(() => { load() }, [])
@@ -14,3 +14,14 @@ export default function SchedulesPage() {
     <section className="schedule-grid">{items.map((item) => <article className="panel schedule-card" key={item.id}><div className="panel-heading"><div><p className="eyebrow">{item.schedule_type} · {item.order_number}</p><h3>{item.customer}</h3></div><span className="status status-approved">{item.status}</span></div><div className="schedule-date"><strong>{item.scheduled_date}</strong><span>{item.time_slot}</span></div><p>{item.assigned_team || 'Team not assigned'}</p>{canManage ? <div className="order-meta"><select value={item.status} onChange={(e) => update(item, 'status', e.target.value)}><option>Scheduled</option><option>In progress</option><option>Completed</option><option>Cancelled</option></select>{item.proof_url && <a className="button-link" href={item.proof_url} target="_blank" rel="noreferrer">View proof</a>}</div> : item.proof_url && <a className="button-link" href={item.proof_url} target="_blank" rel="noreferrer">View completion proof</a>}</article>)}</section>
   </AppShell>
 }
+
+function DeliveryExecutionPanel() {
+  const [items, setItems] = useState([]); const [message, setMessage] = useState('')
+  async function load() { setItems((await getSchedules()).items || []) }
+  useEffect(() => { load() }, [])
+  async function confirm(item) { await confirmSchedule(item.id); setMessage('Customer confirmation saved.'); await load() }
+  async function complete(item) { await saveScheduleProof(item.id, { proof_url: item.proof_url || 'demo://delivery-proof', notes: 'Completion proof captured from delivery console.' }); setMessage('Delivery proof saved and schedule completed.'); await load() }
+  return <section className="panel delivery-execution-panel"><div className="panel-heading"><div><p className="eyebrow">Live delivery board</p><h3>ETA, confirmation & proof</h3></div></div><div className="schedule-grid">{items.map((item) => <article className="schedule-card" key={item.id}><strong>{item.order_number} · {item.schedule_type}</strong><p>{item.customer} · {item.eta || item.time_slot}</p><div className="order-meta"><span>{item.customer_confirmed ? 'Customer confirmed' : 'Awaiting confirmation'}</span><button className="button-link" onClick={() => confirm(item)}>Confirm</button><button className="button-link" onClick={() => complete(item)}>Complete with proof</button></div></article>)}</div>{message && <div className="success-message">{message}</div>}</section>
+}
+
+export default function SchedulesPage() { return <><LegacySchedulesPage /><DeliveryExecutionPanel /></> }

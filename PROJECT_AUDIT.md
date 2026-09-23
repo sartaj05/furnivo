@@ -43,6 +43,9 @@ The application is a working React/Vite + Flask/SQLAlchemy sales workspace. The 
 - Quote-to-payment automation: client quote approval creates a contract, contract signing creates a deposit order/invoice, and a paid deposit confirms the order.
 - Furniture visual configurator MVP: material, fabric, color, finish, dimensions, quantity, live pricing, saved configurations and direct quote handoff.
 - Business control center: BOM costing with labor estimates, wastage-aware inventory planning, reservation actions, shortage/purchase suggestions, project profitability, timeline events and notification automation templates.
+- Mobile production execution: QR visit workflow, check-in/check-out timestamps, worker time tracking, GPS/proof capture, material issue/return records and offline sync queue.
+- Supplier procurement automation: planning shortage conversion to purchase orders, supplier quote/landed-cost tracking, delivery and quality fields, and supplier performance metrics.
+- Delivery and installation management: ETA, customer confirmation, completion proof and dispatch status workflows.
 
 ## Offline/demo behavior
 

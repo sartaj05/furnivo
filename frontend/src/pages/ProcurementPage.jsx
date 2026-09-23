@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react'
 import AppShell from '../components/AppShell'
-import { createPurchaseOrder, createSupplier, getProducts, getPurchaseOrders, getSuppliers, updatePurchaseOrder } from '../lib/api'
+import { createPurchaseOrder, createPurchaseOrderFromPlanning, createSupplier, getBusinessPlanning, getProducts, getPurchaseOrders, getSupplierPerformance, getSuppliers, updatePurchaseOrder } from '../lib/api'
 import { useAuth } from '../context/AuthContext'
 
-export default function ProcurementPage() {
+function LegacyProcurementPage() {
   const { user } = useAuth(); const canEdit = ['admin', 'sales'].includes(user.role); const canCreateSupplier = user.role === 'admin'
   const [suppliers, setSuppliers] = useState([]); const [orders, setOrders] = useState([]); const [products, setProducts] = useState([]); const [showSupplier, setShowSupplier] = useState(false); const [showOrder, setShowOrder] = useState(false); const [supplierForm, setSupplierForm] = useState({ name: '', email: '', phone: '', notes: '' }); const [form, setForm] = useState({ supplier_id: '', expected_date: '', product_id: '', quantity: 1, unit_cost: 0, notes: '' }); const [error, setError] = useState('')
   async function load() { setSuppliers((await getSuppliers()).items || []); setOrders((await getPurchaseOrders()).items || []); if (canEdit) setProducts((await getProducts()).items || []) }
@@ -18,3 +18,12 @@ export default function ProcurementPage() {
     <section className="procurement-list">{orders.map((order) => <article className="panel procurement-card" key={order.id}><div className="panel-heading"><div><p className="eyebrow">{order.po_number} · {order.order_date}</p><h3>{order.supplier}</h3></div>{canEdit ? <select value={order.status} onChange={(e) => updatePurchaseOrder(order.id, { status: e.target.value }).then(load)}><option>Draft</option><option>Confirmed</option><option>Received</option><option>Cancelled</option></select> : <span className="status status-approved">{order.status}</span>}</div><div className="order-meta"><span>{order.items?.length || 0} items</span><strong>₹{Number(order.total || 0).toLocaleString('en-IN')}</strong><span>Expected {order.expected_date || '—'}</span></div></article>)}</section>
   </AppShell>
 }
+
+function ProcurementAutomationPanel() {
+  const [suggestions, setSuggestions] = useState([]); const [suppliers, setSuppliers] = useState([]); const [performance, setPerformance] = useState([]); const [supplierId, setSupplierId] = useState(''); const [message, setMessage] = useState('')
+  useEffect(() => { Promise.all([getBusinessPlanning(), getSuppliers(), getSupplierPerformance()]).then(([planning, supplierResult, performanceResult]) => { setSuggestions((planning.planning?.purchase_suggestions || []).filter((item) => Number(item.shortage_quantity) > 0)); setSuppliers(supplierResult.items || []); setPerformance(performanceResult.items || []) }) }, [])
+  async function createFromPlanning() { if (!supplierId || !suggestions.length) return setMessage('Choose a supplier and ensure planning has shortages.'); await createPurchaseOrderFromPlanning({ supplier_id: Number(supplierId), items: suggestions, notes: 'Created from planning shortage suggestions.' }); setMessage('Purchase order created from shortage suggestions.') }
+  return <section className="panel procurement-automation-panel"><div className="panel-heading"><div><p className="eyebrow">Automation</p><h3>Planning shortage → purchase order</h3></div></div><div className="order-meta"><span>{suggestions.length} shortage item(s) ready</span><select value={supplierId} onChange={(event) => setSupplierId(event.target.value)}><option value="">Choose supplier</option>{suppliers.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select><button className="button button-small" onClick={createFromPlanning}>Create PO</button></div><p className="muted-copy">{performance.slice(0, 3).map((item) => `${item.supplier}: ${item.orders} orders · ${item.on_time_rate}% on time`).join(' · ') || 'Supplier performance will appear after purchase orders are tracked.'}</p>{message && <div className="success-message">{message}</div>}</section>
+}
+
+export default function ProcurementPage() { return <><LegacyProcurementPage /><ProcurementAutomationPanel /></> }

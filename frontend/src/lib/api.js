@@ -730,6 +730,19 @@ export async function updatePurchaseOrder(id, payload) {
   catch (error) { if (error.status) throw error; const db = getLocalDb(); db.purchaseOrders = db.purchaseOrders.map((item) => Number(item.id) === Number(id) ? { ...item, ...payload } : item); saveLocalDb(db); return { item: db.purchaseOrders.find((item) => Number(item.id) === Number(id)), mode: 'demo' } }
 }
 
+export async function createPurchaseOrderFromPlanning(payload) {
+  try { return await backendRequest('/procurement/purchase-orders/from-planning', { method: 'POST', body: JSON.stringify(payload) }) }
+  catch (error) {
+    if (error.status) throw error
+    const db = getLocalDb(); const supplier = db.suppliers.find((item) => Number(item.id) === Number(payload.supplier_id)); const items = (payload.items || []).map((item, index) => ({ id: Date.now() + index, product_id: item.product_id, description: item.product || item.description, quantity: Number(item.quantity || item.shortage_quantity), unit_cost: Number(item.unit_cost || 0), line_total: Number(item.quantity || item.shortage_quantity) * Number(item.unit_cost || 0) })); const po = { id: Date.now(), po_number: `PO-${3001 + db.purchaseOrders.length}`, supplier_id: supplier?.id, supplier: supplier?.name, status: 'Draft', order_date: new Date().toISOString().slice(0, 10), expected_date: payload.expected_date || '', supplier_quote_ref: payload.supplier_quote_ref || '', landed_cost: 0, quality_rating: 0, total: items.reduce((sum, item) => sum + item.line_total, 0), items }; db.purchaseOrders = [po, ...db.purchaseOrders]; saveLocalDb(db); return { item: po, mode: 'demo' }
+  }
+}
+
+export async function getSupplierPerformance() {
+  try { return await backendRequest('/procurement/supplier-performance') }
+  catch (error) { if (error.status) throw error; const db = getLocalDb(); return { items: db.suppliers.map((supplier) => ({ supplier_id: supplier.id, supplier: supplier.name, orders: db.purchaseOrders.filter((po) => Number(po.supplier_id) === Number(supplier.id)).length, received: db.purchaseOrders.filter((po) => Number(po.supplier_id) === Number(supplier.id) && po.status === 'Received').length, on_time_rate: 100, quality_rating: 0 })), mode: 'demo' } }
+}
+
 export async function getReportSummary() {
   try { return await backendRequest('/reports/summary') }
   catch (error) {
@@ -758,6 +771,16 @@ export async function createSchedule(payload) {
 export async function updateSchedule(id, payload) {
   try { return await backendRequest(`/schedules/${id}`, { method: 'PATCH', body: JSON.stringify(payload) }) }
   catch (error) { if (error.status) throw error; const db = getLocalDb(); db.schedules = db.schedules.map((item) => Number(item.id) === Number(id) ? { ...item, ...payload } : item); saveLocalDb(db); return { item: db.schedules.find((item) => Number(item.id) === Number(id)), mode: 'demo' } }
+}
+
+export async function confirmSchedule(id) {
+  try { return await backendRequest(`/schedules/${id}/confirm`, { method: 'POST' }) }
+  catch (error) { if (error.status) throw error; const db = getLocalDb(); db.schedules = db.schedules.map((item) => Number(item.id) === Number(id) ? { ...item, customer_confirmed: true } : item); saveLocalDb(db); return { item: db.schedules.find((item) => Number(item.id) === Number(id)), mode: 'demo' } }
+}
+
+export async function saveScheduleProof(id, payload) {
+  try { return await backendRequest(`/schedules/${id}/proof`, { method: 'POST', body: JSON.stringify(payload) }) }
+  catch (error) { if (error.status) throw error; const db = getLocalDb(); db.schedules = db.schedules.map((item) => Number(item.id) === Number(id) ? { ...item, ...payload, status: 'Completed' } : item); saveLocalDb(db); return { item: db.schedules.find((item) => Number(item.id) === Number(id)), mode: 'demo' } }
 }
 
 export async function getWarehouses() {
@@ -1345,11 +1368,29 @@ export async function saveFieldProof(id, payload) {
   catch (error) { if (error.status) throw error; const db = getLocalDb(); db.fieldVisits = db.fieldVisits.map((item) => Number(item.id) === Number(id) ? { ...item, ...payload, status: 'Completed', offline_synced: false } : item); saveLocalDb(db); const queue = getFieldQueue(); queue.push({ operation: 'proof', id, payload }); saveFieldQueue(queue); return { item: db.fieldVisits.find((item) => Number(item.id) === Number(id)), mode: 'offline' } }
 }
 
+export async function checkInFieldVisit(id, payload = {}) {
+  try { return await backendRequest(`/field/${id}/check-in`, { method: 'POST', body: JSON.stringify(payload) }) }
+  catch (error) { if (error.status) throw error; return updateFieldVisit(id, { ...payload, status: 'On site', check_in_at: new Date().toISOString() }) }
+}
+
+export async function checkOutFieldVisit(id, payload = {}) {
+  try { return await backendRequest(`/field/${id}/check-out`, { method: 'POST', body: JSON.stringify(payload) }) }
+  catch (error) { if (error.status) throw error; return updateFieldVisit(id, { ...payload, status: 'Completed', check_out_at: new Date().toISOString() }) }
+}
+
+export async function recordFieldMaterial(id, payload) {
+  try { return await backendRequest(`/field/${id}/materials`, { method: 'POST', body: JSON.stringify(payload) }) }
+  catch (error) {
+    if (error.status) throw error
+    const db = getLocalDb(); const item = db.fieldVisits.find((visit) => Number(visit.id) === Number(id)); const movement = { id: Date.now(), created_at: new Date().toISOString(), ...payload, quantity: Number(payload.quantity) }; item.materials = [movement, ...(item.materials || [])]; item.offline_synced = false; saveLocalDb(db); const queue = getFieldQueue(); queue.push({ operation: 'material', id, payload }); saveFieldQueue(queue); return { item, mode: 'offline' }
+  }
+}
+
 export async function syncFieldQueue() {
   const queue = getFieldQueue(); if (!queue.length) return { synced: 0, remaining: 0, mode: 'demo' }
   let synced = 0
   for (const entry of queue) {
-    try { if (entry.operation === 'create') await backendRequest('/field', { method: 'POST', body: JSON.stringify(entry.payload) }); else if (entry.operation === 'proof') await backendRequest(`/field/${entry.id}/proof`, { method: 'POST', body: JSON.stringify(entry.payload) }); else await backendRequest(`/field/${entry.id}`, { method: 'PATCH', body: JSON.stringify(entry.payload) }); synced += 1 } catch (error) { if (error.status) throw error; break }
+    try { if (entry.operation === 'create') await backendRequest('/field', { method: 'POST', body: JSON.stringify(entry.payload) }); else if (entry.operation === 'proof') await backendRequest(`/field/${entry.id}/proof`, { method: 'POST', body: JSON.stringify(entry.payload) }); else if (entry.operation === 'material') await backendRequest(`/field/${entry.id}/materials`, { method: 'POST', body: JSON.stringify(entry.payload) }); else await backendRequest(`/field/${entry.id}`, { method: 'PATCH', body: JSON.stringify(entry.payload) }); synced += 1 } catch (error) { if (error.status) throw error; break }
   }
   const remaining = queue.slice(synced); saveFieldQueue(remaining); return { synced, remaining: remaining.length, mode: 'api' }
 }

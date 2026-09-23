@@ -561,6 +561,10 @@ class PurchaseOrder(TimestampMixin, db.Model):
     status = db.Column(db.String(40), nullable=False, default='Draft')
     order_date = db.Column(db.Date, nullable=False)
     expected_date = db.Column(db.Date)
+    supplier_quote_ref = db.Column(db.String(120), nullable=False, default='')
+    actual_delivery_date = db.Column(db.Date)
+    landed_cost = db.Column(db.Numeric(12, 2), nullable=False, default=0)
+    quality_rating = db.Column(db.Numeric(3, 1), nullable=False, default=0)
     notes = db.Column(db.Text, nullable=False, default='')
     created_by_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     supplier = db.relationship('Supplier')
@@ -571,7 +575,7 @@ class PurchaseOrder(TimestampMixin, db.Model):
         return sum((item.line_total for item in self.items), 0)
 
     def to_dict(self):
-        return {'id': self.id, 'po_number': self.po_number, 'supplier_id': self.supplier_id, 'supplier': self.supplier.name if self.supplier else None, 'status': self.status, 'order_date': self.order_date.isoformat(), 'expected_date': self.expected_date.isoformat() if self.expected_date else None, 'notes': self.notes, 'total': float(self.total), 'items': [item.to_dict() for item in self.items]}
+        return {'id': self.id, 'po_number': self.po_number, 'supplier_id': self.supplier_id, 'supplier': self.supplier.name if self.supplier else None, 'status': self.status, 'order_date': self.order_date.isoformat(), 'expected_date': self.expected_date.isoformat() if self.expected_date else None, 'supplier_quote_ref': self.supplier_quote_ref, 'actual_delivery_date': self.actual_delivery_date.isoformat() if self.actual_delivery_date else None, 'landed_cost': float(self.landed_cost or 0), 'quality_rating': float(self.quality_rating or 0), 'notes': self.notes, 'total': float(self.total), 'items': [item.to_dict() for item in self.items]}
 
 
 class PurchaseOrderItem(TimestampMixin, db.Model):
@@ -765,6 +769,8 @@ class DeliverySchedule(TimestampMixin, db.Model):
     scheduled_date = db.Column(db.Date, nullable=False)
     time_slot = db.Column(db.String(80), nullable=False, default='Morning')
     assigned_team = db.Column(db.String(160), nullable=False, default='')
+    eta = db.Column(db.String(80), nullable=False, default='')
+    customer_confirmed = db.Column(db.Boolean, nullable=False, default=False)
     status = db.Column(db.String(40), nullable=False, default='Scheduled')
     proof_url = db.Column(db.String(500), nullable=False, default='')
     notes = db.Column(db.Text, nullable=False, default='')
@@ -772,7 +778,7 @@ class DeliverySchedule(TimestampMixin, db.Model):
     order = db.relationship('Order')
 
     def to_dict(self):
-        return {'id': self.id, 'order_id': self.order_id, 'order_number': self.order.order_number if self.order else None, 'customer': self.order.customer_name if self.order else None, 'schedule_type': self.schedule_type, 'scheduled_date': self.scheduled_date.isoformat(), 'time_slot': self.time_slot, 'assigned_team': self.assigned_team, 'status': self.status, 'proof_url': self.proof_url, 'notes': self.notes}
+        return {'id': self.id, 'order_id': self.order_id, 'order_number': self.order.order_number if self.order else None, 'customer': self.order.customer_name if self.order else None, 'schedule_type': self.schedule_type, 'scheduled_date': self.scheduled_date.isoformat(), 'time_slot': self.time_slot, 'assigned_team': self.assigned_team, 'eta': self.eta, 'customer_confirmed': self.customer_confirmed, 'status': self.status, 'proof_url': self.proof_url, 'notes': self.notes}
 
 class Warehouse(TimestampMixin, db.Model):
     __tablename__ = 'warehouses'
@@ -1046,6 +1052,10 @@ class FieldVisit(TimestampMixin, db.Model):
     customer_signature = db.Column(db.String(255), nullable=False, default='')
     gps_lat = db.Column(db.Numeric(10, 7))
     gps_lng = db.Column(db.Numeric(10, 7))
+    check_in_at = db.Column(db.DateTime(timezone=True))
+    check_out_at = db.Column(db.DateTime(timezone=True))
+    time_minutes = db.Column(db.Integer, nullable=False, default=0)
+    materials_json = db.Column(db.Text, nullable=False, default='[]')
     notes = db.Column(db.Text, nullable=False, default='')
     offline_synced = db.Column(db.Boolean, nullable=False, default=True)
     created_by_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
@@ -1055,7 +1065,9 @@ class FieldVisit(TimestampMixin, db.Model):
     created_by = db.relationship('User', foreign_keys=[created_by_id])
 
     def to_dict(self):
-        return {'id': self.id, 'order_id': self.order_id, 'order_number': self.order.order_number if self.order else None, 'customer': self.order.customer_name if self.order else None, 'schedule_id': self.schedule_id, 'visit_type': self.visit_type, 'status': self.status, 'assigned_to_id': self.assigned_to_id, 'assigned_to': self.assigned_to.public_dict() if self.assigned_to else None, 'scheduled_date': self.scheduled_date.isoformat(), 'qr_token': self.qr_token, 'proof_photo_url': self.proof_photo_url, 'customer_signature': self.customer_signature, 'gps_lat': float(self.gps_lat) if self.gps_lat is not None else None, 'gps_lng': float(self.gps_lng) if self.gps_lng is not None else None, 'notes': self.notes, 'offline_synced': self.offline_synced}
+        try: materials = json.loads(self.materials_json or '[]')
+        except (TypeError, ValueError): materials = []
+        return {'id': self.id, 'order_id': self.order_id, 'order_number': self.order.order_number if self.order else None, 'customer': self.order.customer_name if self.order else None, 'schedule_id': self.schedule_id, 'visit_type': self.visit_type, 'status': self.status, 'assigned_to_id': self.assigned_to_id, 'assigned_to': self.assigned_to.public_dict() if self.assigned_to else None, 'scheduled_date': self.scheduled_date.isoformat(), 'qr_token': self.qr_token, 'proof_photo_url': self.proof_photo_url, 'customer_signature': self.customer_signature, 'gps_lat': float(self.gps_lat) if self.gps_lat is not None else None, 'gps_lng': float(self.gps_lng) if self.gps_lng is not None else None, 'check_in_at': self.check_in_at.isoformat() if self.check_in_at else None, 'check_out_at': self.check_out_at.isoformat() if self.check_out_at else None, 'time_minutes': self.time_minutes, 'materials': materials, 'notes': self.notes, 'offline_synced': self.offline_synced}
 
 
 class IntegrationConnection(TimestampMixin, db.Model):

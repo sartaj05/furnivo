@@ -93,6 +93,28 @@ def test_furniture_visual_configuration_can_be_saved_and_quoted(client, admin_he
     assert linked['quote_id'] == quote.json['item']['id']
 
 
+def test_execution_procurement_and_delivery_workflows(client, admin_headers):
+    visits = client.get('/api/field', headers=admin_headers)
+    visit_id = visits.json['items'][0]['id']
+    checked_in = client.post(f'/api/field/{visit_id}/check-in', headers=admin_headers, json={'gps_lat': 28.61, 'gps_lng': 77.21})
+    assert checked_in.status_code == 200
+    material = client.post(f'/api/field/{visit_id}/materials', headers=admin_headers, json={'name': 'Installation anchors', 'quantity': 4, 'movement': 'issue'})
+    assert material.status_code == 200
+    assert material.json['item']['materials'][0]['movement'] == 'issue'
+    checked_out = client.post(f'/api/field/{visit_id}/check-out', headers=admin_headers)
+    assert checked_out.status_code == 200
+    assert checked_out.json['item']['status'] == 'Completed'
+
+    performance = client.get('/api/procurement/supplier-performance', headers=admin_headers)
+    assert performance.status_code == 200
+    schedules = client.get('/api/schedules', headers=admin_headers)
+    schedule_id = schedules.json['items'][0]['id']
+    confirmed = client.post(f'/api/schedules/{schedule_id}/confirm', headers=admin_headers)
+    assert confirmed.status_code == 200
+    proof = client.post(f'/api/schedules/{schedule_id}/proof', headers=admin_headers, json={'proof_url': 'https://demo.invalid/proof.jpg'})
+    assert proof.status_code == 200
+    assert proof.json['item']['status'] == 'Completed'
+
 def test_planning_profitability_timeline_and_automation(client, admin_headers):
     planning = client.get('/api/business/planning', headers=admin_headers)
     assert planning.status_code == 200

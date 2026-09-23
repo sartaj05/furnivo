@@ -50,7 +50,7 @@ def create_purchase_order():
     items = payload.get('items') or []
     if not supplier or not items: return jsonify({'message': 'Supplier and at least one item are required.'}), 400
     try:
-        po = PurchaseOrder(po_number=next_po_number(), supplier_id=supplier.id, status='Draft', order_date=date.today(), expected_date=date.fromisoformat(payload['expected_date']) if payload.get('expected_date') else None, notes=str(payload.get('notes', '')).strip(), created_by_id=current_user().id)
+        po = PurchaseOrder(po_number=next_po_number(), supplier_id=supplier.id, status='Draft', order_date=date.today(), expected_date=date.fromisoformat(payload['expected_date']) if payload.get('expected_date') else None, supplier_quote_ref=str(payload.get('supplier_quote_ref', '')).strip(), notes=str(payload.get('notes', '')).strip(), created_by_id=current_user().id)
         for row in items:
             product = db.session.get(Product, int(row.get('product_id'))) if row.get('product_id') else None
             if not product: raise ValueError('Each purchase item needs a valid product.')
@@ -70,4 +70,41 @@ def update_purchase_order(po_id):
     item = db.get_or_404(PurchaseOrder, po_id); payload = request.get_json(silent=True) or {}
     if 'status' in payload: item.status = str(payload['status']).strip()
     if 'expected_date' in payload: item.expected_date = date.fromisoformat(payload['expected_date']) if payload['expected_date'] else None
+    if 'actual_delivery_date' in payload: item.actual_delivery_date = date.fromisoformat(payload['actual_delivery_date']) if payload['actual_delivery_date'] else None
+    if 'supplier_quote_ref' in payload: item.supplier_quote_ref = str(payload['supplier_quote_ref']).strip()
+    if 'landed_cost' in payload: item.landed_cost = Decimal(str(payload['landed_cost'] or 0))
+    if 'quality_rating' in payload: item.quality_rating = Decimal(str(payload['quality_rating'] or 0))
     db.session.commit(); record_audit(current_user().id, 'Purchase order updated', 'purchase_order', item.id, item.po_number); db.session.commit(); return jsonify({'item': item.to_dict(), 'mode': 'api'})
+
+
+@procurement_bp.post('/purchase-orders/from-planning')
+@roles_required('admin', 'sales')
+def create_purchase_order_from_planning():
+    payload = request.get_json(silent=True) or {}; suggestions = payload.get('items') or []
+    supplier = db.session.get(Supplier, int(payload.get('supplier_id'))) if payload.get('supplier_id') else None
+    if not supplier or not suggestions: return jsonify({'message': 'Supplier and planning suggestions are required.'}), 400
+    try:
+        po = PurchaseOrder(po_number=next_po_number(), supplier_id=supplier.id, status='Draft', order_date=date.today(), expected_date=date.fromisoformat(payload['expected_date']) if payload.get('expected_date') else None, supplier_quote_ref=str(payload.get('supplier_quote_ref', '')).strip(), notes=str(payload.get('notes', 'Created from production planning shortages.')).strip(), created_by_id=current_user().id)
+        for row in suggestions:
+            product = db.session.get(Product, int(row.get('product_id'))) if row.get('product_id') else None
+            quantity = Decimal(str(row.get('quantity', row.get('shortage_quantity', 0))))
+            unit_cost = Decimal(str(row.get('unit_cost', 0)))
+            if not product or quantity <= 0 or unit_cost < 0: raise ValueError('Every planning item needs a valid product, quantity, and cost.')
+            po.items.append(PurchaseOrderItem(product_id=product.id, description=product.name, quantity=quantity, unit_cost=unit_cost))
+        db.session.add(po); db.session.commit(); record_audit(current_user().id, 'Purchase order created from planning', 'purchase_order', po.id, po.po_number); db.session.commit()
+    except (ValueError, InvalidOperation) as exc:
+        db.session.rollback(); return jsonify({'message': str(exc)}), 400
+    return jsonify({'item': po.to_dict(), 'mode': 'api'}), 201
+
+
+@procurement_bp.get('/supplier-performance')
+@roles_required('admin', 'sales', 'designer')
+def supplier_performance():
+    suppliers = db.session.scalars(db.select(Supplier).order_by(Supplier.name)).all()
+    items = []
+    for supplier in suppliers:
+        orders = db.session.scalars(db.select(PurchaseOrder).where(PurchaseOrder.supplier_id == supplier.id)).all()
+        delivered = [po for po in orders if po.actual_delivery_date]
+        ratings = [float(po.quality_rating or 0) for po in orders if po.quality_rating]
+        items.append({'supplier_id': supplier.id, 'supplier': supplier.name, 'orders': len(orders), 'received': sum(po.status == 'Received' for po in orders), 'on_time_rate': round(sum(po.actual_delivery_date <= po.expected_date for po in delivered if po.expected_date) / max(sum(bool(po.expected_date) for po in delivered), 1) * 100, 1), 'quality_rating': round(sum(ratings) / len(ratings), 1) if ratings else 0})
+    return jsonify({'items': items, 'mode': 'api'})
