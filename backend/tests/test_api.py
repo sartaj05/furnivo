@@ -132,6 +132,17 @@ def test_automation_rules_can_be_toggled(client, admin_headers):
     assert updated.status_code == 200
 
 
+def test_supplier_portal_token_scopes_purchase_orders(client, admin_headers):
+    suppliers = client.get('/api/procurement/suppliers', headers=admin_headers)
+    supplier_id = suppliers.json['items'][0]['id']
+    invite = client.post('/api/procurement/supplier-portal/invites', headers=admin_headers, json={'supplier_id': supplier_id})
+    assert invite.status_code == 201
+    token = invite.json['token']
+    portal = client.get(f'/api/procurement/supplier-portal/{token}')
+    assert portal.status_code == 200
+    assert portal.json['supplier']['id'] == supplier_id
+
+
 def test_client_workspace_records_are_scoped(client):
     login = client.post('/api/auth/login', json={'email': 'client@furnivo.demo', 'password': 'client123'})
     headers = {'Authorization': f"Bearer {login.json['token']}"}

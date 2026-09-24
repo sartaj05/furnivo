@@ -43,6 +43,8 @@ import AccountingCenterPage from './pages/AccountingCenterPage'
 import BranchSecurityPage from './pages/BranchSecurityPage'
 import NotificationAutomationPage from './pages/NotificationAutomationEnhancedPage'
 import AutomationBuilderPage from './pages/AutomationBuilderPage'
+import SupplierPortalPage from './pages/SupplierPortalPage'
+import SupplierPortalPage from './pages/SupplierPortalPage'
 import RoutePlanningPage from './pages/RoutePlanningPage'
 import AIDesignAssistantPage from './pages/AIDesignAssistantPage'
 import ProductionGanttPage from './pages/ProductionGanttPage'
@@ -59,6 +61,8 @@ export default function App() {
       <Route path="/register" element={<RegisterPage />} />
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       <Route path="/reset-password" element={<ResetPasswordPage />} />
+      <Route path="/supplier-portal" element={<SupplierPortalPage />} />
+      <Route path="/supplier-portal" element={<SupplierPortalPage />} />
 
       <Route element={<ProtectedRoute />}>
         <Route path="/app" element={<DashboardPage />} />

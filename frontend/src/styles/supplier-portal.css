@@ -1,0 +1,5 @@
+.supplier-portal { min-height: 100vh; display: grid; place-items: center; padding: 28px; background: var(--paper); }
+.supplier-portal-card { width: min(760px, 100%); padding: 32px; background: var(--paper-2); border: 1px solid var(--line); border-radius: 18px; box-shadow: var(--shadow); }
+.supplier-order { display: flex; justify-content: space-between; gap: 14px; align-items: center; padding: 14px 0; border-top: 1px solid var(--line); }
+.supplier-order small { display: block; margin-top: 4px; color: var(--muted); }
+.supplier-order select { padding: 9px; border: 1px solid var(--line); border-radius: 8px; }

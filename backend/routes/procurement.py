@@ -1,12 +1,34 @@
+import base64
+import hashlib
+import hmac
+import time
 from datetime import date
 from decimal import Decimal, InvalidOperation
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, current_app, jsonify, request
 from ..extensions import db
 from ..models import Product, PurchaseOrder, PurchaseOrderItem, Supplier
 from ..utils import current_user, roles_required
 from ..services.audit import record_audit
 
 procurement_bp = Blueprint('procurement', __name__)
+
+
+def supplier_portal_token(supplier_id):
+    expires = int(time.time()) + 7 * 86400
+    value = f'{supplier_id}:{expires}'
+    signature = hmac.new(str(current_app.config['SECRET_KEY']).encode(), value.encode(), hashlib.sha256).hexdigest()[:32]
+    return base64.urlsafe_b64encode(f'{value}:{signature}'.encode()).decode().rstrip('=')
+
+
+def supplier_from_token(token):
+    try:
+        raw = base64.urlsafe_b64decode(str(token) + '=' * (-len(str(token)) % 4)).decode()
+        supplier_id, expires, signature = raw.split(':', 2)
+        value = f'{supplier_id}:{expires}'
+        expected = hmac.new(str(current_app.config['SECRET_KEY']).encode(), value.encode(), hashlib.sha256).hexdigest()[:32]
+        if int(expires) < int(time.time()) or not hmac.compare_digest(signature, expected): return None
+        return db.session.get(Supplier, int(supplier_id))
+    except (ValueError, TypeError, UnicodeDecodeError): return None
 
 
 def next_po_number():
@@ -108,3 +130,32 @@ def supplier_performance():
         ratings = [float(po.quality_rating or 0) for po in orders if po.quality_rating]
         items.append({'supplier_id': supplier.id, 'supplier': supplier.name, 'orders': len(orders), 'received': sum(po.status == 'Received' for po in orders), 'on_time_rate': round(sum(po.actual_delivery_date <= po.expected_date for po in delivered if po.expected_date) / max(sum(bool(po.expected_date) for po in delivered), 1) * 100, 1), 'quality_rating': round(sum(ratings) / len(ratings), 1) if ratings else 0})
     return jsonify({'items': items, 'mode': 'api'})
+
+
+@procurement_bp.post('/supplier-portal/invites')
+@roles_required('admin')
+def create_supplier_portal_invite():
+    payload = request.get_json(silent=True) or {}
+    supplier = db.session.get(Supplier, int(payload.get('supplier_id'))) if payload.get('supplier_id') else None
+    if not supplier: return jsonify({'message': 'Supplier not found.'}), 404
+    return jsonify({'supplier': supplier.to_dict(), 'token': supplier_portal_token(supplier.id), 'expires_in_days': 7, 'mode': 'api'}), 201
+
+
+@procurement_bp.get('/supplier-portal/<token>')
+def supplier_portal(token):
+    supplier = supplier_from_token(token)
+    if not supplier: return jsonify({'message': 'Supplier portal link is invalid or expired.'}), 401
+    orders = db.session.scalars(db.select(PurchaseOrder).where(PurchaseOrder.supplier_id == supplier.id).order_by(PurchaseOrder.id.desc())).unique().all()
+    return jsonify({'supplier': supplier.to_dict(), 'purchase_orders': [item.to_dict() for item in orders], 'mode': 'api'})
+
+
+@procurement_bp.patch('/supplier-portal/<token>/purchase-orders/<int:po_id>')
+def supplier_portal_update(token, po_id):
+    supplier = supplier_from_token(token); item = db.session.get(PurchaseOrder, po_id)
+    if not supplier: return jsonify({'message': 'Supplier portal link is invalid or expired.'}), 401
+    if not item or item.supplier_id != supplier.id: return jsonify({'message': 'Purchase order not found for this supplier.'}), 404
+    payload = request.get_json(silent=True) or {}
+    if 'status' in payload and str(payload['status']) in {'Confirmed', 'In transit', 'Received'}: item.status = str(payload['status'])
+    if 'expected_date' in payload: item.expected_date = date.fromisoformat(payload['expected_date']) if payload['expected_date'] else None
+    db.session.commit()
+    return jsonify({'item': item.to_dict(), 'mode': 'api'})

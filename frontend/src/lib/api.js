@@ -788,6 +788,36 @@ export async function updatePurchaseOrder(id, payload) {
   catch (error) { if (error.status) throw error; const db = getLocalDb(); db.purchaseOrders = db.purchaseOrders.map((item) => Number(item.id) === Number(id) ? { ...item, ...payload } : item); saveLocalDb(db); return { item: db.purchaseOrders.find((item) => Number(item.id) === Number(id)), mode: 'demo' } }
 }
 
+export async function createSupplierPortalInvite(supplier_id) {
+  try { return await backendRequest('/procurement/supplier-portal/invites', { method: 'POST', body: JSON.stringify({ supplier_id }) }) }
+  catch (error) { if (error.status) throw error; return { token: `demo-${supplier_id}`, expires_in_days: 7, mode: 'demo' } }
+}
+
+export async function getSupplierPortal(token) {
+  try { return await backendRequest(`/procurement/supplier-portal/${encodeURIComponent(token)}`) }
+  catch (error) { if (error.status) throw error; const db = getLocalDb(); const order = db.purchaseOrders[0]; return { supplier: db.suppliers.find((item) => Number(item.id) === Number(order?.supplier_id)) || db.suppliers[0], purchase_orders: db.purchaseOrders, mode: 'demo' } }
+}
+
+export async function updateSupplierPortalOrder(token, id, payload) {
+  try { return await backendRequest(`/procurement/supplier-portal/${encodeURIComponent(token)}/purchase-orders/${id}`, { method: 'PATCH', body: JSON.stringify(payload) }) }
+  catch (error) { if (error.status) throw error; const db = getLocalDb(); const item = db.purchaseOrders.find((order) => Number(order.id) === Number(id)); Object.assign(item, payload); saveLocalDb(db); return { item, mode: 'demo' } }
+}
+
+export async function createSupplierPortalInvite(supplier_id) {
+  try { return await backendRequest('/procurement/supplier-portal/invites', { method: 'POST', body: JSON.stringify({ supplier_id }) }) }
+  catch (error) { if (error.status) throw error; return { token: `demo-${supplier_id}`, expires_in_days: 7, mode: 'demo' } }
+}
+
+export async function getSupplierPortal(token) {
+  try { return await backendRequest(`/procurement/supplier-portal/${encodeURIComponent(token)}`) }
+  catch (error) { if (error.status) throw error; const db = getLocalDb(); const order = db.purchaseOrders[0]; return { supplier: db.suppliers.find((item) => Number(item.id) === Number(order?.supplier_id)) || db.suppliers[0], purchase_orders: db.purchaseOrders, mode: 'demo' } }
+}
+
+export async function updateSupplierPortalOrder(token, id, payload) {
+  try { return await backendRequest(`/procurement/supplier-portal/${encodeURIComponent(token)}/purchase-orders/${id}`, { method: 'PATCH', body: JSON.stringify(payload) }) }
+  catch (error) { if (error.status) throw error; const db = getLocalDb(); const item = db.purchaseOrders.find((order) => Number(order.id) === Number(id)); Object.assign(item, payload); saveLocalDb(db); return { item, mode: 'demo' } }
+}
+
 export async function createPurchaseOrderFromPlanning(payload) {
   try { return await backendRequest('/procurement/purchase-orders/from-planning', { method: 'POST', body: JSON.stringify(payload) }) }
   catch (error) {
