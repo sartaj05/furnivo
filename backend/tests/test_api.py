@@ -107,6 +107,17 @@ def test_backup_verification_is_admin_only(client, admin_headers):
     assert forbidden.status_code in {401, 404, 422}
 
 
+def test_notification_provider_status_and_sms_configuration(client, admin_headers):
+    status = client.get('/api/notifications/provider-status', headers=admin_headers)
+    assert status.status_code == 200
+    assert set(status.json['channels']) >= {'email', 'whatsapp', 'sms'}
+    notifications = client.get('/api/notifications', headers=admin_headers)
+    item_id = notifications.json['items'][0]['id']
+    sms = client.post(f'/api/notifications/{item_id}/deliver', headers=admin_headers, json={'channel': 'sms', 'recipient': '+919999999999'})
+    assert sms.status_code == 200
+    assert sms.json['item']['status'] == 'pending_configuration'
+
+
 def test_client_workspace_records_are_scoped(client):
     login = client.post('/api/auth/login', json={'email': 'client@furnivo.demo', 'password': 'client123'})
     headers = {'Authorization': f"Bearer {login.json['token']}"}

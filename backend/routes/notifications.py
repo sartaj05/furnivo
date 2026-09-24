@@ -1,11 +1,17 @@
 from flask import Blueprint, jsonify, request
 from ..extensions import db
 from ..models import Notification, NotificationDelivery, User
-from ..services.notifications import deliver_notification, retry_pending_deliveries
+from ..services.notifications import deliver_notification, notification_provider_status, retry_pending_deliveries
 from ..services.audit import record_audit
 from ..utils import current_user, roles_required
 
 notifications_bp = Blueprint('notifications', __name__)
+
+
+@notifications_bp.get('/provider-status')
+@roles_required('admin', 'sales')
+def provider_status():
+    return jsonify(notification_provider_status())
 
 
 @notifications_bp.get('')
@@ -37,8 +43,8 @@ def deliver(notification_id):
     payload = request.get_json(silent=True) or {}
     channel = str(payload.get('channel', '')).strip().lower()
     recipient = str(payload.get('recipient') or (current_user().email if channel == 'email' else '')).strip()
-    if channel not in {'email', 'whatsapp'} or not recipient:
-        return jsonify({'message': 'Choose email or WhatsApp and provide a recipient.'}), 400
+    if channel not in {'email', 'whatsapp', 'sms'} or not recipient:
+        return jsonify({'message': 'Choose email, WhatsApp or SMS and provide a recipient.'}), 400
     delivery = deliver_notification(item, channel, recipient)
     record_audit(current_user().id, 'Notification delivery requested', 'notification', item.id, f'{channel} to {recipient}'); db.session.commit()
     return jsonify({'item': delivery.to_dict(), 'mode': 'api'})
@@ -71,7 +77,7 @@ def retry_pending():
 def broadcast_notification():
     payload = request.get_json(silent=True) or {}; title = str(payload.get('title', '')).strip(); body = str(payload.get('body', '')).strip(); channel = str(payload.get('channel', 'in_app')).lower()
     if not title or not body: return jsonify({'message': 'Title and body are required.'}), 400
-    if channel not in {'in_app', 'email', 'whatsapp'}: return jsonify({'message': 'Channel must be in_app, email, or whatsapp.'}), 400
+    if channel not in {'in_app', 'email', 'whatsapp', 'sms'}: return jsonify({'message': 'Channel must be in_app, email, WhatsApp or SMS.'}), 400
     roles = payload.get('roles') if isinstance(payload.get('roles'), list) else ['admin', 'sales', 'designer']
     users = db.session.scalars(db.select(User).where(User.role.in_(roles), User.is_active.is_(True))).all(); items = []; deliveries = []
     for user in users:

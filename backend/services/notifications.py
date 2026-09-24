@@ -9,6 +9,13 @@ from sqlalchemy import or_
 from ..models import Notification, NotificationDelivery, QuoteClientAccess, User
 
 
+def notification_provider_status():
+    email = bool(os.getenv('NOTIFICATION_EMAIL_URL') or os.getenv('SMTP_HOST'))
+    whatsapp = bool(os.getenv('WHATSAPP_WEBHOOK_URL'))
+    sms = bool(os.getenv('SMS_WEBHOOK_URL'))
+    return {'channels': {'in_app': {'configured': True, 'provider': 'Furnivo'}, 'email': {'configured': email, 'provider': 'HTTP provider or SMTP'}, 'whatsapp': {'configured': whatsapp, 'provider': 'Webhook'}, 'sms': {'configured': sms, 'provider': 'Webhook'}}, 'retry_policy': {'max_attempts': 4, 'backoff_minutes': [5, 10, 20, 40]}, 'mode': 'api'}
+
+
 def create_notification(user_id, title, body, notification_type='info', related_type='', related_id=''):
     if not user_id:
         return None
@@ -73,6 +80,15 @@ def deliver_notification(notification, channel, recipient, existing_delivery=Non
             with urllib.request.urlopen(request, timeout=10) as response:
                 if response.status >= 300:
                     raise RuntimeError(f'WhatsApp provider returned HTTP {response.status}.')
+        elif channel == 'sms':
+            webhook = os.getenv('SMS_WEBHOOK_URL', '')
+            if not webhook:
+                raise RuntimeError('SMS_WEBHOOK_URL is not configured.')
+            payload = json.dumps({'to': recipient, 'message': notification.body, 'idempotency_key': f'notification-delivery-{delivery.id}'}).encode()
+            provider_request = urllib.request.Request(webhook, data=payload, headers={'Content-Type': 'application/json'}, method='POST')
+            with urllib.request.urlopen(provider_request, timeout=10) as response:
+                if response.status >= 300:
+                    raise RuntimeError(f'SMS provider returned HTTP {response.status}.')
         else:
             raise RuntimeError('Unsupported notification channel.')
         delivery.status = 'sent'

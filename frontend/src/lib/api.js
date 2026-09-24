@@ -1515,6 +1515,11 @@ export async function getNotificationDeliverySummary() {
   catch (error) { if (error.status) throw error; return { summary: { sent: 0, pending: 0, pending_configuration: 0, failed: 0 }, items: [], mode: 'demo' } }
 }
 
+export async function getNotificationProviderStatus() {
+  try { return await backendRequest('/notifications/provider-status') }
+  catch (error) { if (error.status) throw error; return { channels: { in_app: { configured: true, provider: 'Furnivo' }, email: { configured: false, provider: 'Demo fallback' }, whatsapp: { configured: false, provider: 'Demo fallback' }, sms: { configured: false, provider: 'Demo fallback' } }, retry_policy: { max_attempts: 4, backoff_minutes: [5, 10, 20, 40] }, mode: 'demo' } }
+}
+
 export async function getBranches() {
   try { return await backendRequest('/branches') }
   catch (error) { if (error.status) throw error; const db = getLocalDb(); db.branches = db.branches || [{ id: 1, name: 'Delhi Studio', code: 'DEL', address: 'New Delhi', manager: 'Aarav Admin', is_active: true }]; saveLocalDb(db); return { items: db.branches, mode: 'demo' } }

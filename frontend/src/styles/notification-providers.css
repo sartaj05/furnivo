@@ -1,0 +1,5 @@
+.provider-grid { display: grid; gap: 8px; margin-bottom: 14px; }
+.provider-grid .panel-heading { margin-bottom: 0; }
+.provider-row { display: flex; justify-content: space-between; gap: 12px; padding: 10px 0; border-top: 1px solid var(--line); text-transform: capitalize; }
+.provider-row span, .provider-row small { display: block; }
+.provider-row small { margin-top: 3px; color: var(--muted); text-transform: none; font-size: 11px; }
