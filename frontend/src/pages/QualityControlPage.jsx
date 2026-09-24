@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react'
 import AppShell from '../components/AppShell'
-import { createQualityInspection, getProductionInspections, getProductionJobs, uploadQualityInspectionPhoto } from '../lib/api'
+import { createQualityInspection, getProductionJobs, getQualityInspections, uploadQualityInspectionPhoto } from '../lib/api'
 
 export default function QualityControlPage() {
   const [jobs, setJobs] = useState([]); const [inspections, setInspections] = useState([]); const [form, setForm] = useState({ job_id: '', status: 'Passed', notes: '', defects: '', rework_cost: 0 }); const [photo, setPhoto] = useState(''); const [message, setMessage] = useState(''); const [error, setError] = useState('')
-  async function loadInspections(jobId) { if (!jobId) return setInspections([]); const result = await getProductionInspections(jobId); setInspections(result.items || []) }
+  async function loadInspections(jobId) { if (!jobId) return setInspections([]); const result = await getQualityInspections(jobId); setInspections(result.items || []) }
   useEffect(() => { getProductionJobs().then((result) => setJobs(result.items || [])).catch((err) => setError(err.message)) }, [])
   async function submit(event) { event.preventDefault(); setError(''); try { const result = await createQualityInspection(form.job_id, { status: form.status, notes: form.notes, rework_cost: Number(form.rework_cost || 0), photo_url: photo, checklist: [{ item: 'Dimensions and finish', passed: form.status === 'Passed' }, { item: 'Packaging and fittings', passed: form.status === 'Passed' }], defects: form.defects ? [form.defects] : [] }); setMessage(result.mode === 'demo' ? 'Inspection saved in demo mode.' : 'Quality inspection recorded.'); setForm({ ...form, notes: '', defects: '', rework_cost: 0 }); setInspections((items) => [result.item, ...items]) } catch (err) { setError(err.message) } }
   async function choosePhoto(event) { const file = event.target.files?.[0]; if (!file) return; try { const result = await uploadQualityInspectionPhoto(file, 'pending'); setPhoto(result.item.url); setMessage('Inspection evidence photo ready.'); setError('') } catch (err) { setError(err.message) } }
