@@ -38,6 +38,18 @@ def upload_field_proof():
     return jsonify({'item': result, 'mode': 'api'}), 201
 
 
+@uploads_bp.post('/design-room')
+@roles_required('admin', 'sales', 'designer', 'client')
+def upload_design_room():
+    try:
+        result = save_asset(request.files.get('file'), folder='furnivo/design-rooms')
+    except ValueError as exc:
+        return jsonify({'message': str(exc)}), 400
+    asset = register_asset(result, 'design_room', request.form.get('brief_id', ''))
+    result['asset_id'] = asset.id; result['entity_type'] = asset.entity_type
+    return jsonify({'item': result, 'mode': 'api'}), 201
+
+
 @uploads_bp.get('/assets')
 @roles_required('admin')
 def list_assets():

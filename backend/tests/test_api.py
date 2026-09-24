@@ -1,5 +1,6 @@
 import hashlib
 import hmac
+import io
 import json
 import time
 
@@ -420,6 +421,16 @@ def test_ai_collaboration_predictive_and_tenant_features(client, admin_headers):
     switched = client.post(f'/api/tenants/{tenant_id}/switch', headers=admin_headers)
     assert switched.status_code == 200
     assert switched.json['active_tenant_id'] == tenant_id
+
+
+def test_ai_design_room_upload_and_enriched_brief(client, admin_headers):
+    upload = client.post('/api/uploads/design-room', headers=admin_headers, data={'file': (io.BytesIO(b'fake-image'), 'room.jpg')}, content_type='multipart/form-data')
+    assert upload.status_code == 201
+    assert upload.json['item']['entity_type'] == 'design_room'
+    design = client.post('/api/design-assistant', headers=admin_headers, json={'room': 'Bedroom', 'style': 'Japandi', 'material': 'Oak', 'color': 'Ivory', 'budget': 120000, 'image_url': upload.json['item']['url']})
+    assert design.status_code == 200
+    assert design.json['brief']['design_inputs']['image_url'] == upload.json['item']['url']
+    assert design.json['brief']['next_steps']
 
 
 def test_api_preserves_expected_http_errors_and_demo_ai_budget_order(client, admin_headers):

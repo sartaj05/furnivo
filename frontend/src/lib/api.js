@@ -1225,6 +1225,22 @@ export async function uploadFieldProof(file, visitId) {
   return { item: { url, provider: 'browser-demo' }, mode: 'demo' }
 }
 
+export async function uploadDesignRoomImage(file) {
+  if (API_URL) {
+    try {
+      const token = localStorage.getItem('furnivo-token'); const body = new FormData(); body.append('file', file)
+      const response = await fetch(`${API_URL}/uploads/design-room`, { method: 'POST', headers: token ? { Authorization: `Bearer ${token}` } : {}, body })
+      const data = await response.json().catch(() => ({}))
+      if (!response.ok) { const error = new Error(data.message || 'Room image upload failed'); error.status = response.status; throw error }
+      if (data.item?.url?.startsWith('/')) data.item.url = `${API_URL.replace(/\/api$/, '')}${data.item.url}`
+      return data
+    } catch (error) { if (error.status) throw error; setDataMode('demo') }
+  }
+  if (file.size > 1_500_000) throw new Error('Demo image must be under 1.5 MB.')
+  const url = await new Promise((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(reader.result); reader.onerror = reject; reader.readAsDataURL(file) })
+  return { item: { url, provider: 'browser-demo', original_filename: file.name }, mode: 'demo' }
+}
+
 export async function downloadQuotePdf(quote) {
   if (API_URL && quote.database_id) {
     try {
@@ -1605,7 +1621,7 @@ export async function updateProductionTask(id, payload) {
 
 export async function createDesignBrief(payload) {
   try { return await backendRequest('/design-assistant', { method: 'POST', body: JSON.stringify(payload) }) }
-  catch (error) { if (error.status) throw error; const db = getLocalDb(); const products = db.products.filter((item) => !payload.budget || Number(item.price) <= Number(payload.budget)).slice(0, 6); return { brief: { title: `${String(payload.style || 'Warm modern').replace(/^./, (value) => value.toUpperCase())} ${payload.room || 'room'} concept`, layout: ['Anchor a primary seating zone.', 'Keep clear circulation around the room.', 'Layer accents through textiles and warm lighting.'], moodboard: [{ label: 'Palette', value: payload.color || 'neutral' }, { label: 'Style', value: payload.style || 'warm modern' }], recommendations: products.map((product) => ({ product, reason: 'Matches the selected room and budget.' })), provider: 'demo-fallback' }, mode: 'demo' } }
+  catch (error) { if (error.status) throw error; const db = getLocalDb(); const products = db.products.filter((item) => !payload.budget || Number(item.price) <= Number(payload.budget)).slice(0, 6); return { brief: { title: `${String(payload.style || 'Warm modern').replace(/^./, (value) => value.toUpperCase())} ${payload.room || 'room'} concept`, layout: ['Anchor a primary seating zone.', 'Keep clear circulation around the room.', 'Layer accents through textiles and warm lighting.'], moodboard: [{ label: 'Palette', value: payload.color || 'neutral' }, { label: 'Style', value: payload.style || 'warm modern' }, { label: 'Material', value: payload.material || 'Natural wood' }], design_inputs: payload, confidence: 'demo', next_steps: ['Review the recommended products.', 'Save the selected configuration to a quotation.', 'Confirm dimensions and finish with the designer.'], recommendations: products.map((product) => ({ product, reason: 'Matches the selected room and budget.' })), provider: 'demo-fallback' }, mode: 'demo' } }
 }
 
 export async function getLiveUpdates(since = '') {
