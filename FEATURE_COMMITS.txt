@@ -20,3 +20,4 @@ fix: preserve API HTTP errors and harden seeded demo workspace behavior
 fix: support direct backend app execution
 fix: repair legacy SQLite schema on local startup
 feat: add password recovery and authenticated landing redirects
+fix: preserve landing section navigation across HashRouter refreshes

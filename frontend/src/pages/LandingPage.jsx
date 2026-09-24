@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, Navigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 
@@ -29,6 +29,27 @@ export default function LandingPage() {
   const user = useAuth()?.user
   const [menuOpen, setMenuOpen] = useState(false)
 
+  useEffect(() => {
+    const sectionId = new URLSearchParams(window.location.search).get('section')
+    if (!sectionId) return undefined
+
+    const timer = window.setTimeout(() => {
+      document.getElementById(sectionId)?.scrollIntoView({ block: 'start' })
+    }, 0)
+
+    return () => window.clearTimeout(timer)
+  }, [])
+
+  const navigateToSection = (event, sectionId) => {
+    event.preventDefault()
+    setMenuOpen(false)
+
+    const url = new URL(window.location.href)
+    url.searchParams.set('section', sectionId)
+    window.history.replaceState(null, '', url.toString())
+    document.getElementById(sectionId)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
+
   if (user) return <Navigate to="/app" replace />
 
   return (
@@ -40,9 +61,9 @@ export default function LandingPage() {
         </Link>
 
         <div className={menuOpen ? "nav-links nav-links-open" : "nav-links"}>
-          <a href="#platform" onClick={() => setMenuOpen(false)}>Platform</a>
-          <a href="#trust" onClick={() => setMenuOpen(false)}>Why Furnivo</a>
-          <a href="#contact" onClick={() => setMenuOpen(false)}>Contact</a>
+          <a href="/?section=platform" onClick={(event) => navigateToSection(event, 'platform')}>Platform</a>
+          <a href="/?section=trust" onClick={(event) => navigateToSection(event, 'trust')}>Why Furnivo</a>
+          <a href="/?section=contact" onClick={(event) => navigateToSection(event, 'contact')}>Contact</a>
           <Link className="mobile-menu-link" to="/login">Sign in</Link>
           <Link className="mobile-menu-link" to="/register">Register</Link>
         </div>
@@ -78,7 +99,7 @@ export default function LandingPage() {
             </p>
             <div className="hero-actions">
               <Link className="button" to="/register">Create free demo account</Link>
-              <a className="button button-ghost" href="#platform">See platform</a>
+              <a className="button button-ghost" href="/?section=platform" onClick={(event) => navigateToSection(event, 'platform')}>See platform</a>
             </div>
             <div className="proof-row">
               <span>Catalog</span>
