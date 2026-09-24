@@ -105,4 +105,5 @@ These are not implemented as production features yet:
 - Additional smoke checks pass for invoices/payments, procurement, reports, audit logs and notification delivery configuration handling.
 - New API tests pass for AI briefs, live updates, predictive analytics, tenant creation and tenant switching.
 - Full route smoke checks cover 58 static GET endpoints; expected 404/405 responses now remain proper client errors instead of being converted to 500 responses.
+- Local startup was verified against the legacy SQLite database: pending migration metadata and missing model columns were repaired without deleting existing records.
 - The smoke test uses development defaults; replace `SECRET_KEY` and `JWT_SECRET_KEY` with long production secrets before deployment.

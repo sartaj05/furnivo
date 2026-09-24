@@ -113,6 +113,7 @@ python app.py
 For production, use the configured Gunicorn/Render start command instead of Flask's development server.
 
 The demo data is seeded automatically when `AUTO_SEED=true`.
+On local development SQLite, startup also applies pending migrations and repairs columns from older demo databases before seeding. Production keeps migrations explicit through the Render start command.
 
 Create `frontend/.env`:
 

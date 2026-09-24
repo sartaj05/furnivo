@@ -6,6 +6,7 @@ from pathlib import Path
 from uuid import uuid4
 from flask import Flask, g, jsonify, request, send_from_directory
 from flask_cors import CORS
+from sqlalchemy import inspect, text
 from werkzeug.exceptions import HTTPException
 
 # Support both `python -m backend.app` from the project root and
@@ -19,6 +20,72 @@ from .extensions import db, jwt, migrate
 from .services.health import run_health_check
 
 
+def prepare_development_schema(app):
+    """Bring legacy local SQLite files up to the current migration head.
+
+    Older local versions created tables with ``db.create_all()`` and therefore
+    have no Alembic version row. We know those files contain the pre-tenant
+    production schema, so stamp that revision and apply only the pending
+    tenant/rework migration. Empty databases still run the full migration set.
+    Production uses the explicit deployment migration command instead.
+    """
+    if not app.config.get('AUTO_SEED') or app.config.get('ENVIRONMENT') not in {'development', 'local'}:
+        return
+    with app.app_context():
+        tables = set(inspect(db.engine).get_table_names())
+        from flask_migrate import stamp, upgrade
+        if not tables:
+            upgrade()
+            return
+        if 'alembic_version' not in tables:
+            expected_legacy_tables = {'users', 'production_jobs', 'production_tasks', 'quality_inspections'}
+            if not expected_legacy_tables.issubset(tables):
+                raise RuntimeError('Legacy database schema detected. Back up the database and run `flask --app backend.app db upgrade` manually before starting the app.')
+            stamp(revision='g6b9d5e23f71')
+        upgrade()
+
+
+def repair_legacy_sqlite_columns(app):
+    """Add columns missing from very old local SQLite tables.
+
+    ``create_all`` creates new tables but never alters existing ones. This
+    keeps old demo databases usable after several feature migrations. It is
+    intentionally limited to development SQLite and only adds columns from
+    the current SQLAlchemy metadata; production remains migration-driven.
+    """
+    if not app.config.get('AUTO_SEED') or app.config.get('ENVIRONMENT') not in {'development', 'local'}:
+        return
+    if not str(app.config.get('SQLALCHEMY_DATABASE_URI', '')).startswith('sqlite:'):
+        return
+    engine = db.engine
+    inspector = inspect(engine)
+    existing_tables = set(inspector.get_table_names())
+    quote = engine.dialect.identifier_preparer.quote
+
+    def default_sql(column):
+        type_name = column.type.__class__.__name__.lower()
+        if 'date' in type_name or 'time' in type_name:
+            return 'CURRENT_TIMESTAMP' if 'time' in type_name else 'CURRENT_DATE'
+        if any(token in type_name for token in ('integer', 'numeric', 'decimal', 'float', 'real')):
+            return '0'
+        if 'boolean' in type_name:
+            return '0'
+        return "''"
+
+    with engine.begin() as connection:
+        for table in db.metadata.sorted_tables:
+            if table.name not in existing_tables:
+                continue
+            existing_columns = {column['name'] for column in inspect(connection).get_columns(table.name)}
+            for column in table.columns:
+                if column.name in existing_columns or column.primary_key:
+                    continue
+                sql = f'ALTER TABLE {quote(table.name)} ADD COLUMN {quote(column.name)} {column.type.compile(dialect=engine.dialect)}'
+                if not column.nullable:
+                    sql += f' NOT NULL DEFAULT {default_sql(column)}'
+                connection.execute(text(sql))
+
+
 def create_app(config_object=Config):
     app = Flask(__name__)
     app.config.from_object(config_object)
@@ -27,7 +94,7 @@ def create_app(config_object=Config):
 
     db.init_app(app)
     jwt.init_app(app)
-    migrate.init_app(app, db)
+    migrate.init_app(app, db, directory=str(Path(app.root_path).parent / 'migrations'))
     CORS(
         app,
         resources={r'/api/*': {'origins': app.config['FRONTEND_ORIGINS']}},
@@ -145,6 +212,8 @@ def create_app(config_object=Config):
 
     if app.config.get('AUTO_SEED'):
         with app.app_context():
+            prepare_development_schema(app)
+            repair_legacy_sqlite_columns(app)
             from .seed import seed_database
             seed_database()
 
