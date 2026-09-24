@@ -72,6 +72,97 @@ A responsive furniture / interiors / building-material sales suite built with Re
 
 > Demo passwords are intentionally simple. Change/remove these seed credentials before a real deployment.
 
+## Fresh setup on another computer
+
+These steps assume Windows PowerShell and start from the project root. The same project also works on macOS/Linux with the equivalent virtual-environment activation command.
+
+### 1. Create the Python environment
+
+```powershell
+cd "D:\New folder (3)\furnivo"
+py -3.11 -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
+python -m pip install -r backend\requirements.txt
+```
+
+If PowerShell blocks activation, run this once in a PowerShell window for your user account:
+
+```powershell
+Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
+```
+
+SQLite is the default local database, so no separate database server is required. Optional backend settings are documented in [backend/.env.example](backend/.env.example).
+
+### 2. Apply database migrations
+
+Run this from the project root using the project virtual environment:
+
+```powershell
+.\.venv\Scripts\python.exe -m flask --app backend.app db upgrade
+```
+
+The current contact-inquiry migration completed successfully with:
+
+```text
+Running upgrade i8d1f7a45b93 -> j9e2b8c56d04, add public contact fields to leads
+```
+
+If the terminal is already inside the `backend` directory, use `app` instead of `backend.app`:
+
+```powershell
+..\.venv\Scripts\python.exe -m flask --app app db upgrade
+```
+
+Do not use `--app backend.app` while already inside `backend`; that makes Flask search for `backend.backend.app`.
+
+### 3. Start the Flask backend
+
+From the project root:
+
+```powershell
+.\.venv\Scripts\python.exe -m backend.app
+```
+
+The API runs at `http://localhost:5000`. The health endpoint is `http://localhost:5000/api/health`.
+
+Alternatively, from inside `backend`:
+
+```powershell
+..\.venv\Scripts\python.exe app.py
+```
+
+For local development, `AUTO_SEED=true` creates or updates demo data. For production, use `AUTO_SEED=false` and run migrations explicitly.
+
+### 4. Start the React frontend
+
+Open a second terminal from the project root:
+
+```powershell
+cd frontend
+npm install
+npm run dev
+```
+
+Open `http://localhost:5173`. To connect React to the Flask API, create `frontend/.env` with:
+
+```env
+VITE_API_URL=http://localhost:5000/api
+```
+
+If `VITE_API_URL` is missing or the API is unavailable, the frontend automatically uses its local demo data and stores changes in browser `localStorage`.
+
+### 5. Verify the installation
+
+Run these checks from the project root:
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest -q backend\tests
+cd frontend
+npm test -- --run
+npm run build
+```
+
 ## Frontend-only demo
 
 ```bash
