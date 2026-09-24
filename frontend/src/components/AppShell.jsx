@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import { useModal } from '../context/ModalContext'
 import { deliverNotification, getNotifications, logoutSession, markNotificationRead, retryNotificationDelivery } from '../lib/api'
 
 const navItems = [
@@ -52,6 +53,7 @@ const navItems = [
 
 export default function AppShell({ title, eyebrow, actions, children }) {
   const { user, signOut, mode } = useAuth()
+  const { showModal } = useModal()
   const navigate = useNavigate()
   const [notifications, setNotifications] = useState([])
   const [showNotifications, setShowNotifications] = useState(false)
@@ -80,7 +82,11 @@ export default function AppShell({ title, eyebrow, actions, children }) {
     if (!recipient) return
     const result = await deliverNotification(item.id, channel, recipient)
     setNotifications((current) => current.map((notification) => notification.id === item.id ? { ...notification, delivery_status: result.item?.status || 'queued', delivery_id: result.item?.id } : notification))
-    window.alert(`${channel === 'email' ? 'Email' : 'WhatsApp'} delivery requested.`)
+    showModal({
+      type: 'success',
+      title: 'Delivery requested',
+      message: `${channel === 'email' ? 'Email' : 'WhatsApp'} delivery was queued successfully.`,
+    })
   }
 
   async function retryDelivery(item) {
@@ -92,6 +98,7 @@ export default function AppShell({ title, eyebrow, actions, children }) {
   async function logout() {
     await logoutSession().catch(() => {})
     signOut()
+    showModal({ type: 'success', title: 'Signed out', message: 'You have been signed out safely.' })
     navigate('/')
   }
 

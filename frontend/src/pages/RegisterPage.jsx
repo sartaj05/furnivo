@@ -1,10 +1,12 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import { useModal } from '../context/ModalContext'
 
 export default function RegisterPage() {
   const navigate = useNavigate()
   const { signUp } = useAuth()
+  const { showModal } = useModal()
   const [form, setForm] = useState({ name: '', email: '', password: '', confirmPassword: '' })
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
@@ -26,6 +28,7 @@ export default function RegisterPage() {
     setLoading(true)
     try {
       await signUp(form.name, form.email, form.password)
+      showModal({ type: 'success', title: 'Account created', message: 'Your Furnivo workspace is ready to use.' })
       navigate('/app')
     } catch (err) {
       setError(err.message || 'Unable to create account')

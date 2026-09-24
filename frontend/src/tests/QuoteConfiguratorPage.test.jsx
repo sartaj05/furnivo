@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { describe, expect, it, vi } from 'vitest'
 import QuoteConfiguratorPage from '../pages/QuoteConfiguratorPage'
+import { ModalProvider } from '../context/ModalContext'
 
 vi.mock('../context/AuthContext', () => ({
   useAuth: () => ({ user: { id: 2, name: 'Meera Sales', email: 'sales@furnivo.demo', role: 'sales' }, mode: 'demo', signOut: vi.fn() }),
@@ -9,7 +10,7 @@ vi.mock('../context/AuthContext', () => ({
 
 describe('QuoteConfiguratorPage', () => {
   it('loads the visual furniture configuration workspace', async () => {
-    render(<MemoryRouter><QuoteConfiguratorPage /></MemoryRouter>)
+    render(<ModalProvider><MemoryRouter><QuoteConfiguratorPage /></MemoryRouter></ModalProvider>)
     expect(screen.getByText('Furniture visual configurator')).toBeInTheDocument()
     await waitFor(() => expect(screen.getByText('Resume a configuration')).toBeInTheDocument())
     expect(screen.getByText('Saved specifications')).toBeInTheDocument()
