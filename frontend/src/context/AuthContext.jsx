@@ -39,7 +39,8 @@ export function AuthProvider({ children }) {
   }
 
   async function signUp(name, email, password) {
-    return persistSession(await api.register(name, email, password))
+    // Registration creates credentials only. The user must explicitly sign in.
+    return api.register(name, email, password)
   }
 
   function signOut() {

@@ -28,8 +28,8 @@ export default function RegisterPage() {
     setLoading(true)
     try {
       await signUp(form.name, form.email, form.password)
-      showModal({ type: 'success', title: 'Account created', message: 'Your Furnivo workspace is ready to use.' })
-      navigate('/app')
+      showModal({ type: 'success', title: 'Account created', message: 'Your account was created. Please sign in to continue.' })
+      navigate('/login', { replace: true, state: { email: form.email.trim().toLowerCase() } })
     } catch (err) {
       setError(err.message || 'Unable to create account')
     } finally {
@@ -67,7 +67,7 @@ export default function RegisterPage() {
           <div className="login-heading">
             <p className="eyebrow">New account</p>
             <h2>Create your account</h2>
-            <p>Register once, then continue directly into the client workspace.</p>
+            <p>Register once, then sign in to continue into the client workspace.</p>
           </div>
 
           <label>

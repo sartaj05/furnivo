@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useModal } from '../context/ModalContext'
 
@@ -12,10 +12,11 @@ const demoAccounts = [
 
 export default function LoginPage() {
   const navigate = useNavigate()
+  const location = useLocation()
   const { signIn, verifyMfa } = useAuth()
   const { showModal } = useModal()
   const [form, setForm] = useState({
-    email: 'admin@furnivo.demo',
+    email: location.state?.email || 'admin@furnivo.demo',
     password: 'admin123',
   })
   const [error, setError] = useState('')
