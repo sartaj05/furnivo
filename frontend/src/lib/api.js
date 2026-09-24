@@ -1380,7 +1380,17 @@ export async function reservePlanningStock() {
 
 export async function getAutomationTemplates() {
   try { return await backendRequest('/business/automation') }
-  catch (error) { if (error.status) throw error; await delay(); return { templates: getLocalDb().automationTemplates || demoAutomationTemplates, mode: 'demo' } }
+  catch (error) { if (error.status) throw error; await delay(); const templates = getLocalDb().automationTemplates || demoAutomationTemplates; return { templates, rules: templates.map((item, index) => ({ id: index + 1, event: item.event, label: item.label, enabled: true, actions: [{ type: 'notify', channels: item.channels }, { type: 'audit' }] })), mode: 'demo' } }
+}
+
+export async function getAutomationRules() {
+  try { return await backendRequest('/business/automation/rules') }
+  catch (error) { if (error.status) throw error; const templates = getLocalDb().automationTemplates || demoAutomationTemplates; return { rules: templates.map((item, index) => ({ id: index + 1, event: item.event, label: item.label, enabled: true, actions: [{ type: 'notify', channels: item.channels }, { type: 'audit' }] })), mode: 'demo' } }
+}
+
+export async function toggleAutomationRule(event, enabled) {
+  try { return await backendRequest(`/business/automation/rules/${encodeURIComponent(event)}`, { method: 'PATCH', body: JSON.stringify({ enabled }) }) }
+  catch (error) { if (error.status) throw error; return { rule: { event, enabled, actions: [{ type: 'notify' }, { type: 'audit' }] }, mode: 'demo' } }
 }
 
 export async function previewAutomation(payload) {

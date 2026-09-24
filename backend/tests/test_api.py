@@ -118,6 +118,20 @@ def test_notification_provider_status_and_sms_configuration(client, admin_header
     assert sms.json['item']['status'] == 'pending_configuration'
 
 
+def test_automation_rules_can_be_toggled(client, admin_headers):
+    rules = client.get('/api/business/automation/rules', headers=admin_headers)
+    assert rules.status_code == 200
+    event = rules.json['rules'][0]['event']
+    updated = client.patch(f'/api/business/automation/rules/{event}', headers=admin_headers, json={'enabled': False})
+    assert updated.status_code == 200
+    assert updated.json['rule']['enabled'] is False
+    preview = client.post('/api/business/automation/preview', headers=admin_headers, json={'event': event})
+    assert preview.status_code == 200
+    assert preview.json['preview']['enabled'] is False
+    updated = client.patch(f'/api/business/automation/rules/{event}', headers=admin_headers, json={'enabled': True})
+    assert updated.status_code == 200
+
+
 def test_client_workspace_records_are_scoped(client):
     login = client.post('/api/auth/login', json={'email': 'client@furnivo.demo', 'password': 'client123'})
     headers = {'Authorization': f"Bearer {login.json['token']}"}

@@ -42,6 +42,7 @@ import QualityControlPage from './pages/QualityControlPage'
 import AccountingCenterPage from './pages/AccountingCenterPage'
 import BranchSecurityPage from './pages/BranchSecurityPage'
 import NotificationAutomationPage from './pages/NotificationAutomationEnhancedPage'
+import AutomationBuilderPage from './pages/AutomationBuilderPage'
 import RoutePlanningPage from './pages/RoutePlanningPage'
 import AIDesignAssistantPage from './pages/AIDesignAssistantPage'
 import ProductionGanttPage from './pages/ProductionGanttPage'
@@ -87,6 +88,7 @@ export default function App() {
         <Route path="/app/accounting-center" element={<ProtectedRoute allowedRoles={['admin', 'sales']}><AccountingCenterPage /></ProtectedRoute>} />
         <Route path="/app/branch-security" element={<ProtectedRoute allowedRoles={['admin']}><BranchSecurityPage /></ProtectedRoute>} />
         <Route path="/app/notification-automation" element={<ProtectedRoute allowedRoles={['admin', 'sales']}><NotificationAutomationPage /></ProtectedRoute>} />
+        <Route path="/app/automation-builder" element={<ProtectedRoute allowedRoles={['admin', 'sales']}><AutomationBuilderPage /></ProtectedRoute>} />
         <Route path="/app/route-planning" element={<ProtectedRoute allowedRoles={['admin', 'sales', 'designer']}><RoutePlanningPage /></ProtectedRoute>} />
         <Route path="/app/integrations" element={<ProtectedRoute allowedRoles={['admin']}><IntegrationsPage /></ProtectedRoute>} />
         <Route path="/app/field-operations" element={<FieldOperationsPage />} />

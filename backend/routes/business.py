@@ -17,6 +17,7 @@ AUTOMATION_TEMPLATES = [
     {'event': 'delivery_reminder', 'label': 'Delivery reminder', 'title': 'Delivery reminder', 'body': '{{order_number}} is scheduled for delivery on {{delivery_date}}.', 'channels': ['in_app', 'email', 'whatsapp']},
     {'event': 'support_update', 'label': 'Support update', 'title': 'Support request updated', 'body': 'Support request {{ticket_number}} is now {{status}}.', 'channels': ['in_app', 'email', 'whatsapp']},
 ]
+AUTOMATION_RULES = [{'id': index + 1, 'event': item['event'], 'label': item['label'], 'enabled': True, 'actions': [{'type': 'notify', 'channels': item['channels']}, {'type': 'audit'}]} for index, item in enumerate(AUTOMATION_TEMPLATES)]
 
 
 def _cost_price(product):
@@ -92,7 +93,26 @@ def reserve_planning_stock():
 @business_bp.get('/automation')
 @roles_required(*INTERNAL_ROLES)
 def automation_templates():
-    return jsonify({'templates': AUTOMATION_TEMPLATES, 'mode': 'api'})
+    return jsonify({'templates': AUTOMATION_TEMPLATES, 'rules': AUTOMATION_RULES, 'mode': 'api'})
+
+
+@business_bp.get('/automation/rules')
+@roles_required('admin', 'sales')
+def automation_rules():
+    return jsonify({'rules': AUTOMATION_RULES, 'mode': 'api'})
+
+
+@business_bp.patch('/automation/rules/<event>')
+@roles_required('admin')
+def update_automation_rule(event):
+    rule = next((item for item in AUTOMATION_RULES if item['event'] == event), None)
+    if not rule: return jsonify({'message': 'Automation rule not found.'}), 404
+    payload = request.get_json(silent=True) or {}
+    if 'enabled' in payload: rule['enabled'] = bool(payload['enabled'])
+    if isinstance(payload.get('actions'), list) and payload['actions']: rule['actions'] = payload['actions']
+    record_audit(current_user().id, 'Automation rule updated', 'automation_rule', event, f"enabled={rule['enabled']}")
+    db.session.commit()
+    return jsonify({'rule': rule, 'mode': 'api'})
 
 
 @business_bp.post('/automation/preview')
@@ -101,10 +121,11 @@ def automation_preview():
     payload = request.get_json(silent=True) or {}
     template = next((item for item in AUTOMATION_TEMPLATES if item['event'] == payload.get('event')), None)
     if not template: return jsonify({'message': 'Choose a valid automation event.'}), 400
+    rule = next(item for item in AUTOMATION_RULES if item['event'] == template['event'])
     variables = payload.get('variables') if isinstance(payload.get('variables'), dict) else {}
     body = template['body']
     for key, value in variables.items(): body = body.replace('{{' + key + '}}', str(value))
-    return jsonify({'preview': {'event': template['event'], 'title': template['title'], 'body': body, 'channels': template['channels']}, 'mode': 'api'})
+    return jsonify({'preview': {'event': template['event'], 'title': template['title'], 'body': body, 'channels': template['channels'], 'enabled': rule['enabled'], 'actions': rule['actions']}, 'mode': 'api'})
 
 
 @business_bp.post('/automation/send')
@@ -112,8 +133,10 @@ def automation_preview():
 def automation_send():
     payload = request.get_json(silent=True) or {}
     template = next((item for item in AUTOMATION_TEMPLATES if item['event'] == payload.get('event')), None)
+    rule = next((item for item in AUTOMATION_RULES if item['event'] == payload.get('event')), None)
     user = db.session.get(User, int(payload.get('user_id'))) if payload.get('user_id') else None
     if not template or not user: return jsonify({'message': 'Automation event and recipient user are required.'}), 400
+    if not rule['enabled']: return jsonify({'message': 'This automation rule is disabled.'}), 409
     variables = payload.get('variables') if isinstance(payload.get('variables'), dict) else {}
     body = template['body']
     for key, value in variables.items(): body = body.replace('{{' + key + '}}', str(value))
@@ -121,7 +144,7 @@ def automation_send():
     db.session.commit()
     channel = str(payload.get('channel', 'in_app')).lower()
     delivery = None
-    if channel in {'email', 'whatsapp'}:
+    if channel in {'email', 'whatsapp', 'sms'}:
         delivery = deliver_notification(notification, channel, str(payload.get('recipient') or user.email))
     record_audit(current_user().id, 'Automation notification sent', 'notification', notification.id, template['event'])
     db.session.commit()
