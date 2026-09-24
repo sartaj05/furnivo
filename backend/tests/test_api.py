@@ -5,6 +5,7 @@ import time
 
 from backend.extensions import db
 from backend.models import QuoteClientAccess, User
+from backend.routes.auth import _failed_logins
 
 
 def test_health(client):
@@ -82,6 +83,21 @@ def test_background_worker_status_and_retry(client, admin_headers):
     created = client.post('/api/data-admin/jobs', headers=admin_headers, json={'job_type': 'catalog-reindex'})
     assert created.status_code == 202
     assert created.json['item']['status'] in {'Queued', 'Running', 'Complete'}
+
+
+def test_security_policy_and_login_lockout(client, app):
+    app.config['LOGIN_MAX_ATTEMPTS'] = 2
+    app.config['LOGIN_LOCKOUT_MINUTES'] = 15
+    for _ in range(2):
+        failed = client.post('/api/auth/login', json={'email': 'admin@furnivo.demo', 'password': 'wrong-password'})
+        assert failed.status_code == 401
+    locked = client.post('/api/auth/login', json={'email': 'admin@furnivo.demo', 'password': 'wrong-password'})
+    assert locked.status_code == 429
+    login = client.post('/api/auth/login', json={'email': 'sales@furnivo.demo', 'password': 'sales123'})
+    security = client.get('/api/auth/security', headers={'Authorization': f"Bearer {login.json['token']}"})
+    assert security.status_code == 200
+    assert security.json['policy']['max_login_attempts'] == 2
+    _failed_logins.clear()
 
 
 def test_client_workspace_records_are_scoped(client):

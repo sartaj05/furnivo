@@ -10,6 +10,7 @@ from ..models import MfaChallenge, MfaSetting, PasswordResetToken, RefreshSessio
 from ..utils import current_user, roles_required
 
 auth_bp = Blueprint('auth', __name__)
+_failed_logins = {}
 
 
 def token_hash(value): return hashlib.sha256(value.encode()).hexdigest()
@@ -28,6 +29,27 @@ def auth_payload(user, status=200):
     response.set_cookie('access_token_cookie', token, httponly=True, secure=secure, samesite='Lax', max_age=int(current_app.config['JWT_ACCESS_TOKEN_EXPIRES'].total_seconds()))
     response.set_cookie('refresh_token', raw_refresh, httponly=True, secure=secure, samesite='Lax', max_age=current_app.config['REFRESH_TOKEN_DAYS'] * 86400)
     return response, status
+
+
+def login_key(email):
+    return f'{email}:{request.remote_addr or "unknown"}'
+
+
+def login_lock(key):
+    item = _failed_logins.get(key)
+    if not item or not item.get('until'): return None
+    if item['until'] <= datetime.now(timezone.utc):
+        _failed_logins.pop(key, None); return None
+    return item
+
+
+def record_login_failure(key):
+    item = _failed_logins.get(key) or {'attempts': 0, 'until': None}
+    item['attempts'] += 1
+    if item['attempts'] >= current_app.config.get('LOGIN_MAX_ATTEMPTS', 5):
+        item['until'] = datetime.now(timezone.utc) + timedelta(minutes=current_app.config.get('LOGIN_LOCKOUT_MINUTES', 15))
+    _failed_logins[key] = item
+    return item
 
 
 @auth_bp.post('/register')
@@ -61,9 +83,17 @@ def login():
     email = str(payload.get('email', '')).strip().lower()
     password = str(payload.get('password', ''))
 
+    key = login_key(email)
+    locked = login_lock(key)
+    if locked: return jsonify({'message': 'Too many failed attempts. Try again later.', 'retry_after_seconds': max(1, int((locked['until'] - datetime.now(timezone.utc)).total_seconds()))}), 429
     user = db.session.scalar(db.select(User).where(func.lower(User.email) == email))
     if not user or not user.is_active or not check_password_hash(user.password_hash, password):
+        record_login_failure(key)
         return jsonify({'message': 'Invalid email or password'}), 401
+    _failed_logins.pop(key, None)
+    if user.role == 'admin' and current_app.config.get('REQUIRE_MFA_FOR_ADMIN', False):
+        setting = db.session.scalar(db.select(MfaSetting).where(MfaSetting.user_id == user.id))
+        if not setting or not setting.enabled: return jsonify({'message': 'MFA is required for administrator accounts.'}), 403
 
     setting = db.session.scalar(db.select(MfaSetting).where(MfaSetting.user_id == user.id))
     if setting and setting.enabled:
@@ -77,7 +107,7 @@ def login():
 
 
 def valid_password(password):
-    return len(password) >= 10 and any(char.isupper() for char in password) and any(char.islower() for char in password) and any(char.isdigit() for char in password)
+    return len(password) >= current_app.config.get('PASSWORD_MIN_LENGTH', 10) and any(char.isupper() for char in password) and any(char.islower() for char in password) and any(char.isdigit() for char in password)
 
 
 @auth_bp.post('/forgot-password')
@@ -152,7 +182,7 @@ def revoke_all_sessions():
 @roles_required('admin', 'sales', 'designer', 'client')
 def security_status():
     setting = db.session.scalar(db.select(MfaSetting).where(MfaSetting.user_id == current_user().id)); sessions = db.session.scalars(db.select(RefreshSession).where(RefreshSession.user_id == current_user().id).order_by(RefreshSession.id.desc()).limit(10)).all()
-    return jsonify({'mfa_enabled': bool(setting and setting.enabled), 'mfa_method': setting.method if setting else None, 'sessions': [session.to_dict() for session in sessions], 'mode': 'api'})
+    return jsonify({'mfa_enabled': bool(setting and setting.enabled), 'mfa_method': setting.method if setting else None, 'sessions': [session.to_dict() for session in sessions], 'policy': {'mfa_required_for_admin': current_app.config.get('REQUIRE_MFA_FOR_ADMIN', False), 'max_login_attempts': current_app.config.get('LOGIN_MAX_ATTEMPTS', 5), 'lockout_minutes': current_app.config.get('LOGIN_LOCKOUT_MINUTES', 15), 'minimum_password_length': current_app.config.get('PASSWORD_MIN_LENGTH', 10)}, 'mode': 'api'})
 
 
 @auth_bp.post('/mfa/enable')

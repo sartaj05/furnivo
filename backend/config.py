@@ -39,4 +39,7 @@ class Config:
     BACKUP_FOLDER = os.getenv('BACKUP_FOLDER', str(BASE_DIR / 'backups'))
     EINVOICE_PROVIDER = os.getenv('EINVOICE_PROVIDER', 'demo')
     BACKGROUND_JOB_MODE = os.getenv('BACKGROUND_JOB_MODE', 'thread').lower()
-    BACKGROUND_JOB_MODE = os.getenv('BACKGROUND_JOB_MODE', 'thread').lower()
+    LOGIN_MAX_ATTEMPTS = int(os.getenv('LOGIN_MAX_ATTEMPTS', '5'))
+    LOGIN_LOCKOUT_MINUTES = int(os.getenv('LOGIN_LOCKOUT_MINUTES', '15'))
+    PASSWORD_MIN_LENGTH = int(os.getenv('PASSWORD_MIN_LENGTH', '10'))
+    REQUIRE_MFA_FOR_ADMIN = os.getenv('REQUIRE_MFA_FOR_ADMIN', 'false').lower() == 'true'

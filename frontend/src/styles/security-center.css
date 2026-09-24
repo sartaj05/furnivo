@@ -1,0 +1,4 @@
+.security-policy-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 14px; }
+.security-policy-card { display: grid; gap: 7px; }
+.security-policy-card strong { font-size: 18px; }
+@media (max-width: 780px) { .security-policy-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }

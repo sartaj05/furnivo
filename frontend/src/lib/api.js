@@ -237,7 +237,7 @@ export async function logoutSession() {
 
 export async function getSecurityStatus() {
   try { return await backendRequest('/auth/security') }
-  catch (error) { if (error.status) throw error; await delay(); return { mfa_enabled: false, mfa_method: null, sessions: [], mode: 'demo' } }
+  catch (error) { if (error.status) throw error; await delay(); return { mfa_enabled: false, mfa_method: null, sessions: [], policy: { mfa_required_for_admin: false, max_login_attempts: 5, lockout_minutes: 15, minimum_password_length: 10 }, mode: 'demo' } }
 }
 
 export async function enableMfa() {
