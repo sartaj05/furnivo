@@ -1438,7 +1438,7 @@ export async function sendAutomation(payload) {
 
 export async function getIntegrations() {
   try { return await backendRequest('/integrations') }
-  catch (error) { if (error.status) throw error; await delay(); const db = getLocalDb(); return { connections: db.integrations, runs: db.syncRuns, mode: 'demo' } }
+  catch (error) { if (error.status) throw error; await delay(); const db = getLocalDb(); return { connections: db.integrations, runs: db.syncRuns, status: { providers: ['Tally', 'Zoho Books', 'QuickBooks'], environment: 'demo', connections: db.integrations.map((item) => ({ id: item.id, provider: item.provider, status: item.status, enabled: item.is_enabled, credentials_configured: Boolean(item.credentials_ref), last_sync_at: item.last_sync_at })) }, mode: 'demo' } }
 }
 
 export async function createIntegration(payload) {
@@ -1454,6 +1454,19 @@ export async function updateIntegration(id, payload) {
 export async function syncIntegration(id, entity = 'invoices') {
   try { return await backendRequest(`/integrations/${id}/sync`, { method: 'POST', body: JSON.stringify({ entity }) }) }
   catch (error) { if (error.status) throw error; const db = getLocalDb(); const connection = db.integrations.find((item) => Number(item.id) === Number(id)); const run = { id: Date.now(), connection_id: id, provider: connection?.provider, entity, status: 'Complete', records_synced: entity === 'invoices' ? db.invoices.length : 0, error: '', started_at: new Date().toISOString(), completed_at: new Date().toISOString() }; connection.last_sync_at = run.completed_at; connection.status = 'Synced'; db.syncRuns = [run, ...db.syncRuns]; saveLocalDb(db); return { item: run, connection, mode: 'demo' } }
+}
+
+export async function exportIntegration(id, entity = 'invoices') {
+  try { return await backendRequest(`/integrations/${id}/export`, { method: 'POST', body: JSON.stringify({ entity }) }) }
+  catch (error) {
+    if (error.status) throw error
+    const db = getLocalDb(); let records = []
+    if (entity === 'invoices') records = db.invoices.map((item) => ({ invoice_number: item.invoice_number, customer: item.customer, issue_date: item.issue_date, due_date: item.due_date, subtotal: Number(item.subtotal || 0), tax_amount: Number(item.tax_amount || 0), total: Number(item.total || 0), amount_paid: Number(item.amount_paid || 0), accounting_status: item.accounting_status || 'Pending' }))
+    if (entity === 'e_invoices') records = db.eInvoices.map((item) => ({ invoice_number: item.invoice_number, gstin: item.gstin, place_of_supply: item.place_of_supply, tax_mode: item.tax_mode, irn: item.irn, status: item.status, cgst_amount: Number(item.cgst_amount || 0), sgst_amount: Number(item.sgst_amount || 0), igst_amount: Number(item.igst_amount || 0) }))
+    if (entity === 'payments') records = db.invoices.flatMap((invoice) => (invoice.payments || []).map((payment) => ({ invoice_number: invoice.invoice_number, payment_id: payment.id, amount: Number(payment.amount || 0), method: payment.method, reference: payment.reference, paid_at: payment.paid_at })))
+    const connection = db.integrations.find((item) => Number(item.id) === Number(id))
+    return { export: { provider: connection?.provider, external_account: connection?.external_account, entity, record_count: records.length, records, delivery: 'demo', message: 'Preview generated. Configure the provider adapter for live delivery.' }, mode: 'demo' }
+  }
 }
 
 function getFieldQueue() {

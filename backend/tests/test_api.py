@@ -280,6 +280,29 @@ def test_accounting_security_notifications_routes_and_service_feedback(client, a
     assert feedback.json['item']['customer_rating'] == 5
 
 
+def test_accounting_status_exports_and_entity_validation(client, admin_headers):
+    integrations = client.get('/api/integrations', headers=admin_headers)
+    assert integrations.status_code == 200
+    assert integrations.json['status']['providers']
+    connection_id = integrations.json['connections'][0]['id']
+
+    status = client.get('/api/integrations/accounting-status', headers=admin_headers)
+    assert status.status_code == 200
+    assert status.json['status']['connections'][0]['credentials_configured'] is True
+
+    export = client.post(f'/api/integrations/{connection_id}/export', headers=admin_headers, json={'entity': 'invoices'})
+    assert export.status_code == 200
+    assert export.json['export']['record_count'] >= 1
+    assert export.json['export']['delivery'] == 'adapter-ready'
+
+    sync = client.post(f'/api/integrations/{connection_id}/sync', headers=admin_headers, json={'entity': 'payments'})
+    assert sync.status_code == 200
+    assert sync.json['item']['records_synced'] >= 0
+
+    invalid = client.post(f'/api/integrations/{connection_id}/export', headers=admin_headers, json={'entity': 'customers'})
+    assert invalid.status_code == 400
+
+
 def test_scheduling_portal_recommendations_forecast_and_quality(client, admin_headers):
     jobs = client.get('/api/production', headers=admin_headers)
     job_id = jobs.json['items'][0]['id']
