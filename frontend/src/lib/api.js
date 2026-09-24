@@ -856,6 +856,11 @@ export async function saveScheduleProof(id, payload) {
   catch (error) { if (error.status) throw error; const db = getLocalDb(); db.schedules = db.schedules.map((item) => Number(item.id) === Number(id) ? { ...item, ...payload, status: 'Completed' } : item); saveLocalDb(db); return { item: db.schedules.find((item) => Number(item.id) === Number(id)), mode: 'demo' } }
 }
 
+export async function signoffSchedule(id, payload) {
+  try { return await backendRequest(`/schedules/${id}/signoff`, { method: 'POST', body: JSON.stringify(payload) }) }
+  catch (error) { if (error.status) throw error; const db = getLocalDb(); db.schedules = db.schedules.map((item) => Number(item.id) === Number(id) ? { ...item, customer_confirmed: true, status: 'Completed', notes: `${item.notes || ''}\nCustomer sign-off: ${payload.signature}`.trim() } : item); saveLocalDb(db); return { item: db.schedules.find((item) => Number(item.id) === Number(id)), signoff: { signature: payload.signature, accepted: true, signed_at: new Date().toISOString() }, mode: 'demo' } }
+}
+
 export async function getWarehouses() {
   try { return await backendRequest('/warehouses') }
   catch (error) { if (error.status) throw error; await delay(); return { items: getLocalDb().warehouses, mode: 'demo' } }

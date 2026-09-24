@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import AppShell from '../components/AppShell'
-import { confirmSchedule, createSchedule, getOrders, getSchedules, saveScheduleProof, updateSchedule } from '../lib/api'
+import { confirmSchedule, createSchedule, getOrders, getSchedules, saveScheduleProof, signoffSchedule, updateSchedule } from '../lib/api'
 import { useAuth } from '../context/AuthContext'
 
 function LegacySchedulesPage() {
@@ -16,12 +16,20 @@ function LegacySchedulesPage() {
 }
 
 function DeliveryExecutionPanel() {
-  const [items, setItems] = useState([]); const [message, setMessage] = useState('')
+  const [items, setItems] = useState([]); const [signatures, setSignatures] = useState({}); const [message, setMessage] = useState('')
   async function load() { setItems((await getSchedules()).items || []) }
   useEffect(() => { load() }, [])
   async function confirm(item) { await confirmSchedule(item.id); setMessage('Customer confirmation saved.'); await load() }
   async function complete(item) { await saveScheduleProof(item.id, { proof_url: item.proof_url || 'demo://delivery-proof', notes: 'Completion proof captured from delivery console.' }); setMessage('Delivery proof saved and schedule completed.'); await load() }
+  async function signoff(item) { const signature = (signatures[item.id] || '').trim(); try { const result = await signoffSchedule(item.id, { signature, accepted: true }); setItems((current) => current.map((entry) => entry.id === item.id ? result.item : entry)); setMessage(`Customer sign-off saved for ${item.order_number}.`) } catch (error) { setMessage(error.message) } }
   return <section className="panel delivery-execution-panel"><div className="panel-heading"><div><p className="eyebrow">Live delivery board</p><h3>ETA, confirmation & proof</h3></div></div><div className="schedule-grid">{items.map((item) => <article className="schedule-card" key={item.id}><strong>{item.order_number} · {item.schedule_type}</strong><p>{item.customer} · {item.eta || item.time_slot}</p><div className="order-meta"><span>{item.customer_confirmed ? 'Customer confirmed' : 'Awaiting confirmation'}</span><button className="button-link" onClick={() => confirm(item)}>Confirm</button><button className="button-link" onClick={() => complete(item)}>Complete with proof</button></div></article>)}</div>{message && <div className="success-message">{message}</div>}</section>
 }
 
-export default function SchedulesPage() { return <><LegacySchedulesPage /><DeliveryExecutionPanel /></> }
+function SignoffPanel() {
+  const [items, setItems] = useState([]); const [signatures, setSignatures] = useState({}); const [message, setMessage] = useState('')
+  useEffect(() => { getSchedules().then((result) => setItems(result.items || [])) }, [])
+  async function signoff(item) { try { const result = await signoffSchedule(item.id, { signature: signatures[item.id] || '', accepted: true }); setItems((current) => current.map((entry) => entry.id === item.id ? result.item : entry)); setMessage(`Sign-off saved for ${item.order_number}.`) } catch (error) { setMessage(error.message) } }
+  return <section className="panel"><div className="panel-heading"><div><p className="eyebrow">Customer sign-off</p><h3>Delivery and installation acceptance</h3></div></div>{items.map((item) => <div className="order-meta" key={item.id}><span><strong>{item.order_number} · {item.schedule_type}</strong><small>{item.customer} · {item.status}</small></span><input placeholder="Customer name/signature" value={signatures[item.id] || ''} onChange={(event) => setSignatures({ ...signatures, [item.id]: event.target.value })} /><button className="button button-small" onClick={() => signoff(item)}>Sign off</button></div>)}{message && <div className="success-message">{message}</div>}</section>
+}
+
+export default function SchedulesPage() { return <><LegacySchedulesPage /><DeliveryExecutionPanel /><SignoffPanel /></> }

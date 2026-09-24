@@ -249,6 +249,9 @@ def test_execution_procurement_and_delivery_workflows(client, admin_headers):
     proof = client.post(f'/api/schedules/{schedule_id}/proof', headers=admin_headers, json={'proof_url': 'https://demo.invalid/proof.jpg'})
     assert proof.status_code == 200
     assert proof.json['item']['status'] == 'Completed'
+    signoff = client.post(f'/api/schedules/{schedule_id}/signoff', headers=admin_headers, json={'signature': 'Aarav Customer', 'accepted': True})
+    assert signoff.status_code == 200
+    assert signoff.json['signoff']['accepted'] is True
 
 
 def test_accounting_security_notifications_routes_and_service_feedback(client, admin_headers):

@@ -88,3 +88,18 @@ def save_schedule_proof(schedule_id):
     item.proof_url = str(payload.get('proof_url', item.proof_url)).strip(); item.notes = str(payload.get('notes', item.notes)).strip(); item.status = 'Completed'
     db.session.commit(); notify_quote_client(item.order.quote, 'Delivery completed', f'{item.schedule_type} completion proof is available.', 'order'); record_audit(current_user().id, 'Schedule proof captured', 'schedule', item.id, item.proof_url); db.session.commit()
     return jsonify({'item': item.to_dict(), 'mode': 'api'})
+
+
+@scheduling_bp.post('/<int:schedule_id>/signoff')
+@roles_required('admin', 'sales', 'client')
+def signoff_schedule(schedule_id):
+    item = db.get_or_404(DeliverySchedule, schedule_id); payload = request.get_json(silent=True) or {}; signature = str(payload.get('signature', '')).strip(); accepted = bool(payload.get('accepted', True))
+    if current_user().role == 'client':
+        allowed = db.session.scalar(db.select(QuoteClientAccess.id).where(QuoteClientAccess.user_id == current_user().id, QuoteClientAccess.quote_id == item.order.quote_id))
+        if not allowed: return jsonify({'message': 'You cannot sign off this schedule.'}), 403
+    if accepted and len(signature) < 2: return jsonify({'message': 'A customer signature or name is required.'}), 400
+    if accepted:
+        item.customer_confirmed = True; item.status = 'Completed'
+        item.notes = f'{item.notes}\nCustomer sign-off: {signature}'.strip()
+    db.session.commit(); notify_quote_client(item.order.quote, 'Delivery sign-off recorded', f'{item.schedule_type} sign-off has been recorded.', 'order'); record_audit(current_user().id, 'Delivery sign-off recorded', 'schedule', item.id, signature); db.session.commit()
+    return jsonify({'item': item.to_dict(), 'signoff': {'signature': signature, 'accepted': accepted, 'signed_at': item.updated_at.isoformat()}, 'mode': 'api'})
