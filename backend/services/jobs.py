@@ -7,6 +7,16 @@ from ..models import BackgroundJob, Invoice, Order, Product
 executor = ThreadPoolExecutor(max_workers=2)
 
 
+def worker_status(config):
+    mode = str(config.get('BACKGROUND_JOB_MODE', 'thread')).lower()
+    return {
+        'mode': mode if mode in {'thread', 'inline'} else 'thread',
+        'provider': 'local-thread-pool' if mode == 'thread' else 'inline',
+        'capacity': 2 if mode == 'thread' else 1,
+        'retryable': True,
+    }
+
+
 def execute_job(app, job_id):
     with app.app_context():
         job = db.session.get(BackgroundJob, job_id)
@@ -22,4 +32,7 @@ def execute_job(app, job_id):
 
 
 def enqueue_job(app, job_id):
+    if str(app.config.get('BACKGROUND_JOB_MODE', 'thread')).lower() == 'inline':
+        execute_job(app, job_id)
+        return
     executor.submit(execute_job, app, job_id)

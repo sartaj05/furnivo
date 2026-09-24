@@ -38,3 +38,5 @@ class Config:
     DEFAULT_DEPOSIT_PERCENT = int(os.getenv('DEFAULT_DEPOSIT_PERCENT', '30'))
     BACKUP_FOLDER = os.getenv('BACKUP_FOLDER', str(BASE_DIR / 'backups'))
     EINVOICE_PROVIDER = os.getenv('EINVOICE_PROVIDER', 'demo')
+    BACKGROUND_JOB_MODE = os.getenv('BACKGROUND_JOB_MODE', 'thread').lower()
+    BACKGROUND_JOB_MODE = os.getenv('BACKGROUND_JOB_MODE', 'thread').lower()

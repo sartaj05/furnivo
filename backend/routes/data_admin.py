@@ -5,7 +5,7 @@ from flask import Blueprint, current_app, jsonify, request
 from ..extensions import db
 from ..models import BackgroundJob, Customer, Product
 from ..services.audit import record_audit
-from ..services.jobs import enqueue_job
+from ..services.jobs import enqueue_job, worker_status
 from ..utils import current_user, roles_required
 
 data_admin_bp = Blueprint('data_admin', __name__)
@@ -17,12 +17,29 @@ def list_jobs():
     return jsonify({'items': [item.to_dict() for item in db.session.scalars(db.select(BackgroundJob).order_by(BackgroundJob.id.desc()).limit(50)).all()], 'mode': 'api'})
 
 
+@data_admin_bp.get('/worker-status')
+@roles_required('admin')
+def worker_health():
+    return jsonify({'worker': worker_status(current_app.config), 'mode': 'api'})
+
+
 @data_admin_bp.post('/jobs')
 @roles_required('admin')
 def create_job():
     payload = request.get_json(silent=True) or {}; job_type = str(payload.get('job_type', '')).strip()
     if job_type not in {'catalog-reindex', 'report-refresh'}: return jsonify({'message': 'Unsupported background job type.'}), 400
     item = BackgroundJob(job_type=job_type, payload_json=json.dumps(payload), created_by_id=current_user().id); db.session.add(item); db.session.commit(); enqueue_job(current_app._get_current_object(), item.id)
+    return jsonify({'item': item.to_dict(), 'mode': 'api'}), 202
+
+
+@data_admin_bp.post('/jobs/<int:job_id>/retry')
+@roles_required('admin')
+def retry_job(job_id):
+    item = db.session.get(BackgroundJob, job_id)
+    if not item: return jsonify({'message': 'Background job not found.'}), 404
+    if item.status != 'Failed': return jsonify({'message': 'Only failed jobs can be retried.'}), 400
+    item.status = 'Queued'; item.error = ''; item.result_json = '{}'; db.session.commit()
+    enqueue_job(current_app._get_current_object(), item.id)
     return jsonify({'item': item.to_dict(), 'mode': 'api'}), 202
 
 

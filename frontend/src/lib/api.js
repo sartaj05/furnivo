@@ -1039,9 +1039,25 @@ export async function getBackgroundJobs() {
   catch (error) { if (error.status) throw error; await delay(); return { items: getLocalDb().backgroundJobs, mode: 'demo' } }
 }
 
+export async function getWorkerStatus() {
+  try { return await backendRequest('/data-admin/worker-status') }
+  catch (error) { if (error.status) throw error; return { worker: { mode: 'demo', provider: 'local-demo', capacity: 1, retryable: true }, mode: 'demo' } }
+}
+
 export async function createBackgroundJob(job_type) {
   try { return await backendRequest('/data-admin/jobs', { method: 'POST', body: JSON.stringify({ job_type }) }) }
   catch (error) { if (error.status) throw error; const db = getLocalDb(); const item = { id: Date.now(), job_type, status: 'Complete', payload: {}, result: { demo: true }, error: '', created_at: new Date().toISOString(), updated_at: new Date().toISOString() }; db.backgroundJobs = [item, ...db.backgroundJobs]; saveLocalDb(db); return { item, mode: 'demo' } }
+}
+
+export async function retryBackgroundJob(id) {
+  try { return await backendRequest(`/data-admin/jobs/${id}/retry`, { method: 'POST' }) }
+  catch (error) {
+    if (error.status) throw error
+    const db = getLocalDb(); const item = db.backgroundJobs.find((job) => job.id === id)
+    if (!item || item.status !== 'Failed') throw new Error('Only failed jobs can be retried.')
+    item.status = 'Complete'; item.error = ''; item.result = { demo: true, retried: true }; item.updated_at = new Date().toISOString(); saveLocalDb(db)
+    return { item, mode: 'demo' }
+  }
 }
 
 async function uploadCsv(path, file) {

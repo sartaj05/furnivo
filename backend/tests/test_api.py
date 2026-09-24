@@ -75,6 +75,15 @@ def test_deployment_readiness_endpoint(client, admin_headers):
     assert len(response.json['checks']) >= 4
 
 
+def test_background_worker_status_and_retry(client, admin_headers):
+    status = client.get('/api/data-admin/worker-status', headers=admin_headers)
+    assert status.status_code == 200
+    assert status.json['worker']['retryable'] is True
+    created = client.post('/api/data-admin/jobs', headers=admin_headers, json={'job_type': 'catalog-reindex'})
+    assert created.status_code == 202
+    assert created.json['item']['status'] in {'Queued', 'Running', 'Complete'}
+
+
 def test_client_workspace_records_are_scoped(client):
     login = client.post('/api/auth/login', json={'email': 'client@furnivo.demo', 'password': 'client123'})
     headers = {'Authorization': f"Bearer {login.json['token']}"}
