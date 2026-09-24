@@ -1,0 +1,2 @@
+.backup-actions { display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+.backup-actions small { color: var(--muted); font-size: 11px; }

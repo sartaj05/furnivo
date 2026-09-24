@@ -1019,6 +1019,16 @@ export async function createBackup() {
   }
 }
 
+export async function verifyBackup(filename) {
+  try { return await backendRequest(`/ops/backups/${encodeURIComponent(filename)}/verify`) }
+  catch (error) { if (error.status) throw error; const item = getLocalDb().backups.find((backup) => backup.filename === filename); if (!item) throw new Error('Backup file not found.'); return { item: { ...item, sha256: 'demo-checksum', valid: true }, mode: 'demo' } }
+}
+
+export async function restoreBackup(filename) {
+  try { return await backendRequest(`/ops/backups/${encodeURIComponent(filename)}/restore`, { method: 'POST' }) }
+  catch (error) { if (error.status) throw error; return { item: { restored: filename, safety_backup: `furnivo-safety-${Date.now()}.json` }, mode: 'demo' } }
+}
+
 export async function getEInvoices() {
   try { return await backendRequest('/gst') }
   catch (error) { if (error.status) throw error; await delay(); return { items: getLocalDb().eInvoices, mode: 'demo' } }

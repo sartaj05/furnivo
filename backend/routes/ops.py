@@ -1,7 +1,7 @@
 import os
 from flask import Blueprint, current_app, jsonify
 from ..extensions import db
-from ..services.ops import backup_database, list_backups
+from ..services.ops import backup_database, list_backups, restore_backup, verify_backup
 from ..services.health import run_health_check
 from ..services.deployment import deployment_checks
 from ..utils import roles_required
@@ -33,3 +33,19 @@ def backups(): return jsonify({'items': list_backups(current_app), 'mode': 'api'
 def create_backup():
     try: return jsonify({'item': backup_database(current_app), 'mode': 'api'}), 201
     except RuntimeError as exc: return jsonify({'message': str(exc)}), 503
+
+
+@ops_bp.get('/backups/<path:filename>/verify')
+@roles_required('admin')
+def verify_backup_file(filename):
+    item = verify_backup(current_app, filename)
+    if not item: return jsonify({'message': 'Backup file not found.'}), 404
+    return jsonify({'item': item, 'mode': 'api'})
+
+
+@ops_bp.post('/backups/<path:filename>/restore')
+@roles_required('admin')
+def restore_backup_file(filename):
+    try: return jsonify({'item': restore_backup(current_app, filename), 'mode': 'api'}), 200
+    except FileNotFoundError as exc: return jsonify({'message': str(exc)}), 404
+    except RuntimeError as exc: return jsonify({'message': str(exc)}), 501

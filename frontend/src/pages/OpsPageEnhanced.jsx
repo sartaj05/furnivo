@@ -1,7 +1,15 @@
 import { useEffect, useState } from 'react'
 import AppShell from '../components/AppShell'
-import { createBackup, getBackups, getDeploymentChecks, getOpsHealth } from '../lib/api'
+import { createBackup, getBackups, getDeploymentChecks, getOpsHealth, restoreBackup, verifyBackup } from '../lib/api'
 import '../styles/deployment.css'
+import '../styles/backup-actions.css'
+
+function BackupActions({ item, onDone }) {
+  const [working, setWorking] = useState(false); const [message, setMessage] = useState('')
+  async function verify() { setWorking(true); try { const result = await verifyBackup(item.filename); setMessage(result.item.valid ? `Verified · ${result.item.sha256.slice(0, 10)}…` : 'Invalid') } catch (error) { setMessage(error.message) } finally { setWorking(false) } }
+  async function restore() { setWorking(true); try { const result = await restoreBackup(item.filename); setMessage(`Restored. Safety backup: ${result.item.safety_backup}`); onDone() } catch (error) { setMessage(error.message) } finally { setWorking(false) } }
+  return <span className="backup-actions"><button className="button-link" onClick={verify} disabled={working}>Verify</button><button className="button-link" onClick={restore} disabled={working}>Restore</button>{message && <small>{message}</small>}</span>
+}
 import '../styles/deployment.css'
 
 function DeploymentReadiness({ deployment }) {
@@ -65,7 +73,7 @@ export default function OpsPageEnhanced() {
       </section>
       <section className="panel">
         <div className="panel-heading"><div><p className="eyebrow">Recovery points</p><h3>Database backups</h3></div><span className="mode-chip">Admin only</span></div>
-        {backups.length ? <div className="backup-list">{backups.map((item) => <div className="backup-row" key={item.filename}><span><strong>{item.filename}</strong><small>{new Date(item.created_at).toLocaleString()}</small></span><b>{Math.round(Number(item.size_bytes || 0) / 1024)} KB</b></div>)}</div> : <div className="empty-state"><h3>No backups created yet</h3><p>Create a backup before deploying schema or configuration changes.</p></div>}
+        {backups.length ? <div className="backup-list">{backups.map((item) => <div className="backup-row" key={item.filename}><span><strong>{item.filename}</strong><small>{new Date(item.created_at).toLocaleString()}</small></span><span className="backup-actions"><b>{Math.round(Number(item.size_bytes || 0) / 1024)} KB</b><BackupActions item={item} onDone={load} /></span></div>)}</div> : <div className="empty-state"><h3>No backups created yet</h3><p>Create a backup before deploying schema or configuration changes.</p></div>}
       </section>
       <section className="panel ops-checklist"><p className="eyebrow">Production checklist</p><h3>Before go-live</h3><div><span>Set long SECRET_KEY and JWT_SECRET_KEY</span><span>Set AUTO_SEED=false</span><span>Run flask db upgrade against PostgreSQL</span><span>Configure PAYMENT_WEBHOOK_SECRET and provider keys</span><span>Store backups outside the application server</span></div></section>
     </AppShell>

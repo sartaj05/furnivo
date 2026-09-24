@@ -100,6 +100,13 @@ def test_security_policy_and_login_lockout(client, app):
     _failed_logins.clear()
 
 
+def test_backup_verification_is_admin_only(client, admin_headers):
+    missing = client.get('/api/ops/backups/missing.db/verify', headers=admin_headers)
+    assert missing.status_code == 404
+    forbidden = client.get('/api/ops/backups/missing.db/verify')
+    assert forbidden.status_code in {401, 404, 422}
+
+
 def test_client_workspace_records_are_scoped(client):
     login = client.post('/api/auth/login', json={'email': 'client@furnivo.demo', 'password': 'client123'})
     headers = {'Authorization': f"Bearer {login.json['token']}"}
