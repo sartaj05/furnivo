@@ -5,6 +5,7 @@ from pathlib import Path
 from uuid import uuid4
 from flask import Flask, g, jsonify, request, send_from_directory
 from flask_cors import CORS
+from werkzeug.exceptions import HTTPException
 from .config import Config
 from .extensions import db, jwt, migrate
 from .services.health import run_health_check
@@ -49,6 +50,10 @@ def create_app(config_object=Config):
 
     @app.errorhandler(Exception)
     def api_error(error):
+        if isinstance(error, HTTPException):
+            if request.path.startswith('/api/'):
+                return jsonify({'message': error.description, 'request_id': getattr(g, 'request_id', '')}), error.code
+            return error
         app.logger.exception('Unhandled application error', exc_info=error)
         if request.path.startswith('/api/'):
             return jsonify({'message': 'Unexpected server error.', 'request_id': getattr(g, 'request_id', '')}), 500

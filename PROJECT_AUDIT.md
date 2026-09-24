@@ -90,6 +90,11 @@ These are not implemented as production features yet:
 - Provider-backed delivery and fully automated scheduling still require production email/WhatsApp credentials; the control center provides demo-safe previews and queued fallback behavior.
 - Secret rotation, external backup storage, centralized log shipping and full production deployment automation.
 - Live OpenAI-generated design briefs require a server-side `OPENAI_API_KEY`; without it, the deterministic demo assistant remains active.
+- Room-image upload, furniture detection and generated moodboards are still provider-dependent; the current AI screen accepts an optional image URL and safely falls back to deterministic recommendations.
+- Tenant workspaces currently provide membership and active-workspace foundations; existing business tables are not yet tenant-scoped, so this is not ready for untrusted multi-company production data.
+- Collaboration currently uses audit-backed polling plus a one-shot SSE snapshot; durable WebSocket presence, comments, conflict resolution and offline merge are still missing.
+- Payment, accounting, email, WhatsApp and cloud-image providers still need real credentials, webhook verification and staging validation.
+- The project is deployment-ready but not deployed from this workspace; GitHub/Render/Supabase/Cloudinary accounts and production secrets still need to be connected.
 
 ## Verification
 
@@ -99,4 +104,5 @@ These are not implemented as production features yet:
 - Additional smoke checks pass for client quote response, quote history, orders, inventory and notifications.
 - Additional smoke checks pass for invoices/payments, procurement, reports, audit logs and notification delivery configuration handling.
 - New API tests pass for AI briefs, live updates, predictive analytics, tenant creation and tenant switching.
+- Full route smoke checks cover 58 static GET endpoints; expected 404/405 responses now remain proper client errors instead of being converted to 500 responses.
 - The smoke test uses development defaults; replace `SECRET_KEY` and `JWT_SECRET_KEY` with long production secrets before deployment.

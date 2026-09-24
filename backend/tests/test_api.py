@@ -263,3 +263,16 @@ def test_ai_collaboration_predictive_and_tenant_features(client, admin_headers):
     switched = client.post(f'/api/tenants/{tenant_id}/switch', headers=admin_headers)
     assert switched.status_code == 200
     assert switched.json['active_tenant_id'] == tenant_id
+
+
+def test_api_preserves_expected_http_errors_and_demo_ai_budget_order(client, admin_headers):
+    missing = client.post('/api/tenants/999999/switch', headers=admin_headers)
+    assert missing.status_code == 404
+    assert missing.json['message']
+    wrong_method = client.post('/api/products/1', headers=admin_headers, json={})
+    assert wrong_method.status_code == 405
+
+    design = client.post('/api/design-assistant', headers=admin_headers, json={'room': 'Living room', 'budget': 13000})
+    assert design.status_code == 200
+    prices = [item['product']['price'] for item in design.json['brief']['recommendations']]
+    assert prices and prices[0] <= 13000

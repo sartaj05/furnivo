@@ -1,6 +1,6 @@
 from werkzeug.security import generate_password_hash
 from .extensions import db
-from .models import AccessPermission, ApprovalRequest, AuditLog, BomItem, Contract, CreditNote, Customer, CustomerPricing, Department, DeliverySchedule, EInvoice, FieldVisit, IntegrationConnection, InventoryItem, Invoice, Lead, LeadNote, LeadTask, Notification, Order, PaymentReconciliation, Product, ProductVariant, ProductionJob, ProjectOwnership, PurchaseOrder, PurchaseOrderItem, Quote, QuoteClientAccess, QuoteItem, QuotePreset, ProjectUpdate, ReturnRequest, ServiceTicket, StockMovement, Supplier, SyncRun, User, UserDepartment, Warehouse, WarehouseStock, Warranty
+from .models import AccessPermission, ApprovalRequest, AuditLog, BomItem, Contract, CreditNote, Customer, CustomerPricing, Department, DeliverySchedule, EInvoice, FieldVisit, IntegrationConnection, InventoryItem, Invoice, Lead, LeadNote, LeadTask, Notification, Order, PaymentReconciliation, Product, ProductVariant, ProductionJob, ProjectOwnership, PurchaseOrder, PurchaseOrderItem, Quote, QuoteClientAccess, QuoteItem, QuotePreset, ProjectUpdate, ReturnRequest, ServiceTicket, StockMovement, Subscription, Supplier, SyncRun, Tenant, TenantMembership, User, UserDepartment, Warehouse, WarehouseStock, Warranty
 
 
 DEMO_PRODUCTS = [
@@ -32,6 +32,7 @@ def seed_database():
             )
         )
     db.session.commit()
+    seed_tenants()
 
     for data in DEMO_PRODUCTS:
         if db.session.scalar(db.select(Product).where(Product.sku == data["sku"])):
@@ -69,6 +70,21 @@ def seed_database():
     seed_service_management()
     seed_integrations()
     seed_field_operations()
+
+
+def seed_tenants():
+    tenant = db.session.scalar(db.select(Tenant).where(Tenant.slug == 'furnivo-demo'))
+    admin = db.session.scalar(db.select(User).where(User.email == 'admin@furnivo.demo'))
+    if not tenant:
+        tenant = Tenant(name='Furnivo Demo Workspace', slug='furnivo-demo', plan='Starter', status='Trial', branding_json='{}')
+        db.session.add(tenant); db.session.flush()
+    if not db.session.scalar(db.select(Subscription).where(Subscription.tenant_id == tenant.id)):
+        db.session.add(Subscription(tenant_id=tenant.id, provider='demo', plan='Starter', status='trialing', seats=5, monthly_amount=0))
+    for user in db.session.scalars(db.select(User)).all():
+        if not db.session.scalar(db.select(TenantMembership).where(TenantMembership.tenant_id == tenant.id, TenantMembership.user_id == user.id)):
+            db.session.add(TenantMembership(tenant_id=tenant.id, user_id=user.id, role='Owner' if user.id == admin.id else 'Member', status='Active'))
+        if user.active_tenant_id is None: user.active_tenant_id = tenant.id
+    db.session.commit()
 
 
 def seed_access_controls():

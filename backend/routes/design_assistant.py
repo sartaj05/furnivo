@@ -10,8 +10,10 @@ design_bp = Blueprint('design_assistant', __name__)
 
 
 def fallback_brief(payload, products):
-    room = str(payload.get('room', 'living room')).strip(); style = str(payload.get('style', 'warm modern')).strip(); color = str(payload.get('color', 'neutral')).strip(); budget = float(payload.get('budget', 0) or 0)
-    ranked = sorted(products, key=lambda item: (0 if budget and float(item.price or 0) > budget else 1, -float(item.price or 0)))[:6]
+    room = str(payload.get('room', 'living room')).strip() or 'living room'; style = str(payload.get('style', 'warm modern')).strip() or 'warm modern'; color = str(payload.get('color', 'neutral')).strip() or 'neutral'
+    try: budget = max(float(payload.get('budget', 0) or 0), 0)
+    except (TypeError, ValueError): budget = 0
+    ranked = sorted(products, key=lambda item: (0 if budget and float(item.price or 0) <= budget else 1, abs(float(item.price or 0) - budget) if budget else -float(item.price or 0)))[:6]
     return {'title': f'{style.title()} {room.title()} concept', 'layout': [f'Anchor the room with a primary seating zone.', f'Keep a clear circulation path around the {room}.', f'Layer {color} accents through textiles, lighting, and artwork.'], 'moodboard': [{'label': 'Palette', 'value': color}, {'label': 'Style', 'value': style}, {'label': 'Lighting', 'value': 'Warm layered light'}], 'recommendations': [{'product': item.to_dict(), 'reason': f'Fits the {style} direction and requested budget.' if not budget or float(item.price or 0) <= budget else 'Alternative to review above the current budget.'} for item in ranked], 'provider': 'demo-fallback'}
 
 

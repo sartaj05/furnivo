@@ -16,10 +16,10 @@ def _database_uri():
 class Config:
     APP_VERSION = os.getenv('APP_VERSION', 'furnivo-v3')
     ENVIRONMENT = os.getenv('ENVIRONMENT', 'development')
-    SECRET_KEY = os.getenv('SECRET_KEY', 'dev-change-me')
+    SECRET_KEY = os.getenv('SECRET_KEY', 'local-development-secret-change-before-production-please')
     SQLALCHEMY_DATABASE_URI = _database_uri()
     SQLALCHEMY_TRACK_MODIFICATIONS = False
-    JWT_SECRET_KEY = os.getenv('JWT_SECRET_KEY', 'dev-jwt-change-me')
+    JWT_SECRET_KEY = os.getenv('JWT_SECRET_KEY', 'local-jwt-secret-change-before-production-please')
     JWT_ACCESS_TOKEN_EXPIRES = timedelta(seconds=int(os.getenv('JWT_ACCESS_TOKEN_EXPIRES', '3600')))
     REFRESH_TOKEN_DAYS = int(os.getenv('REFRESH_TOKEN_DAYS', '30'))
     JWT_TOKEN_LOCATION = ['headers', 'cookies']
