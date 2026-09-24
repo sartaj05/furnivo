@@ -80,11 +80,28 @@ def parse_datetime(value):
     except ValueError: raise ValueError('Task dates must use ISO date-time format.')
 
 
+def task_conflicts(task, tasks=None):
+    tasks = tasks if tasks is not None else db.session.scalars(db.select(ProductionTask)).all()
+    if not task.planned_start or not task.planned_end: return []
+    conflicts = []
+    for other in tasks:
+        if other.id == task.id or not other.planned_start or not other.planned_end: continue
+        shared_resource = (task.assigned_worker and task.assigned_worker == other.assigned_worker) or (task.machine and task.machine == other.machine)
+        overlaps = task.planned_start < other.planned_end and task.planned_end > other.planned_start
+        if shared_resource and overlaps:
+            conflicts.append({'task_id': other.id, 'task_name': other.name, 'resource': 'worker' if task.assigned_worker == other.assigned_worker else 'machine'})
+    return conflicts
+
+
+def schedule_conflicts(tasks):
+    return [{'task_id': task.id, 'task_name': task.name, 'conflicts': task_conflicts(task, tasks)} for task in tasks if task_conflicts(task, tasks)]
+
+
 @production_bp.get('/schedule')
 @roles_required('admin', 'sales', 'designer')
 def list_production_schedule():
     tasks = db.session.scalars(db.select(ProductionTask).order_by(ProductionTask.planned_start, ProductionTask.id)).all()
-    return jsonify({'items': [task.to_dict() for task in tasks], 'mode': 'api'})
+    return jsonify({'items': [task.to_dict() for task in tasks], 'conflicts': schedule_conflicts(tasks), 'mode': 'api'})
 
 
 @production_bp.post('/schedule')
@@ -117,8 +134,19 @@ def update_production_task(task_id):
         if 'planned_start' in payload: task.planned_start = parse_datetime(payload['planned_start'])
         if 'planned_end' in payload: task.planned_end = parse_datetime(payload['planned_end'])
     except ValueError as exc: return jsonify({'message': str(exc)}), 400
+    if task.planned_start and task.planned_end and task.planned_end <= task.planned_start:
+        return jsonify({'message': 'Task end must be after task start.'}), 400
+    if task.dependency_id:
+        dependency = db.session.get(ProductionTask, task.dependency_id)
+        if dependency and dependency.production_job_id != task.production_job_id:
+            return jsonify({'message': 'Dependencies must belong to the same production job.'}), 400
+        seen = {task.id}; cursor = dependency
+        while cursor:
+            if cursor.id in seen: return jsonify({'message': 'Task dependencies cannot contain a cycle.'}), 400
+            seen.add(cursor.id); cursor = cursor.dependency
+    conflicts = task_conflicts(task)
     db.session.commit(); record_audit(current_user().id, 'Production task updated', 'production_task', task.id, task.status); db.session.commit()
-    return jsonify({'item': task.to_dict(), 'mode': 'api'})
+    return jsonify({'item': task.to_dict(), 'conflicts': conflicts, 'mode': 'api'})
 
 
 @production_bp.get('/capacity')

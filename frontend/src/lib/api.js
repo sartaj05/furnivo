@@ -1606,7 +1606,7 @@ export async function saveServiceFeedback(id, payload) {
 
 export async function getProductionSchedule() {
   try { return await backendRequest('/production/schedule') }
-  catch (error) { if (error.status) throw error; const tasks = (getLocalDb().productionJobs || []).flatMap((job) => (job.tasks || []).map((task) => ({ ...task, production_job_id: job.id, job_number: job.job_number }))); return { items: tasks, mode: 'demo' } }
+  catch (error) { if (error.status) throw error; const tasks = (getLocalDb().productionJobs || []).flatMap((job) => (job.tasks || []).map((task) => ({ ...task, production_job_id: job.id, job_number: job.job_number }))); return { items: tasks, conflicts: [], mode: 'demo' } }
 }
 
 export async function createProductionTask(payload) {
@@ -1616,7 +1616,7 @@ export async function createProductionTask(payload) {
 
 export async function updateProductionTask(id, payload) {
   try { return await backendRequest(`/production/schedule/${id}`, { method: 'PATCH', body: JSON.stringify(payload) }) }
-  catch (error) { if (error.status) throw error; const db = getLocalDb(); db.productionJobs.forEach((job) => { job.tasks = (job.tasks || []).map((task) => Number(task.id) === Number(id) ? { ...task, ...payload } : task) }); saveLocalDb(db); const item = db.productionJobs.flatMap((job) => job.tasks || []).find((task) => Number(task.id) === Number(id)); return { item, mode: 'demo' } }
+  catch (error) { if (error.status) throw error; const db = getLocalDb(); db.productionJobs.forEach((job) => { job.tasks = (job.tasks || []).map((task) => Number(task.id) === Number(id) ? { ...task, ...payload } : task) }); saveLocalDb(db); const item = db.productionJobs.flatMap((job) => job.tasks || []).find((task) => Number(task.id) === Number(id)); return { item, conflicts: [], mode: 'demo' } }
 }
 
 export async function createDesignBrief(payload) {

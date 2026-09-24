@@ -327,6 +327,21 @@ def test_scheduling_portal_recommendations_forecast_and_quality(client, admin_he
     assert mobile.status_code == 200
     assert 'next_schedules' in mobile.json
 
+
+def test_production_planner_dependency_and_resource_conflicts(client, admin_headers):
+    jobs = client.get('/api/production', headers=admin_headers).json['items']
+    first = client.post('/api/production/schedule', headers=admin_headers, json={'production_job_id': jobs[0]['id'], 'name': 'Planner cut', 'stage': 'Cutting', 'assigned_worker': 'Planner Worker', 'machine': 'Planner Saw', 'planned_start': '2026-09-24T09:00:00+00:00', 'planned_end': '2026-09-24T11:00:00+00:00'})
+    second = client.post('/api/production/schedule', headers=admin_headers, json={'production_job_id': jobs[0]['id'], 'name': 'Planner assembly', 'stage': 'Assembly', 'assigned_worker': 'Planner Worker', 'machine': 'Planner Saw', 'planned_start': '2026-09-24T10:00:00+00:00', 'planned_end': '2026-09-24T12:00:00+00:00'})
+    assert first.status_code == 201 and second.status_code == 201
+    schedule = client.get('/api/production/schedule', headers=admin_headers)
+    assert schedule.status_code == 200
+    assert any(item['task_id'] == second.json['item']['id'] for item in schedule.json['conflicts'])
+    moved = client.patch(f"/api/production/schedule/{second.json['item']['id']}", headers=admin_headers, json={'dependency_id': first.json['item']['id']})
+    assert moved.status_code == 200
+    assert moved.json['conflicts']
+    invalid = client.patch(f"/api/production/schedule/{second.json['item']['id']}", headers=admin_headers, json={'planned_start': '2026-09-24T12:00:00+00:00', 'planned_end': '2026-09-24T11:00:00+00:00'})
+    assert invalid.status_code == 400
+
 def test_planning_profitability_timeline_and_automation(client, admin_headers):
     planning = client.get('/api/business/planning', headers=admin_headers)
     assert planning.status_code == 200
