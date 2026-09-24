@@ -1,0 +1,6 @@
+.deployment-checks { margin-bottom: 14px; }
+.deployment-check { display: flex; justify-content: space-between; gap: 16px; align-items: center; padding: 10px 0; border-top: 1px solid var(--line); }
+.deployment-check:first-of-type { border-top: 0; }
+.deployment-check small { display: block; margin-top: 3px; color: var(--muted); font-size: 12px; }
+.check-good { color: var(--green-2); }
+.check-warning { color: var(--terracotta); }

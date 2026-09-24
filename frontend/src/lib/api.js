@@ -997,6 +997,14 @@ export async function getOpsHealth() {
   catch (error) { if (error.status) throw error; await delay(); return { ...demoOpsHealth, mode: 'demo' } }
 }
 
+export async function getDeploymentChecks() {
+  try { return await backendRequest('/ops/deployment-checks') }
+  catch (error) {
+    if (error.status) throw error
+    return { environment: 'demo', ready: true, checks: [{ name: 'Demo mode', ok: true, detail: 'Deployment checks are available when the backend is connected.' }], mode: 'demo' }
+  }
+}
+
 export async function getBackups() {
   try { return await backendRequest('/ops/backups') }
   catch (error) { if (error.status) throw error; await delay(); return { items: getLocalDb().backups, mode: 'demo' } }

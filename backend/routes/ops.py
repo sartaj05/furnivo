@@ -3,6 +3,7 @@ from flask import Blueprint, current_app, jsonify
 from ..extensions import db
 from ..services.ops import backup_database, list_backups
 from ..services.health import run_health_check
+from ..services.deployment import deployment_checks
 from ..utils import roles_required
 
 ops_bp = Blueprint('ops', __name__)
@@ -14,6 +15,12 @@ def detailed_health():
     result = run_health_check(current_app.config)
     result.update({'database': result['checks']['database'], 'auto_seed': current_app.config['AUTO_SEED'], 'rate_limit_per_minute': current_app.config['RATE_LIMIT_PER_MINUTE'], 'mode': 'api'})
     return jsonify(result), 200 if result['status'] == 'ok' else 503
+
+
+@ops_bp.get('/deployment-checks')
+@roles_required('admin')
+def deployment_readiness():
+    return jsonify(deployment_checks(current_app.config))
 
 
 @ops_bp.get('/backups')

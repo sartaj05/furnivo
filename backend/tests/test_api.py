@@ -67,6 +67,14 @@ def test_production_and_operations_endpoints(client, admin_headers):
     assert operations.json['database'] == 'ok'
 
 
+def test_deployment_readiness_endpoint(client, admin_headers):
+    response = client.get('/api/ops/deployment-checks', headers=admin_headers)
+    assert response.status_code == 200
+    assert response.json['environment'] == 'test'
+    assert response.json['mode'] == 'api'
+    assert len(response.json['checks']) >= 4
+
+
 def test_client_workspace_records_are_scoped(client):
     login = client.post('/api/auth/login', json={'email': 'client@furnivo.demo', 'password': 'client123'})
     headers = {'Authorization': f"Bearer {login.json['token']}"}

@@ -20,6 +20,12 @@
 * { box-sizing: border-box; }
 
 html { scroll-behavior: smooth; }
+.deployment-checks { margin-bottom: 14px; }
+.deployment-check { display: flex; justify-content: space-between; gap: 16px; align-items: center; padding: 10px 0; border-top: 1px solid var(--line); }
+.deployment-check:first-of-type { border-top: 0; }
+.deployment-check small { display: block; margin-top: 3px; color: var(--muted); font-size: 12px; }
+.check-good { color: var(--green-2); }
+.check-warning { color: var(--terracotta); }
 .provider-status-panel { display: flex; justify-content: space-between; gap: 18px; align-items: center; }
 .provider-status-panel h3 { margin: 0; text-transform: capitalize; }
 .provider-status-panel h3 .status { margin-left: 8px; vertical-align: middle; }
