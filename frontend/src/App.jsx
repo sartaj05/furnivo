@@ -30,7 +30,7 @@ import GstPage from './pages/GstPage'
 import DataAdminPage from './pages/DataAdminEnhancedPage'
 import AccessControlPage from './pages/AccessControlPage'
 import ServicePage from './pages/ServicePage'
-import AnalyticsPage from './pages/AnalyticsPage'
+import AnalyticsPage from './pages/AnalyticsEnhancedPage'
 import IntegrationsPage from './pages/IntegrationsPage'
 import FieldOperationsPage from './pages/FieldOperationsPage'
 import BusinessControlPage from './pages/BusinessControlPage'
@@ -43,7 +43,6 @@ import AccountingCenterPage from './pages/AccountingCenterPage'
 import BranchSecurityPage from './pages/BranchSecurityPage'
 import NotificationAutomationPage from './pages/NotificationAutomationEnhancedPage'
 import AutomationBuilderPage from './pages/AutomationBuilderPage'
-import SupplierPortalPage from './pages/SupplierPortalPage'
 import SupplierPortalPage from './pages/SupplierPortalPage'
 import RoutePlanningPage from './pages/RoutePlanningPage'
 import AIDesignAssistantPage from './pages/AIDesignAssistantPage'
@@ -61,7 +60,6 @@ export default function App() {
       <Route path="/register" element={<RegisterPage />} />
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       <Route path="/reset-password" element={<ResetPasswordPage />} />
-      <Route path="/supplier-portal" element={<SupplierPortalPage />} />
       <Route path="/supplier-portal" element={<SupplierPortalPage />} />
 
       <Route element={<ProtectedRoute />}>

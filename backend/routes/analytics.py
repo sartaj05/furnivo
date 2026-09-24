@@ -16,15 +16,16 @@ def _unit_cost(product):
     return Decimal(str(product.price or 0)) * Decimal('0.45')
 
 
-def _job_cost(job):
-    total = Decimal('0')
+def _job_cost_breakdown(job):
+    material = Decimal('0'); labor = Decimal('0'); wastage = Decimal('0')
     for item in job.bom_items:
-        planned = Decimal(str(item.quantity or 0)) * (Decimal('1') + Decimal(str(item.wastage_percent or 0)) / 100)
+        base_quantity = Decimal(str(item.quantity or 0))
+        planned = base_quantity * (Decimal('1') + Decimal(str(item.wastage_percent or 0)) / 100)
         unit_cost = Decimal(str(item.unit_cost or 0)) or _unit_cost(item.product)
-        material_cost = planned * unit_cost
-        labor_cost = Decimal(str(item.labor_cost or 0)) or material_cost * Decimal('0.18')
-        total += material_cost + labor_cost
-    return total
+        material += planned * unit_cost
+        wastage += max(planned - base_quantity, Decimal('0')) * unit_cost
+        labor += Decimal(str(item.labor_cost or 0)) or (planned * unit_cost * Decimal('0.18'))
+    return {'material': material, 'wastage': wastage, 'labor': labor, 'total': material + labor}
 
 
 @analytics_bp.get('')
@@ -51,14 +52,20 @@ def analytics_dashboard():
     profitability_rows = []
     product_profitability = defaultdict(lambda: {'product': '', 'revenue': 0, 'estimated_cost': 0, 'quantity': 0})
     profitability_revenue = Decimal('0'); profitability_cost = Decimal('0')
+    cost_breakdown = {'material': Decimal('0'), 'labor': Decimal('0'), 'wastage': Decimal('0'), 'shipping': Decimal('0'), 'discounts': Decimal('0'), 'taxes': Decimal('0')}
     for order in orders:
         if not order.quote: continue
-        order_revenue = Decimal(str(order.quote.total or 0))
+        quote = order.quote
+        order_revenue = Decimal(str(quote.taxable_amount or 0)) + Decimal(str(quote.shipping_amount or 0))
         job = job_by_quote.get(order.quote_id)
         if job:
-            order_cost = _job_cost(job)
+            job_breakdown = _job_cost_breakdown(job)
+            order_cost = job_breakdown['total']
         else:
-            order_cost = sum((Decimal(str(item.quantity or 0)) * _unit_cost(item.product) * Decimal('1.18') for item in order.quote.items), Decimal('0'))
+            material = sum((Decimal(str(item.quantity or 0)) * _unit_cost(item.product) for item in quote.items), Decimal('0'))
+            job_breakdown = {'material': material, 'wastage': Decimal('0'), 'labor': material * Decimal('0.18'), 'total': material * Decimal('1.18')}
+            order_cost = job_breakdown['total']
+        cost_breakdown['material'] += job_breakdown['material']; cost_breakdown['labor'] += job_breakdown['labor']; cost_breakdown['wastage'] += job_breakdown['wastage']; cost_breakdown['shipping'] += Decimal(str(quote.shipping_amount or 0)) * Decimal('0.65'); cost_breakdown['discounts'] += Decimal(str(quote.discount_amount or 0)); cost_breakdown['taxes'] += Decimal(str(quote.tax_amount or 0))
         profitability_revenue += order_revenue; profitability_cost += order_cost
         profitability_rows.append({'order_number': order.order_number, 'customer': order.customer_name, 'revenue': float(order_revenue), 'estimated_cost': float(order_cost), 'gross_profit': float(order_revenue - order_cost), 'margin_percent': round(float((order_revenue - order_cost) / order_revenue * 100) if order_revenue else 0, 1)})
         for item in order.quote.items:
@@ -67,7 +74,11 @@ def analytics_dashboard():
             row = product_profitability[name]; row['product'] = name; row['revenue'] += float(item.line_total); row['quantity'] += float(item.quantity or 0); row['estimated_cost'] += float(Decimal(str(item.quantity or 0)) * _unit_cost(product))
     gross_profit = profitability_revenue - profitability_cost
     for row in product_profitability.values(): row['gross_profit'] = round(row['revenue'] - row['estimated_cost'], 2); row['margin_percent'] = round((row['gross_profit'] / row['revenue'] * 100) if row['revenue'] else 0, 1)
-    return jsonify({'summary': {'revenue': round(revenue, 2), 'invoice_total': round(invoice_total, 2), 'outstanding': round(max(invoice_total - revenue, 0), 2), 'quote_pipeline': round(quote_pipeline, 2), 'conversion_rate': round((len(approved_quotes) / len(quotes) * 100) if quotes else 0, 1), 'lead_win_rate': round((len(won_leads) / len(leads) * 100) if leads else 0, 1), 'inventory_value': round(sum(float(item.quantity or 0) * float(item.product.price or 0) for item in stock if item.product), 2), 'low_stock': sum(1 for item in stock if (item.quantity or 0) - (item.reserved_quantity or 0) <= (item.reorder_level or 0))}, 'profitability': {'revenue': float(profitability_revenue), 'estimated_cost': float(profitability_cost), 'gross_profit': float(gross_profit), 'margin_percent': round(float(gross_profit / profitability_revenue * 100) if profitability_revenue else 0, 1), 'projects': profitability_rows, 'top_products': sorted(product_profitability.values(), key=lambda item: item['gross_profit'], reverse=True)[:8]}, 'quotes_by_status': _counts(quotes, 'status'), 'leads_by_stage': _counts(leads, 'stage'), 'production_by_status': _counts(jobs, 'status'), 'forecast': {'next_30_days': round(revenue + (quote_pipeline * 0.35), 2), 'next_90_days': round(revenue + (quote_pipeline * 0.75), 2), 'method': 'Collected revenue plus weighted open pipeline'}, 'top_customers': top_customers, 'mode': 'api'})
+    confidence = round(min(95, 55 + len(quotes) * 4 + len(orders) * 5), 1)
+    risks = []
+    if any((item.quantity or 0) - (item.reserved_quantity or 0) <= (item.reorder_level or 0) for item in stock): risks.append('Low-stock materials may delay margin realization.')
+    if quote_pipeline: risks.append('Forecast includes open quotations weighted by stage confidence.')
+    return jsonify({'summary': {'revenue': round(revenue, 2), 'invoice_total': round(invoice_total, 2), 'outstanding': round(max(invoice_total - revenue, 0), 2), 'quote_pipeline': round(quote_pipeline, 2), 'conversion_rate': round((len(approved_quotes) / len(quotes) * 100) if quotes else 0, 1), 'lead_win_rate': round((len(won_leads) / len(leads) * 100) if leads else 0, 1), 'inventory_value': round(sum(float(item.quantity or 0) * float(item.product.price or 0) for item in stock if item.product), 2), 'low_stock': sum(1 for item in stock if (item.quantity or 0) - (item.reserved_quantity or 0) <= (item.reorder_level or 0))}, 'profitability': {'revenue': float(profitability_revenue), 'estimated_cost': float(profitability_cost), 'gross_profit': float(gross_profit), 'margin_percent': round(float(gross_profit / profitability_revenue * 100) if profitability_revenue else 0, 1), 'projects': profitability_rows, 'top_products': sorted(product_profitability.values(), key=lambda item: item['gross_profit'], reverse=True)[:8], 'cost_breakdown': {key: round(float(value), 2) for key, value in cost_breakdown.items()}}, 'quotes_by_status': _counts(quotes, 'status'), 'leads_by_stage': _counts(leads, 'stage'), 'production_by_status': _counts(jobs, 'status'), 'forecast': {'next_30_days': round(revenue + (quote_pipeline * 0.35), 2), 'next_90_days': round(revenue + (quote_pipeline * 0.75), 2), 'confidence_percent': confidence, 'risks': risks, 'method': 'Collected revenue plus weighted open pipeline'}, 'top_customers': top_customers, 'mode': 'api'})
 
 
 def _counts(items, field):
