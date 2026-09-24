@@ -14,7 +14,7 @@ import OrdersPage from './pages/OrdersPage'
 import InventoryPage from './pages/InventoryPage'
 import InvoicesPage from './pages/InvoicesPage'
 import ProcurementPage from './pages/ProcurementPage'
-import ReportsPage from './pages/ReportsPage'
+import CustomReportsPage from './pages/CustomReportsPage'
 import AuditPage from './pages/AuditPage'
 import SchedulesPage from './pages/SchedulesPage'
 import WarehousesPage from './pages/WarehousesPage'
@@ -112,7 +112,7 @@ export default function App() {
         <Route path="/app/recommendations" element={<RecommendationsPage />} />
         <Route path="/app/invoices" element={<InvoicesPage />} />
         <Route path="/app/procurement" element={<ProcurementPage />} />
-        <Route path="/app/reports" element={<ProtectedRoute allowedRoles={['admin', 'sales']}><ReportsPage /></ProtectedRoute>} />
+        <Route path="/app/reports" element={<ProtectedRoute allowedRoles={['admin', 'sales']}><CustomReportsPage /></ProtectedRoute>} />
         <Route path="/app/audit" element={<ProtectedRoute allowedRoles={['admin']}><AuditPage /></ProtectedRoute>} />
         <Route path="/app/schedules" element={<SchedulesPage />} />
         <Route path="/app/warehouses" element={<WarehousesPage />} />

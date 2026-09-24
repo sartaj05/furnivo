@@ -826,6 +826,11 @@ export async function getReportSummary() {
   }
 }
 
+export async function getCustomReport(metrics = ['quotes', 'orders', 'invoices', 'inventory'], periodDays = 90) {
+  try { return await backendRequest(`/reports/custom?metrics=${encodeURIComponent(metrics.join(','))}&period_days=${encodeURIComponent(periodDays)}`) }
+  catch (error) { if (error.status) throw error; const summary = await getReportSummary(); return { report: { metrics: Object.fromEntries(metrics.filter((key) => summary.data[key]).map((key) => [key, summary.data[key]])), selected_metrics: metrics, period_days: Number(periodDays), filters: { scope: 'demo workspace' }, generated_at: new Date().toISOString(), export_formats: ['csv', 'pdf', 'xlsx'] }, mode: 'demo' } }
+}
+
 export async function getAuditLogs(resource = '') {
   try { return await backendRequest(`/audit-logs${resource ? `?resource=${encodeURIComponent(resource)}` : ''}`) }
   catch (error) { if (error.status) throw error; await delay(); return { items: getLocalDb().auditLogs, mode: 'demo' } }

@@ -402,6 +402,17 @@ def test_quality_approval_gate_before_production_complete(client, admin_headers)
     completed = client.patch(f'/api/production/{job_id}', headers=admin_headers, json={'status': 'Complete'})
     assert completed.status_code == 200
 
+
+def test_custom_reports_builder_metrics_and_period(client, admin_headers):
+    report = client.get('/api/reports/custom?metrics=quotes,profitability,forecast&period_days=180', headers=admin_headers)
+    assert report.status_code == 200
+    assert report.json['report']['selected_metrics'] == ['quotes', 'profitability', 'forecast']
+    assert report.json['report']['period_days'] == 180
+    assert 'gross_profit' in report.json['report']['metrics']['profitability']
+    assert 'csv' in report.json['report']['export_formats']
+    invalid = client.get('/api/reports/custom?metrics=not-a-metric', headers=admin_headers)
+    assert invalid.status_code == 400
+
 def test_planning_profitability_timeline_and_automation(client, admin_headers):
     planning = client.get('/api/business/planning', headers=admin_headers)
     assert planning.status_code == 200
