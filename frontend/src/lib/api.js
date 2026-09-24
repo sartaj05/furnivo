@@ -1619,6 +1619,36 @@ export async function updateProductionTask(id, payload) {
   catch (error) { if (error.status) throw error; const db = getLocalDb(); db.productionJobs.forEach((job) => { job.tasks = (job.tasks || []).map((task) => Number(task.id) === Number(id) ? { ...task, ...payload } : task) }); saveLocalDb(db); const item = db.productionJobs.flatMap((job) => job.tasks || []).find((task) => Number(task.id) === Number(id)); return { item, conflicts: [], mode: 'demo' } }
 }
 
+export async function getMobileWorkshopTasks(code = '') {
+  try { return await backendRequest(`/production/mobile/tasks${code ? `?code=${encodeURIComponent(code)}` : ''}`) }
+  catch (error) { if (error.status) throw error; const tasks = (getLocalDb().productionJobs || []).flatMap((job) => (job.tasks || []).map((task) => ({ ...task, production_job_id: job.id, job_number: job.job_number }))); return { items: code ? tasks.filter((task) => [task.id, task.name, task.job_number].some((value) => String(value || '').toLowerCase().includes(code.toLowerCase()))) : tasks, mode: 'demo' } }
+}
+
+export async function updateMobileWorkshopTask(id, payload) {
+  try { return await backendRequest(`/production/mobile/tasks/${id}`, { method: 'PATCH', body: JSON.stringify(payload) }) }
+  catch (error) { if (error.status) throw error; return updateProductionTask(id, payload) }
+}
+
+export async function recordWorkshopMaterial(taskId, payload) {
+  try { return await backendRequest(`/production/mobile/tasks/${taskId}/materials`, { method: 'POST', body: JSON.stringify(payload) }) }
+  catch (error) { if (error.status) throw error; return { item: (await updateProductionTask(taskId, {})).item, movement: { ...payload, reference: `TASK-${taskId}` }, mode: 'offline' } }
+}
+
+export async function uploadProductionTaskPhoto(file, taskId) {
+  if (API_URL) {
+    try {
+      const token = localStorage.getItem('furnivo-token'); const body = new FormData(); body.append('file', file); body.append('task_id', String(taskId || ''))
+      const response = await fetch(`${API_URL}/uploads/production-task`, { method: 'POST', headers: token ? { Authorization: `Bearer ${token}` } : {}, body }); const data = await response.json().catch(() => ({}))
+      if (!response.ok) { const error = new Error(data.message || 'Task photo upload failed'); error.status = response.status; throw error }
+      if (data.item?.url?.startsWith('/')) data.item.url = `${API_URL.replace(/\/api$/, '')}${data.item.url}`
+      return data
+    } catch (error) { if (error.status) throw error; setDataMode('demo') }
+  }
+  if (file.size > 1_500_000) throw new Error('Demo photo must be under 1.5 MB.')
+  const url = await new Promise((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(reader.result); reader.onerror = reject; reader.readAsDataURL(file) })
+  return { item: { url, provider: 'browser-demo', task_id: taskId }, mode: 'demo' }
+}
+
 export async function createDesignBrief(payload) {
   try { return await backendRequest('/design-assistant', { method: 'POST', body: JSON.stringify(payload) }) }
   catch (error) { if (error.status) throw error; const db = getLocalDb(); const products = db.products.filter((item) => !payload.budget || Number(item.price) <= Number(payload.budget)).slice(0, 6); return { brief: { title: `${String(payload.style || 'Warm modern').replace(/^./, (value) => value.toUpperCase())} ${payload.room || 'room'} concept`, layout: ['Anchor a primary seating zone.', 'Keep clear circulation around the room.', 'Layer accents through textiles and warm lighting.'], moodboard: [{ label: 'Palette', value: payload.color || 'neutral' }, { label: 'Style', value: payload.style || 'warm modern' }, { label: 'Material', value: payload.material || 'Natural wood' }], design_inputs: payload, confidence: 'demo', next_steps: ['Review the recommended products.', 'Save the selected configuration to a quotation.', 'Confirm dimensions and finish with the designer.'], recommendations: products.map((product) => ({ product, reason: 'Matches the selected room and budget.' })), provider: 'demo-fallback' }, mode: 'demo' } }

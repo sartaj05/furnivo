@@ -50,6 +50,18 @@ def upload_design_room():
     return jsonify({'item': result, 'mode': 'api'}), 201
 
 
+@uploads_bp.post('/production-task')
+@roles_required('admin', 'sales', 'designer')
+def upload_production_task_photo():
+    try:
+        result = save_asset(request.files.get('file'), folder='furnivo/production-tasks')
+    except ValueError as exc:
+        return jsonify({'message': str(exc)}), 400
+    asset = register_asset(result, 'production_task', request.form.get('task_id', ''))
+    result['asset_id'] = asset.id; result['entity_type'] = asset.entity_type; result['entity_id'] = asset.entity_id
+    return jsonify({'item': result, 'mode': 'api'}), 201
+
+
 @uploads_bp.get('/assets')
 @roles_required('admin')
 def list_assets():

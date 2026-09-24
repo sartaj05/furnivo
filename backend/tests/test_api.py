@@ -354,6 +354,23 @@ def test_inventory_forecast_controls_and_stockout_metrics(client, admin_headers)
     invalid = client.get('/api/inventory/forecast?days=bad', headers=admin_headers)
     assert invalid.status_code == 400
 
+
+def test_mobile_workshop_task_execution_and_material_issue(client, admin_headers):
+    jobs = client.get('/api/production', headers=admin_headers).json['items']
+    created = client.post('/api/production/schedule', headers=admin_headers, json={'production_job_id': jobs[0]['id'], 'name': 'Mobile execution task', 'stage': 'Assembly', 'assigned_worker': 'Mobile Worker'})
+    assert created.status_code == 201
+    task_id = created.json['item']['id']
+    mobile = client.get('/api/production/mobile/tasks', headers=admin_headers, query_string={'code': str(task_id)})
+    assert mobile.status_code == 200
+    assert len(mobile.json['items']) == 1
+    updated = client.patch(f'/api/production/mobile/tasks/{task_id}', headers=admin_headers, json={'status': 'In progress', 'actual_minutes': 35})
+    assert updated.status_code == 200
+    assert updated.json['item']['actual_minutes'] == 35
+    inventory = client.get('/api/inventory', headers=admin_headers).json['items'][0]
+    movement = client.post(f'/api/production/mobile/tasks/{task_id}/materials', headers=admin_headers, json={'inventory_id': inventory['id'], 'quantity': 0.1, 'movement': 'issue'})
+    assert movement.status_code == 200
+    assert movement.json['movement']['movement_type'] == 'Workshop issue'
+
 def test_planning_profitability_timeline_and_automation(client, admin_headers):
     planning = client.get('/api/business/planning', headers=admin_headers)
     assert planning.status_code == 200

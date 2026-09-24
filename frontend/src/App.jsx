@@ -33,6 +33,7 @@ import ServicePage from './pages/ServicePage'
 import AnalyticsPage from './pages/AnalyticsEnhancedPage'
 import IntegrationsPage from './pages/IntegrationsPage'
 import FieldOperationsPage from './pages/FieldOperationsPage'
+import MobileWorkshopPage from './pages/MobileWorkshopPage'
 import BusinessControlPage from './pages/BusinessControlPage'
 import ProductionSchedulingPage from './pages/ProductionSchedulingPage'
 import MobilePortalPage from './pages/MobilePortalPage'
@@ -94,6 +95,7 @@ export default function App() {
         <Route path="/app/route-planning" element={<ProtectedRoute allowedRoles={['admin', 'sales', 'designer']}><RoutePlanningPage /></ProtectedRoute>} />
         <Route path="/app/integrations" element={<ProtectedRoute allowedRoles={['admin']}><IntegrationsPage /></ProtectedRoute>} />
         <Route path="/app/field-operations" element={<FieldOperationsPage />} />
+        <Route path="/app/mobile-workshop" element={<ProtectedRoute allowedRoles={['admin', 'sales', 'designer']}><MobileWorkshopPage /></ProtectedRoute>} />
         <Route path="/app/customers" element={<ProtectedRoute allowedRoles={['admin', 'sales']}><CustomersPage /></ProtectedRoute>} />
         <Route
           path="/app/leads"

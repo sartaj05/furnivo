@@ -3,7 +3,7 @@ from datetime import date, datetime, timezone
 from decimal import Decimal, InvalidOperation
 from flask import Blueprint, jsonify, request
 from ..extensions import db
-from ..models import BomItem, Order, ProductionJob, ProductionTask, QualityInspection, QuoteClientAccess, utcnow
+from ..models import BomItem, InventoryItem, Order, ProductionJob, ProductionTask, QualityInspection, QuoteClientAccess, StockMovement, utcnow
 from ..services.audit import record_audit
 from ..utils import current_user, roles_required
 
@@ -162,6 +162,49 @@ def production_capacity():
             planned_end = task.planned_end if task.planned_end.tzinfo else task.planned_end.replace(tzinfo=timezone.utc)
             alert_count += planned_end < now
     return jsonify({'capacity': {'planned_tasks': len(tasks), 'open_tasks': sum(task.status not in {'Complete', 'Cancelled'} for task in tasks), 'worker_minutes': workers, 'machine_minutes': machines, 'alert_count': alert_count}, 'mode': 'api'})
+
+
+@production_bp.get('/mobile/tasks')
+@roles_required('admin', 'sales', 'designer')
+def mobile_tasks():
+    code = str(request.args.get('code', '')).strip().lower()
+    tasks = db.session.scalars(db.select(ProductionTask).order_by(ProductionTask.planned_start, ProductionTask.id)).all()
+    if code:
+        tasks = [task for task in tasks if code in str(task.id).lower() or code in str(task.name).lower() or code in str(task.production_job.job_number if task.production_job else '').lower()]
+    return jsonify({'items': [task.to_dict() for task in tasks], 'scan_code': code, 'mode': 'api'})
+
+
+@production_bp.patch('/mobile/tasks/<int:task_id>')
+@roles_required('admin', 'sales', 'designer')
+def update_mobile_task(task_id):
+    task = db.get_or_404(ProductionTask, task_id); payload = request.get_json(silent=True) or {}
+    if 'status' in payload and str(payload['status']) not in {'Planned', 'In progress', 'Blocked', 'Complete'}:
+        return jsonify({'message': 'Mobile task status is invalid.'}), 400
+    try:
+        if 'actual_minutes' in payload and int(payload['actual_minutes']) < 0: raise ValueError
+        if 'actual_minutes' in payload: task.actual_minutes = int(payload['actual_minutes'])
+    except (TypeError, ValueError):
+        return jsonify({'message': 'Actual minutes must be a non-negative number.'}), 400
+    if 'status' in payload: task.status = str(payload['status'])
+    conflicts = task_conflicts(task)
+    db.session.commit(); record_audit(current_user().id, 'Mobile production task updated', 'production_task', task.id, task.status); db.session.commit()
+    return jsonify({'item': task.to_dict(), 'conflicts': conflicts, 'mode': 'api'})
+
+
+@production_bp.post('/mobile/tasks/<int:task_id>/materials')
+@roles_required('admin', 'sales', 'designer')
+def mobile_material_movement(task_id):
+    task = db.get_or_404(ProductionTask, task_id); payload = request.get_json(silent=True) or {}; movement = str(payload.get('movement', 'issue')).lower()
+    if movement not in {'issue', 'return'}: return jsonify({'message': 'Movement must be issue or return.'}), 400
+    try: quantity = Decimal(str(payload.get('quantity', 0)))
+    except (InvalidOperation, ValueError): return jsonify({'message': 'Quantity must be a valid number.'}), 400
+    inventory = db.session.get(InventoryItem, payload.get('inventory_id')) if payload.get('inventory_id') else None
+    if not inventory or quantity <= 0: return jsonify({'message': 'Choose an inventory item and a positive quantity.'}), 400
+    if movement == 'issue' and quantity > inventory.available_quantity: return jsonify({'message': 'Not enough available stock for this issue.'}), 409
+    inventory.quantity = inventory.quantity - quantity if movement == 'issue' else inventory.quantity + quantity
+    stock = StockMovement(product_id=inventory.product_id, quantity=quantity, movement_type=f'Workshop {movement}', reference=f'TASK-{task.id}', created_by_id=current_user().id)
+    db.session.add(stock); db.session.commit(); record_audit(current_user().id, f'Workshop material {movement}', 'production_task', task.id, f'{inventory.product.name if inventory.product else "Material"} x {quantity}'); db.session.commit()
+    return jsonify({'item': task.to_dict(), 'inventory': inventory.to_dict(), 'movement': stock.to_dict(), 'mode': 'api'})
 
 
 @production_bp.get('/<int:job_id>/inspections')
