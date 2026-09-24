@@ -5,6 +5,7 @@ frontend/.coverage/
 frontend/.vite-cache/
 .venv/
 __pycache__/
+.pytest_cache/
 *.pyc
 .env
 .DS_Store
