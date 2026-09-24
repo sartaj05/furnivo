@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, Navigate } from 'react-router-dom'
+import { useAuth } from '../context/AuthContext'
 
 const features = [
   {
@@ -25,7 +26,10 @@ const features = [
 ]
 
 export default function LandingPage() {
+  const user = useAuth()?.user
   const [menuOpen, setMenuOpen] = useState(false)
+
+  if (user) return <Navigate to="/app" replace />
 
   return (
     <div className="marketing-page">

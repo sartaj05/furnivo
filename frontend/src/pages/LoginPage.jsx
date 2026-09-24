@@ -109,6 +109,10 @@ export default function LoginPage() {
           </button>
 
           <p className="auth-switch">
+            <Link className="forgot-link" to="/forgot-password">Forgot password?</Link>
+          </p>
+
+          <p className="auth-switch">
             New to Furnivo? <Link to="/register">Create an account</Link>
           </p>
 

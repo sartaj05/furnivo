@@ -34,6 +34,21 @@ class User(TimestampMixin, db.Model):
         }
 
 
+class PasswordResetToken(TimestampMixin, db.Model):
+    __tablename__ = 'password_reset_tokens'
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='CASCADE'), nullable=False, index=True)
+    token_hash = db.Column(db.String(128), unique=True, nullable=False, index=True)
+    expires_at = db.Column(db.DateTime(timezone=True), nullable=False)
+    used_at = db.Column(db.DateTime(timezone=True))
+    user = db.relationship('User')
+
+    def is_valid(self):
+        expiry = self.expires_at.replace(tzinfo=timezone.utc) if self.expires_at.tzinfo is None else self.expires_at
+        return not self.used_at and expiry > utcnow()
+
+
 class RefreshSession(TimestampMixin, db.Model):
     __tablename__ = 'refresh_sessions'
 

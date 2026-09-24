@@ -1,0 +1,9 @@
+import { useState } from 'react'
+import { Link } from 'react-router-dom'
+import { forgotPassword } from '../lib/api'
+
+export default function ForgotPasswordPage() {
+  const [email, setEmail] = useState('admin@furnivo.demo'); const [result, setResult] = useState(null); const [error, setError] = useState(''); const [loading, setLoading] = useState(false)
+  async function submit(event) { event.preventDefault(); setError(''); setResult(null); setLoading(true); try { setResult(await forgotPassword(email)) } catch (err) { setError(err.message || 'Unable to create reset link.') } finally { setLoading(false) } }
+  return <div className="login-layout"><section className="login-story"><Link className="brand brand-light" to="/"><span className="brand-mark brand-mark-light">F</span><span>Furnivo</span></Link><div className="login-story-copy"><p className="eyebrow eyebrow-light">Account recovery</p><h1>Get back to the work without the account anxiety.</h1><p>Request a secure password reset link. Demo mode shows the link here; production mode should deliver it through your configured email provider.</p></div></section><section className="login-panel"><form className="login-card" onSubmit={submit}><Link className="back-link" to="/login">← Back to sign in</Link><div className="login-heading"><p className="eyebrow">Forgot password</p><h2>Reset your password</h2><p>Enter the email connected to your Furnivo account.</p></div><label>Email<input type="email" value={email} onChange={(event) => setEmail(event.target.value)} required /></label>{error && <div className="form-error">{error}</div>}{result && <div className="success-message">{result.message}{result.reset_token && <><br /><Link to={`/reset-password?token=${encodeURIComponent(result.reset_token)}`}>Continue to reset password</Link></>}</div>}<button className="button login-button" disabled={loading}>{loading ? 'Preparing reset…' : 'Send reset link'}</button></form></section></div>
+}

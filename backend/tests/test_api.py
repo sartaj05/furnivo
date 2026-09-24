@@ -276,3 +276,21 @@ def test_api_preserves_expected_http_errors_and_demo_ai_budget_order(client, adm
     assert design.status_code == 200
     prices = [item['product']['price'] for item in design.json['brief']['recommendations']]
     assert prices and prices[0] <= 13000
+
+
+def test_forgot_and_reset_password_flow(client):
+    requested = client.post('/api/auth/forgot-password', json={'email': 'admin@furnivo.demo'})
+    assert requested.status_code == 200
+    token = requested.json['reset_token']
+    assert token
+
+    reset = client.post('/api/auth/reset-password', json={'token': token, 'password': 'NewAdmin12345'})
+    assert reset.status_code == 200
+    login = client.post('/api/auth/login', json={'email': 'admin@furnivo.demo', 'password': 'NewAdmin12345'})
+    assert login.status_code == 200
+
+    reused = client.post('/api/auth/reset-password', json={'token': token, 'password': 'AnotherAdmin12345'})
+    assert reused.status_code == 400
+    unknown = client.post('/api/auth/forgot-password', json={'email': 'unknown@example.com'})
+    assert unknown.status_code == 200
+    assert unknown.json.get('reset_token') is None

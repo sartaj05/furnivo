@@ -196,6 +196,32 @@ export async function login(email, password) {
   }
 }
 
+export async function forgotPassword(email) {
+  try { return await backendRequest('/auth/forgot-password', { method: 'POST', body: JSON.stringify({ email }) }) }
+  catch (error) {
+    if (error.status) throw error
+    const db = getLocalDb(); const user = db.users.find((item) => item.email.toLowerCase() === String(email).trim().toLowerCase())
+    const token = `demo-reset-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
+    db.passwordResetTokens = db.passwordResetTokens || {}
+    if (user) db.passwordResetTokens[token] = { email: user.email, expires_at: Date.now() + 30 * 60 * 1000 }
+    saveLocalDb(db)
+    return { message: 'If an active account matches that email, reset instructions are ready.', reset_token: user ? token : null, mode: 'demo' }
+  }
+}
+
+export async function resetPassword(token, password) {
+  try { return await backendRequest('/auth/reset-password', { method: 'POST', body: JSON.stringify({ token, password }) }) }
+  catch (error) {
+    if (error.status) throw error
+    const db = getLocalDb(); const reset = db.passwordResetTokens?.[token]
+    if (!reset || reset.expires_at < Date.now()) throw new Error('This reset link is invalid or expired.')
+    const user = db.users.find((item) => item.email === reset.email)
+    if (!user) throw new Error('This reset link is invalid or expired.')
+    user.password = password; delete db.passwordResetTokens[token]; saveLocalDb(db)
+    return { message: 'Password updated. You can now sign in.', mode: 'demo' }
+  }
+}
+
 export async function verifyMfa(challengeId, code) {
   try { return await backendRequest('/auth/mfa/verify', { method: 'POST', body: JSON.stringify({ challenge_id: challengeId, code }) }) }
   catch (error) { if (error.status) throw error; throw new Error('MFA verification requires the connected backend.') }

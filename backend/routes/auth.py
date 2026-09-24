@@ -6,7 +6,7 @@ from flask_jwt_extended import create_access_token, jwt_required
 from sqlalchemy import func
 from werkzeug.security import check_password_hash, generate_password_hash
 from ..extensions import db
-from ..models import MfaChallenge, MfaSetting, RefreshSession, User
+from ..models import MfaChallenge, MfaSetting, PasswordResetToken, RefreshSession, User
 from ..utils import current_user, roles_required
 
 auth_bp = Blueprint('auth', __name__)
@@ -74,6 +74,41 @@ def login():
         if current_app.config['ENVIRONMENT'] != 'production': payload['demo_code'] = code
         return jsonify(payload), 202
     return auth_payload(user)
+
+
+def valid_password(password):
+    return len(password) >= 10 and any(char.isupper() for char in password) and any(char.islower() for char in password) and any(char.isdigit() for char in password)
+
+
+@auth_bp.post('/forgot-password')
+def forgot_password():
+    payload = request.get_json(silent=True) or {}
+    email = str(payload.get('email', '')).strip().lower()
+    user = db.session.scalar(db.select(User).where(func.lower(User.email) == email, User.is_active.is_(True))) if email else None
+    response = {'message': 'If an active account matches that email, reset instructions are ready.', 'mode': 'api'}
+    if user:
+        raw_token = secrets.token_urlsafe(32)
+        db.session.add(PasswordResetToken(user_id=user.id, token_hash=token_hash(raw_token), expires_at=datetime.now(timezone.utc) + timedelta(minutes=30)))
+        db.session.commit()
+        if current_app.config['ENVIRONMENT'] != 'production': response['reset_token'] = raw_token
+    return jsonify(response)
+
+
+@auth_bp.post('/reset-password')
+def reset_password():
+    payload = request.get_json(silent=True) or {}
+    raw_token = str(payload.get('token', '')).strip()
+    password = str(payload.get('password', ''))
+    if not raw_token or not valid_password(password):
+        return jsonify({'message': 'Use a valid reset token and a 10+ character password with upper, lower and numeric characters.'}), 400
+    item = db.session.scalar(db.select(PasswordResetToken).where(PasswordResetToken.token_hash == token_hash(raw_token)))
+    if not item or not item.is_valid() or not item.user or not item.user.is_active:
+        return jsonify({'message': 'This reset link is invalid or expired.'}), 400
+    item.user.password_hash = generate_password_hash(password); item.used_at = datetime.now(timezone.utc)
+    now = datetime.now(timezone.utc)
+    for session in db.session.scalars(db.select(RefreshSession).where(RefreshSession.user_id == item.user_id, RefreshSession.revoked_at.is_(None))).all(): session.revoked_at = now
+    db.session.commit()
+    return jsonify({'message': 'Password updated. You can now sign in.', 'mode': 'api'})
 
 
 @auth_bp.get('/me')
