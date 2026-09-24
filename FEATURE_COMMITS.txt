@@ -17,3 +17,4 @@ feat: add accounting security notifications routing and service operations
 feat: add advanced scheduling mobile portal recommendations forecasting and quality control
 feat: add AI design assistant Gantt collaboration predictive analytics and tenant foundations
 fix: preserve API HTTP errors and harden seeded demo workspace behavior
+fix: support direct backend app execution

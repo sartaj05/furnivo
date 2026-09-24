@@ -104,6 +104,14 @@ Run the API:
 python -m backend.app
 ```
 
+When your terminal is already inside `backend`, this also works:
+
+```powershell
+python app.py
+```
+
+For production, use the configured Gunicorn/Render start command instead of Flask's development server.
+
 The demo data is seeded automatically when `AUTO_SEED=true`.
 
 Create `frontend/.env`:

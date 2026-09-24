@@ -1,11 +1,19 @@
 import json
 import logging
+import sys
 import time
 from pathlib import Path
 from uuid import uuid4
 from flask import Flask, g, jsonify, request, send_from_directory
 from flask_cors import CORS
 from werkzeug.exceptions import HTTPException
+
+# Support both `python -m backend.app` from the project root and
+# `python app.py` from inside the backend directory.
+if __package__ in {None, ''}:
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+    __package__ = 'backend'
+
 from .config import Config
 from .extensions import db, jwt, migrate
 from .services.health import run_health_check
