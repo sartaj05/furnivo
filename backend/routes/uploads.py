@@ -62,6 +62,18 @@ def upload_production_task_photo():
     return jsonify({'item': result, 'mode': 'api'}), 201
 
 
+@uploads_bp.post('/quality-inspection')
+@roles_required('admin', 'sales', 'designer')
+def upload_quality_inspection_photo():
+    try:
+        result = save_asset(request.files.get('file'), folder='furnivo/quality-inspections')
+    except ValueError as exc:
+        return jsonify({'message': str(exc)}), 400
+    asset = register_asset(result, 'quality_inspection', request.form.get('inspection_id', ''))
+    result['asset_id'] = asset.id; result['entity_type'] = asset.entity_type; result['entity_id'] = asset.entity_id
+    return jsonify({'item': result, 'mode': 'api'}), 201
+
+
 @uploads_bp.get('/assets')
 @roles_required('admin')
 def list_assets():

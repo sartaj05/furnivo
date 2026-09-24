@@ -63,6 +63,8 @@ def create_job():
 def update_job(job_id):
     job = db.get_or_404(ProductionJob, job_id); payload = request.get_json(silent=True) or {}
     if 'status' in payload and payload['status'] not in {'Planned', 'Cutting', 'Assembly', 'Quality check', 'Ready', 'Complete', 'On hold'}: return jsonify({'message': 'Invalid production status.'}), 400
+    if payload.get('status') == 'Complete' and not db.session.scalar(db.select(QualityInspection.id).where(QualityInspection.production_job_id == job.id, QualityInspection.status == 'Passed')):
+        return jsonify({'message': 'A passed quality inspection is required before production can be completed.'}), 409
     try:
         for field in ('scheduled_start', 'due_date'):
             if field in payload: setattr(job, field, parse_date(payload[field]))

@@ -391,6 +391,17 @@ def test_customer_portal_self_service_actions(client):
     checkout = client.post(f"/api/payments/invoices/{invoice_documents[0]['id']}/checkout", headers=headers, json={})
     assert checkout.status_code == 200
 
+
+def test_quality_approval_gate_before_production_complete(client, admin_headers):
+    jobs = client.get('/api/production', headers=admin_headers).json['items']
+    job_id = jobs[0]['id']
+    blocked = client.patch(f'/api/production/{job_id}', headers=admin_headers, json={'status': 'Complete'})
+    assert blocked.status_code == 409
+    inspection = client.post(f'/api/production/{job_id}/inspections', headers=admin_headers, json={'status': 'Passed', 'checklist': [{'item': 'Finish', 'passed': True}], 'photo_url': 'demo://inspection-photo'})
+    assert inspection.status_code == 201
+    completed = client.patch(f'/api/production/{job_id}', headers=admin_headers, json={'status': 'Complete'})
+    assert completed.status_code == 200
+
 def test_planning_profitability_timeline_and_automation(client, admin_headers):
     planning = client.get('/api/business/planning', headers=admin_headers)
     assert planning.status_code == 200

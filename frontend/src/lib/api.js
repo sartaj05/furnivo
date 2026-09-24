@@ -1704,6 +1704,26 @@ export async function createQualityInspection(jobId, payload) {
   catch (error) { if (error.status) throw error; const db = getLocalDb(); const job = db.productionJobs.find((item) => Number(item.id) === Number(jobId)); const item = { id: Date.now(), production_job_id: jobId, job_number: job?.job_number, status: payload.status || 'Pending', checklist: payload.checklist || [], defects: payload.defects || [], notes: payload.notes || '' }; job.inspections = [item, ...(job.inspections || [])]; job.status = item.status === 'Passed' ? 'Ready' : 'Quality check'; saveLocalDb(db); return { item, job, mode: 'demo' } }
 }
 
+export async function getQualityInspections(jobId) {
+  try { return await backendRequest(`/production/${jobId}/inspections`) }
+  catch (error) { if (error.status) throw error; const job = getLocalDb().productionJobs.find((item) => Number(item.id) === Number(jobId)); return { items: job?.inspections || [], mode: 'demo' } }
+}
+
+export async function uploadQualityInspectionPhoto(file, inspectionId) {
+  if (API_URL) {
+    try {
+      const token = localStorage.getItem('furnivo-token'); const body = new FormData(); body.append('file', file); body.append('inspection_id', String(inspectionId || ''))
+      const response = await fetch(`${API_URL}/uploads/quality-inspection`, { method: 'POST', headers: token ? { Authorization: `Bearer ${token}` } : {}, body }); const data = await response.json().catch(() => ({}))
+      if (!response.ok) { const error = new Error(data.message || 'Inspection photo upload failed'); error.status = response.status; throw error }
+      if (data.item?.url?.startsWith('/')) data.item.url = `${API_URL.replace(/\/api$/, '')}${data.item.url}`
+      return data
+    } catch (error) { if (error.status) throw error; setDataMode('demo') }
+  }
+  if (file.size > 1_500_000) throw new Error('Demo inspection photo must be under 1.5 MB.')
+  const url = await new Promise((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(reader.result); reader.onerror = reject; reader.readAsDataURL(file) })
+  return { item: { url, provider: 'browser-demo', inspection_id: inspectionId }, mode: 'demo' }
+}
+
 export async function getInventoryForecast(days = 30, seasonalFactor = 1, leadTimeDays = 14) {
   try { return await backendRequest(`/inventory/forecast?days=${encodeURIComponent(days)}&seasonal_factor=${encodeURIComponent(seasonalFactor)}&lead_time_days=${encodeURIComponent(leadTimeDays)}`) }
   catch (error) { if (error.status) throw error; return { items: getLocalDb().inventory.map((item) => ({ inventory_id: item.id, product_id: item.product_id, product: item.product, available_quantity: Number(item.available_quantity || 0), forecast_demand: 0, average_daily_demand: 0, projected_quantity: Number(item.available_quantity || 0), reorder_level: Number(item.reorder_level || 0), safety_stock: 0, suggested_order_quantity: Math.max(Number(item.reorder_level || 0) - Number(item.available_quantity || 0), 0), days_until_stockout: null, supplier: item.supplier, risk: item.is_low_stock ? 'Watch' : 'Healthy' })), horizon_days: Number(days), seasonal_factor: Number(seasonalFactor), lead_time_days: Number(leadTimeDays), mode: 'demo' } }
