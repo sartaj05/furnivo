@@ -1669,9 +1669,9 @@ export async function createQualityInspection(jobId, payload) {
   catch (error) { if (error.status) throw error; const db = getLocalDb(); const job = db.productionJobs.find((item) => Number(item.id) === Number(jobId)); const item = { id: Date.now(), production_job_id: jobId, job_number: job?.job_number, status: payload.status || 'Pending', checklist: payload.checklist || [], defects: payload.defects || [], notes: payload.notes || '' }; job.inspections = [item, ...(job.inspections || [])]; job.status = item.status === 'Passed' ? 'Ready' : 'Quality check'; saveLocalDb(db); return { item, job, mode: 'demo' } }
 }
 
-export async function getInventoryForecast() {
-  try { return await backendRequest('/inventory/forecast') }
-  catch (error) { if (error.status) throw error; return { items: getLocalDb().inventory.map((item) => ({ inventory_id: item.id, product_id: item.product_id, product: item.product, available_quantity: Number(item.available_quantity || 0), forecast_demand: 0, projected_quantity: Number(item.available_quantity || 0), reorder_level: Number(item.reorder_level || 0), suggested_order_quantity: Math.max(Number(item.reorder_level || 0) - Number(item.available_quantity || 0), 0), risk: item.is_low_stock ? 'Watch' : 'Healthy' })), horizon_days: 30, mode: 'demo' } }
+export async function getInventoryForecast(days = 30, seasonalFactor = 1, leadTimeDays = 14) {
+  try { return await backendRequest(`/inventory/forecast?days=${encodeURIComponent(days)}&seasonal_factor=${encodeURIComponent(seasonalFactor)}&lead_time_days=${encodeURIComponent(leadTimeDays)}`) }
+  catch (error) { if (error.status) throw error; return { items: getLocalDb().inventory.map((item) => ({ inventory_id: item.id, product_id: item.product_id, product: item.product, available_quantity: Number(item.available_quantity || 0), forecast_demand: 0, average_daily_demand: 0, projected_quantity: Number(item.available_quantity || 0), reorder_level: Number(item.reorder_level || 0), safety_stock: 0, suggested_order_quantity: Math.max(Number(item.reorder_level || 0) - Number(item.available_quantity || 0), 0), days_until_stockout: null, supplier: item.supplier, risk: item.is_low_stock ? 'Watch' : 'Healthy' })), horizon_days: Number(days), seasonal_factor: Number(seasonalFactor), lead_time_days: Number(leadTimeDays), mode: 'demo' } }
 }
 
 export async function getRecommendations(payload) {

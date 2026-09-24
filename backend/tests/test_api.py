@@ -342,6 +342,18 @@ def test_production_planner_dependency_and_resource_conflicts(client, admin_head
     invalid = client.patch(f"/api/production/schedule/{second.json['item']['id']}", headers=admin_headers, json={'planned_start': '2026-09-24T12:00:00+00:00', 'planned_end': '2026-09-24T11:00:00+00:00'})
     assert invalid.status_code == 400
 
+
+def test_inventory_forecast_controls_and_stockout_metrics(client, admin_headers):
+    forecast = client.get('/api/inventory/forecast?days=90&seasonal_factor=1.25&lead_time_days=21', headers=admin_headers)
+    assert forecast.status_code == 200
+    assert forecast.json['horizon_days'] == 90
+    assert forecast.json['seasonal_factor'] == 1.25
+    assert forecast.json['lead_time_days'] == 21
+    assert forecast.json['items']
+    assert 'safety_stock' in forecast.json['items'][0]
+    invalid = client.get('/api/inventory/forecast?days=bad', headers=admin_headers)
+    assert invalid.status_code == 400
+
 def test_planning_profitability_timeline_and_automation(client, admin_headers):
     planning = client.get('/api/business/planning', headers=admin_headers)
     assert planning.status_code == 200

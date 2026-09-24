@@ -73,12 +73,19 @@ def update_inventory(item_id):
 @inventory_bp.get('/forecast')
 @roles_required('admin', 'sales', 'designer')
 def inventory_forecast():
+    try:
+        horizon_days = min(max(int(request.args.get('days', 30)), 7), 365)
+        seasonal_factor = min(max(float(request.args.get('seasonal_factor', 1)), 0.25), 4)
+        lead_time_days = min(max(int(request.args.get('lead_time_days', 14)), 1), 180)
+    except (TypeError, ValueError):
+        return jsonify({'message': 'Forecast days, seasonal factor, and lead time must be valid numbers.'}), 400
     inventory = db.session.scalars(db.select(InventoryItem)).all(); jobs = db.session.scalars(db.select(ProductionJob).where(ProductionJob.status.not_in(['Complete', 'On hold']))).all(); demand = {}
     for job in jobs:
         for bom in job.bom_items:
             if bom.product_id: demand[bom.product_id] = demand.get(bom.product_id, 0) + float(bom.quantity or 0) * (1 + float(bom.wastage_percent or 0) / 100)
     items = []
     for item in inventory:
-        projected = float(item.available_quantity) - demand.get(item.product_id, 0); reorder = max(float(item.reorder_level or 0), demand.get(item.product_id, 0) * 0.25); suggested = max(reorder - projected, 0)
-        items.append({'inventory_id': item.id, 'product_id': item.product_id, 'product': item.product.name if item.product else None, 'available_quantity': float(item.available_quantity), 'forecast_demand': round(demand.get(item.product_id, 0), 2), 'projected_quantity': round(projected, 2), 'reorder_level': round(reorder, 2), 'suggested_order_quantity': round(suggested, 2), 'risk': 'Stockout risk' if projected < 0 else 'Watch' if projected <= reorder else 'Healthy'})
-    return jsonify({'items': items, 'horizon_days': 30, 'method': 'Open production BOM demand plus reorder level', 'mode': 'api'})
+        base_demand = demand.get(item.product_id, 0); forecast_demand = base_demand * (horizon_days / 30) * seasonal_factor; daily_demand = forecast_demand / horizon_days if horizon_days else 0; projected = float(item.available_quantity) - forecast_demand; safety_stock = daily_demand * lead_time_days * 0.5; reorder = max(float(item.reorder_level or 0), daily_demand * lead_time_days + safety_stock); suggested = max(reorder - projected, 0); days_until_stockout = round(float(item.available_quantity) / daily_demand, 1) if daily_demand > 0 else None
+        risk = 'Stockout risk' if projected < 0 or (days_until_stockout is not None and days_until_stockout <= lead_time_days) else 'Watch' if projected <= reorder else 'Healthy'
+        items.append({'inventory_id': item.id, 'product_id': item.product_id, 'product': item.product.name if item.product else None, 'available_quantity': float(item.available_quantity), 'forecast_demand': round(forecast_demand, 2), 'average_daily_demand': round(daily_demand, 2), 'projected_quantity': round(projected, 2), 'reorder_level': round(reorder, 2), 'safety_stock': round(safety_stock, 2), 'suggested_order_quantity': round(suggested, 2), 'days_until_stockout': days_until_stockout, 'supplier': item.supplier, 'risk': risk})
+    return jsonify({'items': items, 'horizon_days': horizon_days, 'seasonal_factor': seasonal_factor, 'lead_time_days': lead_time_days, 'method': 'Open production BOM demand, seasonal multiplier, supplier lead time, and safety stock', 'mode': 'api'})
