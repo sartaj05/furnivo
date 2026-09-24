@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, Navigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import { submitContactInquiry } from '../lib/api'
 
 const features = [
   {
@@ -25,9 +26,22 @@ const features = [
   },
 ]
 
+const initialContactForm = {
+  name: '',
+  company: '',
+  email: '',
+  phone: '',
+  interest: 'General enquiry',
+  message: '',
+  website: '',
+}
+
 export default function LandingPage() {
   const user = useAuth()?.user
   const [menuOpen, setMenuOpen] = useState(false)
+  const [contactForm, setContactForm] = useState(initialContactForm)
+  const [contactStatus, setContactStatus] = useState({ type: '', message: '' })
+  const [contactSubmitting, setContactSubmitting] = useState(false)
 
   useEffect(() => {
     const sectionId = new URLSearchParams(window.location.search).get('section')
@@ -50,6 +64,21 @@ export default function LandingPage() {
     document.getElementById(sectionId)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
 
+  async function submitContact(event) {
+    event.preventDefault()
+    setContactSubmitting(true)
+    setContactStatus({ type: '', message: '' })
+    try {
+      const result = await submitContactInquiry(contactForm)
+      setContactStatus({ type: 'success', message: result.message || 'Thanks, your enquiry has been received.' })
+      setContactForm(initialContactForm)
+    } catch (error) {
+      setContactStatus({ type: 'error', message: error.message || 'We could not send your enquiry. Please try again.' })
+    } finally {
+      setContactSubmitting(false)
+    }
+  }
+
   if (user) return <Navigate to="/app" replace />
 
   return (
@@ -62,7 +91,7 @@ export default function LandingPage() {
 
         <div className={menuOpen ? "nav-links nav-links-open" : "nav-links"}>
           <a href="/?section=platform" onClick={(event) => navigateToSection(event, 'platform')}>Platform</a>
-          <a href="/?section=trust" onClick={(event) => navigateToSection(event, 'trust')}>Why Furnivo</a>
+          <a href="/?section=why-furnivo" onClick={(event) => navigateToSection(event, 'why-furnivo')}>Why Furnivo</a>
           <a href="/?section=contact" onClick={(event) => navigateToSection(event, 'contact')}>Contact</a>
           <Link className="mobile-menu-link" to="/login">Sign in</Link>
           <Link className="mobile-menu-link" to="/register">Register</Link>
@@ -150,6 +179,39 @@ export default function LandingPage() {
           </div>
         </section>
 
+        <section className="why-section" id="why-furnivo">
+          <div className="container">
+            <div className="section-heading">
+              <div>
+                <p className="eyebrow">Why Furnivo</p>
+                <h2>Less chasing. More considered customer conversations.</h2>
+              </div>
+              <p>
+                Furnivo gives furniture and interior teams one calm workspace for the details
+                that usually get scattered across spreadsheets, chats and follow-up calls.
+              </p>
+            </div>
+            <div className="why-grid">
+              <article className="why-card why-card-feature">
+                <span className="why-card-kicker">Designed around your workflow</span>
+                <h3>From first enquiry to final installation.</h3>
+                <p>Keep product choices, pricing, approvals, production updates and customer context connected from the first conversation.</p>
+                <ul className="why-list">
+                  <li><strong>For sales</strong><span>Faster quotes and a clearer follow-up rhythm.</span></li>
+                  <li><strong>For designers</strong><span>Detailed furniture configurations that production can understand.</span></li>
+                  <li><strong>For operations</strong><span>Inventory, schedules, deliveries and service in one view.</span></li>
+                </ul>
+              </article>
+              <aside className="why-proof">
+                <p className="eyebrow">A better operating picture</p>
+                <div><strong>01</strong><span>One connected customer record</span></div>
+                <div><strong>02</strong><span>Demo mode when the API is offline</span></div>
+                <div><strong>03</strong><span>Real workflows when your team is ready</span></div>
+              </aside>
+            </div>
+          </div>
+        </section>
+
         <section className="section container" id="platform">
           <div className="section-heading">
             <div>
@@ -191,13 +253,37 @@ export default function LandingPage() {
           </div>
         </section>
 
-        <section className="cta-section" id="contact">
-          <div className="container cta-inner">
-            <div>
-              <p className="eyebrow">Ready for a walkthrough</p>
-              <h2>Bring catalog, quotes and enquiries into one polished experience.</h2>
+        <section className="contact-section" id="contact">
+          <div className="container">
+            <div className="section-heading contact-heading">
+              <div>
+                <p className="eyebrow">Contact Furnivo</p>
+                <h2>Tell us what you are building.</h2>
+              </div>
+              <p>Share a little about your furniture, interiors or materials workflow. Our team will get back to you with a useful next step.</p>
             </div>
-            <Link className="button button-light" to="/register">Create account</Link>
+            <div className="contact-grid">
+              <div className="contact-details">
+                <p className="contact-intro">Whether you are replacing scattered tools or planning your first operational workspace, we can help you map the right starting point.</p>
+                <div className="contact-detail"><span>General enquiries</span><a href="mailto:hello@furnivo.in">hello@furnivo.in</a></div>
+                <div className="contact-detail"><span>Sales & walkthroughs</span><a href="mailto:hello@furnivo.in">Book a conversation</a></div>
+                <div className="contact-detail"><span>Typical response</span><strong>Within one business day</strong></div>
+                <Link className="text-link" to="/register">Prefer to explore first? Create a free demo account →</Link>
+              </div>
+              <form className="contact-form" onSubmit={submitContact}>
+                <div className="contact-form-grid">
+                  <label>Name<input required minLength="2" value={contactForm.name} onChange={(event) => setContactForm({ ...contactForm, name: event.target.value })} placeholder="Your name" /></label>
+                  <label>Company<input value={contactForm.company} onChange={(event) => setContactForm({ ...contactForm, company: event.target.value })} placeholder="Studio or company" /></label>
+                  <label>Email<input required type="email" value={contactForm.email} onChange={(event) => setContactForm({ ...contactForm, email: event.target.value })} placeholder="you@company.com" /></label>
+                  <label>Phone <span className="optional-label">optional</span><input type="tel" value={contactForm.phone} onChange={(event) => setContactForm({ ...contactForm, phone: event.target.value })} placeholder="+91" /></label>
+                  <label className="contact-form-span">What can we help with?<select value={contactForm.interest} onChange={(event) => setContactForm({ ...contactForm, interest: event.target.value })}><option>General enquiry</option><option>Catalog & products</option><option>Quotations</option><option>Design consultation</option><option>Production & delivery</option></select></label>
+                  <label className="contact-form-span">Project details<textarea required minLength="10" rows="5" value={contactForm.message} onChange={(event) => setContactForm({ ...contactForm, message: event.target.value })} placeholder="Tell us what you would like to improve…" /></label>
+                  <input className="contact-honeypot" tabIndex="-1" autoComplete="off" aria-hidden="true" value={contactForm.website} onChange={(event) => setContactForm({ ...contactForm, website: event.target.value })} />
+                </div>
+                {contactStatus.message && <p className={`contact-status contact-status-${contactStatus.type}`} role="status">{contactStatus.message}</p>}
+                <button className="button" type="submit" disabled={contactSubmitting}>{contactSubmitting ? 'Sending…' : 'Send enquiry'}</button>
+              </form>
+            </div>
           </div>
         </section>
       </main>

@@ -8,6 +8,21 @@ def test_health(client):
     assert response.json['ok'] is True
 
 
+def test_public_contact_inquiry_creates_new_lead(client):
+    response = client.post('/api/leads/public', json={
+        'name': 'Nisha Kapoor',
+        'company': 'Kapoor Studio',
+        'email': 'nisha@example.com',
+        'phone': '+91 98765 43210',
+        'interest': 'Design consultation',
+        'message': 'We need help managing custom furniture quotations for our next project.',
+    })
+    assert response.status_code == 201
+    assert response.json['item']['source'] == 'Website contact'
+    assert response.json['item']['interest'] == 'Design consultation'
+    assert response.json['item']['message'].startswith('We need help')
+
+
 def test_login_and_protected_catalog(client, admin_headers):
     assert admin_headers['Authorization'].startswith('Bearer ')
     response = client.get('/api/products', headers=admin_headers)

@@ -535,7 +535,7 @@ export async function getLeads() {
   try { return await backendRequest('/leads') }
   catch (error) {
     if (error.status) throw error
-    const items = getLocalDb().leads.map((lead) => ({ notes: [], tasks: [], ...lead }))
+    const items = getLocalDb().leads.map((lead) => ({ interest: 'General enquiry', message: '', notes: [], tasks: [], ...lead }))
     return { items, team: getLocalDb().users.filter((user) => ['admin', 'sales'].includes(user.role)).map(({ password, ...user }) => user), mode: 'demo' }
   }
 }
@@ -585,6 +585,38 @@ export async function createLead(payload) {
     addDemoNotification(db, 1, 'New lead captured', `${lead.name} was added to the pipeline.`, 'lead', 'lead', lead.id)
     saveLocalDb(db)
     return { item: lead, mode: 'demo' }
+  }
+}
+
+export async function submitContactInquiry(payload) {
+  try {
+    return await backendRequest('/leads/public', { method: 'POST', body: JSON.stringify(payload) })
+  } catch (error) {
+    if (error.status) throw error
+    await delay()
+    const db = getLocalDb()
+    const lead = {
+      id: Math.max(0, ...db.leads.map((item) => Number(item.id) || 0)) + 1,
+      name: payload.name.trim(),
+      company: payload.company?.trim() || '',
+      email: payload.email.trim().toLowerCase(),
+      phone: payload.phone?.trim() || '',
+      interest: payload.interest || 'General enquiry',
+      message: payload.message.trim(),
+      source: 'Website contact',
+      stage: 'New',
+      value: 0,
+      owner_id: null,
+      owner: null,
+      notes: [],
+      tasks: [],
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    }
+    db.leads = [lead, ...db.leads]
+    addDemoNotification(db, 1, 'New website enquiry', `${lead.name} is interested in ${lead.interest}.`, 'lead', 'lead', lead.id)
+    saveLocalDb(db)
+    return { item: lead, message: 'Thanks, your enquiry has been received.', mode: 'demo' }
   }
 }
 

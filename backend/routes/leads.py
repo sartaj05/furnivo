@@ -1,5 +1,6 @@
 from datetime import date
 from decimal import Decimal
+import re
 from flask import Blueprint, jsonify, request
 from sqlalchemy import or_
 from ..extensions import db
@@ -9,6 +10,7 @@ from ..services.notifications import create_notification, notify_roles
 
 leads_bp = Blueprint('leads', __name__)
 STAGES = {'New', 'Qualified', 'Proposal', 'Won', 'Lost'}
+CONTACT_INTERESTS = {'General enquiry', 'Catalog & products', 'Quotations', 'Design consultation', 'Production & delivery'}
 
 
 @leads_bp.get('')
@@ -36,6 +38,8 @@ def create_lead():
         company=str(payload.get('company', '')).strip(),
         email=str(payload.get('email', '')).strip(),
         phone=str(payload.get('phone', '')).strip(),
+        interest=str(payload.get('interest', 'General enquiry')).strip() or 'General enquiry',
+        message=str(payload.get('message', '')).strip(),
         source=str(payload.get('source', 'Website')).strip(),
         stage=str(payload.get('stage', 'New')).strip(),
         value=Decimal(str(payload.get('value', 0) or 0)),
@@ -46,6 +50,58 @@ def create_lead():
     notify_roles(['admin', 'sales'], 'New lead captured', f'{lead.name} was added to the pipeline.', 'lead', current_user().id, 'lead', lead.id)
     db.session.commit()
     return jsonify({'item': lead.to_dict(), 'mode': 'api'}), 201
+
+
+@leads_bp.post('/public')
+def create_public_contact_inquiry():
+    """Capture a website enquiry without requiring an account or JWT."""
+    payload = request.get_json(silent=True) or {}
+    if str(payload.get('website', '')).strip():
+        return jsonify({'message': 'Thanks, your enquiry has been received.', 'mode': 'api'}), 201
+
+    name = str(payload.get('name', '')).strip()
+    email = str(payload.get('email', '')).strip().lower()
+    message = str(payload.get('message', '')).strip()
+    company = str(payload.get('company', '')).strip()
+    phone = str(payload.get('phone', '')).strip()
+    interest = str(payload.get('interest', 'General enquiry')).strip() or 'General enquiry'
+
+    if len(name) < 2:
+        return jsonify({'message': 'Please enter your name.'}), 400
+    if not re.fullmatch(r'[^@\s]+@[^@\s]+\.[^@\s]+', email):
+        return jsonify({'message': 'Please enter a valid email address.'}), 400
+    if len(message) < 10:
+        return jsonify({'message': 'Please tell us a little about your project.'}), 400
+    if len(message) > 4000:
+        return jsonify({'message': 'Message must be 4000 characters or less.'}), 400
+    if interest not in CONTACT_INTERESTS:
+        return jsonify({'message': 'Please choose a valid enquiry type.'}), 400
+
+    lead = Lead(
+        name=name,
+        company=company,
+        email=email,
+        phone=phone,
+        interest=interest,
+        message=message,
+        source='Website contact',
+        stage='New',
+        value=Decimal('0'),
+        owner_id=None,
+    )
+    db.session.add(lead)
+    db.session.commit()
+    notify_roles(
+        ['admin', 'sales'],
+        'New website enquiry',
+        f'{lead.name} is interested in {lead.interest}.',
+        'lead',
+        None,
+        'lead',
+        lead.id,
+    )
+    db.session.commit()
+    return jsonify({'item': lead.to_dict(), 'message': 'Thanks, your enquiry has been received.', 'mode': 'api'}), 201
 
 
 @leads_bp.patch('/<int:lead_id>')
@@ -60,6 +116,9 @@ def update_lead(lead_id):
     if 'owner_id' in payload:
         lead.owner_id = int(payload['owner_id']) if payload['owner_id'] else None
     for field in ['name', 'company', 'email', 'phone', 'source']:
+        if field in payload:
+            setattr(lead, field, str(payload[field]).strip())
+    for field in ['interest', 'message']:
         if field in payload:
             setattr(lead, field, str(payload[field]).strip())
     if 'value' in payload:

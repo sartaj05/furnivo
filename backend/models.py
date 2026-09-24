@@ -1106,6 +1106,8 @@ class Lead(TimestampMixin, db.Model):
     company = db.Column(db.String(180), nullable=False, default='')
     email = db.Column(db.String(255), nullable=False, default='')
     phone = db.Column(db.String(60), nullable=False, default='')
+    interest = db.Column(db.String(100), nullable=False, default='General enquiry')
+    message = db.Column(db.Text, nullable=False, default='')
     source = db.Column(db.String(80), nullable=False, default='Website')
     stage = db.Column(db.String(40), nullable=False, default='New', index=True)
     value = db.Column(db.Numeric(12, 2), nullable=False, default=0)
@@ -1117,7 +1119,8 @@ class Lead(TimestampMixin, db.Model):
     def to_dict(self):
         return {
             'id': self.id, 'name': self.name, 'company': self.company, 'email': self.email,
-            'phone': self.phone, 'source': self.source, 'stage': self.stage, 'value': float(self.value or 0),
+            'phone': self.phone, 'interest': self.interest, 'message': self.message, 'source': self.source,
+            'stage': self.stage, 'value': float(self.value or 0),
             'owner_id': self.owner_id, 'owner': self.owner.public_dict() if self.owner else None,
             'notes': [note.to_dict() for note in sorted(self.notes, key=lambda x: x.created_at, reverse=True)],
             'tasks': [task.to_dict() for task in sorted(self.tasks, key=lambda x: (x.is_done, x.due_date or __import__('datetime').date.max))],
