@@ -1,6 +1,9 @@
 import base64
+import hashlib
+import hmac
 import json
 import os
+import time
 import urllib.parse
 import urllib.request
 from uuid import uuid4
@@ -8,6 +11,57 @@ from decimal import Decimal
 from ..extensions import db
 from ..models import Invoice, Payment, PaymentIntent, PaymentReconciliation
 from .conversion import activate_order_after_payment
+
+
+def payment_provider_status():
+    provider = os.getenv('PAYMENT_PROVIDER', 'demo').lower()
+    if provider == 'stripe':
+        configured = bool(os.getenv('STRIPE_SECRET_KEY'))
+        webhook_ready = bool(os.getenv('STRIPE_WEBHOOK_SECRET'))
+        capabilities = ['checkout', 'refunds', 'webhooks']
+    elif provider == 'razorpay':
+        configured = bool(os.getenv('RAZORPAY_KEY_ID') and os.getenv('RAZORPAY_KEY_SECRET'))
+        webhook_ready = bool(os.getenv('RAZORPAY_WEBHOOK_SECRET'))
+        capabilities = ['payment_links', 'refunds', 'webhooks']
+    else:
+        configured = True
+        webhook_ready = True
+        capabilities = ['checkout', 'refunds', 'webhooks']
+    return {'provider': provider, 'configured': configured, 'webhook_ready': webhook_ready, 'live_refunds': os.getenv('PAYMENT_LIVE_REFUNDS', 'false').lower() == 'true', 'capabilities': capabilities, 'mode': 'demo' if provider == 'demo' or not configured else 'live'}
+
+
+def verify_webhook_signature(provider, raw_body, headers):
+    """Verify provider webhooks before any payment state is changed."""
+    provider = (provider or 'demo').lower()
+    if provider == 'demo':
+        secret = os.getenv('PAYMENT_WEBHOOK_SECRET', '')
+        supplied = headers.get('X-Payment-Webhook-Secret', '')
+        return not secret or hmac.compare_digest(supplied, secret)
+    if provider == 'razorpay':
+        secret = os.getenv('RAZORPAY_WEBHOOK_SECRET', '')
+        supplied = headers.get('X-Razorpay-Signature', '')
+        if not secret or not supplied:
+            return False
+        expected = hmac.new(secret.encode(), raw_body, hashlib.sha256).hexdigest()
+        return hmac.compare_digest(supplied, expected)
+    if provider == 'stripe':
+        secret = os.getenv('STRIPE_WEBHOOK_SECRET', '')
+        signature = headers.get('Stripe-Signature', '')
+        if not secret or not signature:
+            return False
+        parts = {}
+        for item in signature.split(','):
+            key, _, value = item.partition('=')
+            parts.setdefault(key, []).append(value)
+        try:
+            timestamp = int(parts.get('t', ['0'])[0])
+        except (TypeError, ValueError):
+            return False
+        if abs(time.time() - timestamp) > 300:
+            return False
+        expected = hmac.new(secret.encode(), f'{timestamp}.'.encode() + raw_body, hashlib.sha256).hexdigest()
+        return any(hmac.compare_digest(value, expected) for value in parts.get('v1', []))
+    return False
 
 
 def create_checkout(invoice):

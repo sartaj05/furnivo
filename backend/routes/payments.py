@@ -6,10 +6,16 @@ from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
 from ..extensions import db
 from ..models import Invoice, PaymentIntent, PaymentOperation, PaymentReconciliation, QuoteClientAccess
-from ..services.payments import create_checkout, request_provider_refund, settle_payment
+from ..services.payments import create_checkout, payment_provider_status, request_provider_refund, settle_payment, verify_webhook_signature
 from ..utils import current_user, roles_required
 
 payments_bp = Blueprint('payments', __name__)
+
+
+@payments_bp.get('/provider-status')
+@roles_required('admin', 'sales')
+def provider_status():
+    return jsonify({'provider': payment_provider_status(), 'mode': 'api'})
 
 
 @payments_bp.post('/invoices/<int:invoice_id>/checkout')
@@ -38,9 +44,9 @@ def checkout(invoice_id):
 
 @payments_bp.post('/webhook/<provider>')
 def webhook(provider):
-    secret = os.getenv('PAYMENT_WEBHOOK_SECRET', '')
-    if secret and request.headers.get('X-Payment-Webhook-Secret') != secret:
-        return jsonify({'message': 'Invalid webhook secret.'}), 401
+    raw_body = request.get_data(cache=True)
+    if not verify_webhook_signature(provider, raw_body, request.headers):
+        return jsonify({'message': 'Invalid payment webhook signature.'}), 401
     payload = request.get_json(silent=True) or {}
     external_id = str(payload.get('external_id') or payload.get('payment_link_id') or payload.get('session_id') or '')
     if not external_id:

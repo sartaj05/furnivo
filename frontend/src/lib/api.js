@@ -1458,6 +1458,14 @@ export async function getAccountingSummary() {
   catch (error) { if (error.status) throw error; const invoices = getLocalDb().invoices; const overdue = invoices.filter((item) => item.status === 'Overdue'); return { summary: { invoice_count: invoices.length, invoiced: invoices.reduce((sum, item) => sum + Number(item.total || 0), 0), collected: invoices.reduce((sum, item) => sum + Number(item.amount_paid || 0), 0), outstanding: invoices.reduce((sum, item) => sum + Number(item.balance || 0), 0), overdue_count: overdue.length, overdue_value: overdue.reduce((sum, item) => sum + Number(item.balance || 0), 0) }, overdue, reconciled_count: 0, mode: 'demo' } }
 }
 
+export async function getPaymentProviderStatus() {
+  try { return await backendRequest('/payments/provider-status') }
+  catch (error) {
+    if (error.status) throw error
+    return { provider: { provider: 'demo', configured: true, webhook_ready: true, live_refunds: false, capabilities: ['checkout', 'refunds', 'webhooks'], mode: 'demo' }, mode: 'demo' }
+  }
+}
+
 export async function sendPaymentReminders() {
   try { return await backendRequest('/payment-reconciliation/reminders', { method: 'POST' }) }
   catch (error) { if (error.status) throw error; const db = getLocalDb(); const open = db.invoices.filter((item) => Number(item.balance || 0) > 0); open.forEach((invoice) => addDemoNotification(db, 1, 'Payment reminder ready', `${invoice.invoice_number} has INR ${Number(invoice.balance).toLocaleString('en-IN')} outstanding.`, 'payment', 'invoice', invoice.id)); saveLocalDb(db); return { sent: open.length, items: [], mode: 'demo' } }

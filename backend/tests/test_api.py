@@ -1,3 +1,8 @@
+import hashlib
+import hmac
+import json
+import time
+
 from backend.extensions import db
 from backend.models import QuoteClientAccess, User
 
@@ -6,6 +11,23 @@ def test_health(client):
     response = client.get('/api/health')
     assert response.status_code == 200
     assert response.json['ok'] is True
+
+
+def test_payment_provider_status_and_signed_webhook(monkeypatch, client, admin_headers):
+    status = client.get('/api/payments/provider-status', headers=admin_headers)
+    assert status.status_code == 200
+    assert status.json['provider']['provider'] == 'demo'
+    assert 'webhooks' in status.json['provider']['capabilities']
+
+    monkeypatch.setenv('RAZORPAY_WEBHOOK_SECRET', 'razorpay-test-secret')
+    payload = json.dumps({'external_id': 'missing-payment', 'status': 'paid'}).encode()
+    signature = hmac.new(b'razorpay-test-secret', payload, hashlib.sha256).hexdigest()
+    signed = client.post('/api/payments/webhook/razorpay', data=payload, content_type='application/json', headers={'X-Razorpay-Signature': signature})
+    assert signed.status_code == 404
+
+    stale_signature = hmac.new(b'razorpay-test-secret', payload, hashlib.sha256).hexdigest()
+    invalid = client.post('/api/payments/webhook/stripe', data=payload, content_type='application/json', headers={'Stripe-Signature': f't={int(time.time()) - 600},v1={stale_signature}'})
+    assert invalid.status_code == 401
 
 
 def test_public_contact_inquiry_creates_new_lead(client):
