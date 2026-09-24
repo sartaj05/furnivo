@@ -14,6 +14,20 @@ def test_health(client):
     assert response.json['ok'] is True
 
 
+def test_tenant_plans_branding_and_checkout(client, admin_headers):
+    plans = client.get('/api/tenants/plans')
+    assert plans.status_code == 200
+    assert plans.json['plans']['Growth']['limits']['users'] == 15
+    tenants = client.get('/api/tenants', headers=admin_headers)
+    tenant_id = tenants.json['memberships'][0]['tenant']['id']
+    branding = client.patch(f'/api/tenants/{tenant_id}/branding', headers=admin_headers, json={'primary_color': '#234b3c', 'support_email': 'support@furnivo.test'})
+    assert branding.status_code == 200
+    assert branding.json['tenant']['branding']['primary_color'] == '#234b3c'
+    checkout = client.post(f'/api/tenants/{tenant_id}/subscription/checkout', headers=admin_headers, json={'plan': 'Growth'})
+    assert checkout.status_code == 200
+    assert checkout.json['plan'] == 'Growth'
+
+
 def test_payment_provider_status_and_signed_webhook(monkeypatch, client, admin_headers):
     status = client.get('/api/payments/provider-status', headers=admin_headers)
     assert status.status_code == 200

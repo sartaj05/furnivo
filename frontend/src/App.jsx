@@ -49,7 +49,7 @@ import AIDesignAssistantPage from './pages/AIDesignAssistantPage'
 import ProductionGanttPage from './pages/ProductionGanttPage'
 import LiveCollaborationPage from './pages/LiveCollaborationPage'
 import PredictiveAnalyticsPage from './pages/PredictiveAnalyticsPage'
-import TenantWorkspacePage from './pages/TenantWorkspacePage'
+import TenantWorkspacePage from './pages/TenantWorkspaceEnhancedPage'
 import ProtectedRoute from './components/ProtectedRoute'
 
 export default function App() {

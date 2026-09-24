@@ -1,0 +1,9 @@
+.tenant-plan-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin: 14px 0; }
+.tenant-plan { display: grid; gap: 8px; border: 2px solid transparent; }
+.tenant-plan.selected { border-color: var(--green-2); }
+.tenant-plan h3 { margin: 0; }
+.tenant-plan p { color: var(--muted); font-size: 12px; }
+.branding-form { display: grid; gap: 12px; margin-top: 14px; }
+.branding-form label { display: grid; gap: 6px; color: var(--muted); font-size: 11px; font-weight: 800; text-transform: uppercase; }
+.branding-form input { max-width: 320px; padding: 9px; border: 1px solid var(--line); border-radius: 8px; }
+@media (max-width: 780px) { .tenant-plan-grid { grid-template-columns: 1fr; } }

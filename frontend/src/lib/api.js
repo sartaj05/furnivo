@@ -1620,6 +1620,16 @@ export async function switchTenant(id) {
   catch (error) { if (error.status) throw error; localStorage.setItem('furnivo-active-tenant', String(id)); return { active_tenant_id: id, mode: 'demo' } }
 }
 
+export async function updateTenantSubscription(id, payload) {
+  try { return await backendRequest(`/tenants/${id}/subscription`, { method: 'PATCH', body: JSON.stringify(payload) }) }
+  catch (error) { if (error.status) throw error; return { subscription: { plan: payload.plan, status: payload.status, seats: 5 }, mode: 'demo' } }
+}
+
+export async function updateTenantBranding(id, payload) {
+  try { return await backendRequest(`/tenants/${id}/branding`, { method: 'PATCH', body: JSON.stringify(payload) }) }
+  catch (error) { if (error.status) throw error; const db = getLocalDb(); db.tenants = (db.tenants || []).map((tenant) => Number(tenant.id) === Number(id) ? { ...tenant, branding: payload } : tenant); saveLocalDb(db); return { tenant: db.tenants.find((tenant) => Number(tenant.id) === Number(id)), mode: 'demo' } }
+}
+
 export async function getProductionCapacity() {
   try { return await backendRequest('/production/capacity') }
   catch (error) { if (error.status) throw error; return { capacity: { planned_tasks: 0, open_tasks: 0, worker_minutes: {}, machine_minutes: {}, alert_count: 0 }, mode: 'demo' } }
