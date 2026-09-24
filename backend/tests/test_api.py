@@ -374,6 +374,23 @@ def test_mobile_workshop_task_execution_and_material_issue(client, admin_headers
     assert movement.status_code == 200
     assert movement.json['movement']['movement_type'] == 'Workshop issue'
 
+
+def test_customer_portal_self_service_actions(client):
+    login = client.post('/api/auth/login', json={'email': 'client@furnivo.demo', 'password': 'client123'})
+    headers = {'Authorization': f"Bearer {login.json['token']}"}
+    portal = client.get('/api/portal', headers=headers)
+    assert portal.status_code == 200
+    assert 'online payment' in portal.json['portal_features']
+    assert portal.json['projects']
+    invoice_documents = [item for item in portal.json['documents'] if item['type'] == 'Invoice']
+    assert invoice_documents
+    assert 'can_pay' in invoice_documents[0]
+    order_id = portal.json['projects'][0]['order']['id']
+    ticket = client.post('/api/service/tickets', headers=headers, json={'order_id': order_id, 'subject': 'Installation question', 'description': 'Please confirm the fitting window.'})
+    assert ticket.status_code == 201
+    checkout = client.post(f"/api/payments/invoices/{invoice_documents[0]['id']}/checkout", headers=headers, json={})
+    assert checkout.status_code == 200
+
 def test_planning_profitability_timeline_and_automation(client, admin_headers):
     planning = client.get('/api/business/planning', headers=admin_headers)
     assert planning.status_code == 200
