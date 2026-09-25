@@ -954,6 +954,18 @@ export async function updateProductionJob(id, payload) {
   catch (error) { if (error.status) throw error; const db = getLocalDb(); db.productionJobs = db.productionJobs.map((item) => Number(item.id) === Number(id) ? { ...item, ...payload } : item); saveLocalDb(db); return { item: db.productionJobs.find((item) => Number(item.id) === Number(id)), mode: 'demo' } }
 }
 
+export async function handoffProductionJob(id, payload = {}) {
+  try { return await backendRequest(`/production/${id}/handoff`, { method: 'POST', body: JSON.stringify(payload) }) }
+  catch (error) {
+    if (error.status) throw error
+    const db = getLocalDb(); const item = db.productionJobs.find((job) => Number(job.id) === Number(id));
+    if (!item) throw new Error('Production job was not found.')
+    item.status = 'Complete'; item.production_status = 'Ready for delivery'; item.handoff = { id: Date.now(), production_job_id: item.id, job_number: item.job_number, order_id: item.order_id, order_number: item.order_number, customer: item.customer, status: 'Ready for delivery', notes: payload.notes || '', handed_at: new Date().toISOString(), handed_by: { name: 'Demo Admin' } };
+    const order = db.orders.find((entry) => Number(entry.id) === Number(item.order_id)); if (order) { order.production_status = 'Ready for delivery'; order.updates = [{ id: Date.now(), body: `Production handoff completed for ${item.job_number}. Ready for delivery.`, author: 'Demo Admin', created_at: new Date().toISOString() }, ...(order.updates || [])] }
+    saveLocalDb(db); return { item: item.handoff, order, mode: 'demo' }
+  }
+}
+
 export async function getPaymentReconciliations() {
   try { return await backendRequest('/payment-reconciliation') }
   catch (error) { if (error.status) throw error; await delay(); return { items: getLocalDb().paymentReconciliations, mode: 'demo' } }

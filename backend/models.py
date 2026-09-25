@@ -1032,9 +1032,10 @@ class ProductionJob(TimestampMixin, db.Model):
     bom_items = db.relationship('BomItem', back_populates='production_job', cascade='all, delete-orphan', lazy='selectin')
     tasks = db.relationship('ProductionTask', back_populates='production_job', cascade='all, delete-orphan', lazy='selectin')
     inspections = db.relationship('QualityInspection', back_populates='production_job', cascade='all, delete-orphan', lazy='selectin')
+    handoffs = db.relationship('ProductionHandoff', back_populates='production_job', cascade='all, delete-orphan', lazy='selectin')
 
     def to_dict(self):
-        return {'id': self.id, 'job_number': self.job_number, 'order_id': self.order_id, 'order_number': self.order.order_number if self.order else None, 'customer': self.order.customer_name if self.order else None, 'status': self.status, 'scheduled_start': self.scheduled_start.isoformat() if self.scheduled_start else None, 'due_date': self.due_date.isoformat() if self.due_date else None, 'assigned_team': self.assigned_team, 'wastage_percent': float(self.wastage_percent or 0), 'notes': self.notes, 'bom_items': [item.to_dict() for item in self.bom_items], 'tasks': [item.to_dict() for item in self.tasks], 'inspections': [item.to_dict() for item in self.inspections]}
+        return {'id': self.id, 'job_number': self.job_number, 'order_id': self.order_id, 'order_number': self.order.order_number if self.order else None, 'customer': self.order.customer_name if self.order else None, 'status': self.status, 'production_status': self.order.production_status if self.order else None, 'scheduled_start': self.scheduled_start.isoformat() if self.scheduled_start else None, 'due_date': self.due_date.isoformat() if self.due_date else None, 'assigned_team': self.assigned_team, 'wastage_percent': float(self.wastage_percent or 0), 'notes': self.notes, 'bom_items': [item.to_dict() for item in self.bom_items], 'tasks': [item.to_dict() for item in self.tasks], 'inspections': [item.to_dict() for item in self.inspections], 'handoff': self.handoffs[0].to_dict() if self.handoffs else None}
 
 
 class BomItem(TimestampMixin, db.Model):
@@ -1098,6 +1099,24 @@ class QualityInspection(TimestampMixin, db.Model):
         try: checklist = json.loads(self.checklist_json or '[]'); defects = json.loads(self.defects_json or '[]')
         except (TypeError, ValueError): checklist, defects = [], []
         return {'id': self.id, 'production_job_id': self.production_job_id, 'job_number': self.production_job.job_number if self.production_job else None, 'inspector': self.inspector.public_dict() if self.inspector else None, 'status': self.status, 'checklist': checklist, 'defects': defects, 'photo_url': self.photo_url, 'notes': self.notes, 'rework_cost': float(self.rework_cost or 0), 'approved_at': self.approved_at.isoformat() if self.approved_at else None}
+
+
+class ProductionHandoff(TimestampMixin, db.Model):
+    __tablename__ = 'production_handoffs'
+
+    id = db.Column(db.Integer, primary_key=True)
+    production_job_id = db.Column(db.Integer, db.ForeignKey('production_jobs.id', ondelete='CASCADE'), nullable=False, unique=True, index=True)
+    order_id = db.Column(db.Integer, db.ForeignKey('orders.id', ondelete='CASCADE'), nullable=False, index=True)
+    handed_by_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    status = db.Column(db.String(40), nullable=False, default='Ready for delivery')
+    notes = db.Column(db.Text, nullable=False, default='')
+    handed_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow)
+    production_job = db.relationship('ProductionJob', back_populates='handoffs')
+    order = db.relationship('Order')
+    handed_by = db.relationship('User')
+
+    def to_dict(self):
+        return {'id': self.id, 'production_job_id': self.production_job_id, 'job_number': self.production_job.job_number if self.production_job else None, 'order_id': self.order_id, 'order_number': self.order.order_number if self.order else None, 'customer': self.order.customer_name if self.order else None, 'status': self.status, 'notes': self.notes, 'handed_at': self.handed_at.isoformat() if self.handed_at else None, 'handed_by': self.handed_by.public_dict() if self.handed_by else None}
 
 
 class Customer(TimestampMixin, db.Model):

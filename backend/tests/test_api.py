@@ -534,6 +534,12 @@ def test_quality_approval_gate_before_production_complete(client, admin_headers)
     assert inspection.status_code == 201
     completed = client.patch(f'/api/production/{job_id}', headers=admin_headers, json={'status': 'Complete'})
     assert completed.status_code == 200
+    handoff = client.post(f'/api/production/{job_id}/handoff', headers=admin_headers, json={'notes': 'Packed and ready for delivery scheduling.'})
+    assert handoff.status_code == 201
+    assert handoff.json['item']['status'] == 'Ready for delivery'
+    assert handoff.json['order']['production_status'] == 'Ready for delivery'
+    duplicate = client.post(f'/api/production/{job_id}/handoff', headers=admin_headers)
+    assert duplicate.status_code == 409
 
 
 def test_custom_reports_builder_metrics_and_period(client, admin_headers):

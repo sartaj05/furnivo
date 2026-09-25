@@ -3,8 +3,9 @@ from datetime import date, datetime, timezone
 from decimal import Decimal, InvalidOperation
 from flask import Blueprint, jsonify, request
 from ..extensions import db
-from ..models import BomItem, InventoryItem, Order, ProductionJob, ProductionTask, QualityInspection, QuoteClientAccess, StockMovement, utcnow
+from ..models import BomItem, InventoryItem, Order, ProductionHandoff, ProductionJob, ProductionTask, ProjectUpdate, QualityInspection, QuoteClientAccess, StockMovement, utcnow
 from ..services.audit import record_audit
+from ..services.notifications import notify_quote_client, notify_roles
 from ..utils import staff_can_access_order, current_user, roles_required
 
 production_bp = Blueprint('production', __name__)
@@ -246,3 +247,35 @@ def create_inspection(job_id):
     item = QualityInspection(production_job_id=job.id, inspector_id=current_user().id, status=status, checklist_json=json.dumps(checklist), defects_json=json.dumps(defects), photo_url=str(payload.get('photo_url', '')).strip(), notes=str(payload.get('notes', '')).strip(), rework_cost=rework_cost, approved_at=utcnow() if status == 'Passed' else None)
     db.session.add(item); job.status = 'Ready' if status == 'Passed' else 'Quality check' if status in {'Pending', 'Failed'} else 'On hold'; db.session.commit(); record_audit(current_user().id, 'Quality inspection recorded', 'production_job', job.id, status); db.session.commit()
     return jsonify({'item': item.to_dict(), 'job': job.to_dict(), 'mode': 'api'}), 201
+
+
+@production_bp.get('/<int:job_id>/handoff')
+@roles_required('admin', 'sales', 'designer')
+def get_handoff(job_id):
+    job = db.get_or_404(ProductionJob, job_id)
+    if not access_allowed(job) and current_user().role != 'sales': return jsonify({'message': 'You do not have access to this production job.'}), 403
+    handoff = db.session.scalar(db.select(ProductionHandoff).where(ProductionHandoff.production_job_id == job.id))
+    return jsonify({'item': handoff.to_dict() if handoff else None, 'mode': 'api'})
+
+
+@production_bp.post('/<int:job_id>/handoff')
+@roles_required('admin', 'designer')
+def create_handoff(job_id):
+    job = db.get_or_404(ProductionJob, job_id)
+    if not access_allowed(job): return jsonify({'message': 'You do not have access to this production job.'}), 403
+    existing = db.session.scalar(db.select(ProductionHandoff).where(ProductionHandoff.production_job_id == job.id))
+    if existing: return jsonify({'message': 'This production job has already been handed off.', 'item': existing.to_dict(), 'mode': 'api'}), 409
+    passed = db.session.scalar(db.select(QualityInspection).where(QualityInspection.production_job_id == job.id, QualityInspection.status == 'Passed').order_by(QualityInspection.id.desc()))
+    if not passed: return jsonify({'message': 'A passed quality inspection is required before handoff.'}), 409
+    payload = request.get_json(silent=True) or {}
+    handoff = ProductionHandoff(production_job_id=job.id, order_id=job.order_id, handed_by_id=current_user().id, notes=str(payload.get('notes', '')).strip())
+    job.status = 'Complete'
+    job.order.production_status = 'Ready for delivery'
+    job.order.updates.append(ProjectUpdate(body=f'Production handoff completed for {job.job_number}. Ready for delivery.', author_id=current_user().id))
+    db.session.add(handoff)
+    db.session.flush()
+    notify_roles(['admin', 'sales'], 'Production ready for delivery', f'{job.order.order_number} has passed quality control and is ready for delivery.', 'production', exclude_user_id=current_user().id, related_type='production_handoff', related_id=handoff.id)
+    if job.order.quote: notify_quote_client(job.order.quote, 'Your furniture is ready for delivery', f'{job.order.order_number} has completed production and is ready for delivery scheduling.', 'production')
+    record_audit(current_user().id, 'Production handed off to delivery', 'production_handoff', handoff.id, job.job_number)
+    db.session.commit()
+    return jsonify({'item': handoff.to_dict(), 'order': job.order.to_dict(), 'mode': 'api'}), 201
