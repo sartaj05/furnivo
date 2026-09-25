@@ -1,4 +1,4 @@
-# Furnivo V3
+# Furnivo
 
 A responsive furniture / interiors / building-material sales suite built with React + Vite and Flask. It includes a marketing website, secure role-based workspace, catalog management, quotations, customers and lead CRM. The React app keeps an offline demo fallback so the UI remains usable without the API.
 
