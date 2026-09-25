@@ -2,7 +2,9 @@ from ..extensions import db
 import json
 import os
 import smtplib
+import base64
 import urllib.request
+import urllib.parse
 from datetime import datetime, timedelta, timezone
 from email.message import EmailMessage
 from sqlalchemy import or_
@@ -11,9 +13,27 @@ from ..models import Notification, NotificationDelivery, QuoteClientAccess, User
 
 def notification_provider_status():
     email = bool(os.getenv('NOTIFICATION_EMAIL_URL') or os.getenv('SMTP_HOST'))
-    whatsapp = bool(os.getenv('WHATSAPP_WEBHOOK_URL'))
-    sms = bool(os.getenv('SMS_WEBHOOK_URL'))
-    return {'channels': {'in_app': {'configured': True, 'provider': 'Furnivo'}, 'email': {'configured': email, 'provider': 'HTTP provider or SMTP'}, 'whatsapp': {'configured': whatsapp, 'provider': 'Webhook'}, 'sms': {'configured': sms, 'provider': 'Webhook'}}, 'retry_policy': {'max_attempts': 4, 'backoff_minutes': [5, 10, 20, 40]}, 'mode': 'api'}
+    twilio = bool(os.getenv('TWILIO_ACCOUNT_SID') and os.getenv('TWILIO_AUTH_TOKEN'))
+    whatsapp = bool(os.getenv('WHATSAPP_WEBHOOK_URL') or (twilio and os.getenv('TWILIO_WHATSAPP_FROM')))
+    sms = bool(os.getenv('SMS_WEBHOOK_URL') or (twilio and os.getenv('TWILIO_FROM_NUMBER')))
+    return {'channels': {'in_app': {'configured': True, 'provider': 'Furnivo'}, 'email': {'configured': email, 'provider': 'HTTP provider or SMTP'}, 'whatsapp': {'configured': whatsapp, 'provider': 'Webhook or Twilio'}, 'sms': {'configured': sms, 'provider': 'Webhook or Twilio'}}, 'retry_policy': {'max_attempts': 4, 'backoff_minutes': [5, 10, 20, 40]}, 'mode': 'api'}
+
+
+def _twilio_send(channel, recipient, message, delivery_id):
+    account_sid = os.getenv('TWILIO_ACCOUNT_SID', '')
+    auth_token = os.getenv('TWILIO_AUTH_TOKEN', '')
+    from_number = os.getenv('TWILIO_WHATSAPP_FROM' if channel == 'whatsapp' else 'TWILIO_FROM_NUMBER', '')
+    if not account_sid or not auth_token or not from_number:
+        raise RuntimeError(f'TWILIO_{"WHATSAPP_FROM" if channel == "whatsapp" else "FROM_NUMBER"} is not configured.')
+    to_number = recipient if recipient.startswith('whatsapp:') or channel != 'whatsapp' else f'whatsapp:{recipient}'
+    sender = from_number if channel != 'whatsapp' or from_number.startswith('whatsapp:') else f'whatsapp:{from_number}'
+    body = urllib.parse.urlencode({'To': to_number, 'From': sender, 'Body': message, 'StatusCallback': os.getenv('TWILIO_STATUS_CALLBACK', '')}).encode()
+    token = base64.b64encode(f'{account_sid}:{auth_token}'.encode()).decode()
+    provider_request = urllib.request.Request(f'https://api.twilio.com/2010-04-01/Accounts/{account_sid}/Messages.json', data=body, headers={'Authorization': f'Basic {token}', 'Content-Type': 'application/x-www-form-urlencoded', 'Idempotency-Key': f'notification-delivery-{delivery_id}'}, method='POST')
+    with urllib.request.urlopen(provider_request, timeout=10) as response:
+        if response.status >= 300: raise RuntimeError(f'Twilio returned HTTP {response.status}.')
+        try: return json.loads(response.read().decode() or '{}')
+        except (TypeError, ValueError): return {}
 
 
 def create_notification(user_id, title, body, notification_type='info', related_type='', related_id=''):
@@ -73,22 +93,30 @@ def deliver_notification(notification, channel, recipient, existing_delivery=Non
                     smtp.send_message(message)
         elif channel == 'whatsapp':
             webhook = os.getenv('WHATSAPP_WEBHOOK_URL', '')
-            if not webhook:
-                raise RuntimeError('WHATSAPP_WEBHOOK_URL is not configured.')
-            payload = json.dumps({'to': recipient, 'title': notification.title, 'body': notification.body}).encode()
-            request = urllib.request.Request(webhook, data=payload, headers={'Content-Type': 'application/json'}, method='POST')
-            with urllib.request.urlopen(request, timeout=10) as response:
-                if response.status >= 300:
-                    raise RuntimeError(f'WhatsApp provider returned HTTP {response.status}.')
+            if webhook:
+                payload = json.dumps({'to': recipient, 'title': notification.title, 'body': notification.body, 'idempotency_key': f'notification-delivery-{delivery.id}'}).encode()
+                request = urllib.request.Request(webhook, data=payload, headers={'Content-Type': 'application/json'}, method='POST')
+                with urllib.request.urlopen(request, timeout=10) as response:
+                    if response.status >= 300: raise RuntimeError(f'WhatsApp provider returned HTTP {response.status}.')
+                    try: provider_result = json.loads(response.read().decode() or '{}')
+                    except (TypeError, ValueError): provider_result = {}
+                    delivery.provider_message_id = str(provider_result.get('id') or provider_result.get('message_id') or '')
+            else:
+                provider_result = _twilio_send(channel, recipient, notification.body, delivery.id)
+                delivery.provider_message_id = str(provider_result.get('sid') or provider_result.get('id') or '')
         elif channel == 'sms':
             webhook = os.getenv('SMS_WEBHOOK_URL', '')
-            if not webhook:
-                raise RuntimeError('SMS_WEBHOOK_URL is not configured.')
-            payload = json.dumps({'to': recipient, 'message': notification.body, 'idempotency_key': f'notification-delivery-{delivery.id}'}).encode()
-            provider_request = urllib.request.Request(webhook, data=payload, headers={'Content-Type': 'application/json'}, method='POST')
-            with urllib.request.urlopen(provider_request, timeout=10) as response:
-                if response.status >= 300:
-                    raise RuntimeError(f'SMS provider returned HTTP {response.status}.')
+            if webhook:
+                payload = json.dumps({'to': recipient, 'message': notification.body, 'idempotency_key': f'notification-delivery-{delivery.id}'}).encode()
+                provider_request = urllib.request.Request(webhook, data=payload, headers={'Content-Type': 'application/json'}, method='POST')
+                with urllib.request.urlopen(provider_request, timeout=10) as response:
+                    if response.status >= 300: raise RuntimeError(f'SMS provider returned HTTP {response.status}.')
+                    try: provider_result = json.loads(response.read().decode() or '{}')
+                    except (TypeError, ValueError): provider_result = {}
+                    delivery.provider_message_id = str(provider_result.get('sid') or provider_result.get('id') or provider_result.get('message_id') or '')
+            else:
+                provider_result = _twilio_send(channel, recipient, notification.body, delivery.id)
+                delivery.provider_message_id = str(provider_result.get('sid') or provider_result.get('id') or '')
         else:
             raise RuntimeError('Unsupported notification channel.')
         delivery.status = 'sent'

@@ -266,6 +266,18 @@ def test_notification_provider_status_and_sms_configuration(client, admin_header
     assert sms.json['item']['status'] == 'pending_configuration'
 
 
+def test_notification_provider_status_supports_twilio_channels(monkeypatch, client, admin_headers):
+    monkeypatch.setenv('TWILIO_ACCOUNT_SID', 'ACdemo')
+    monkeypatch.setenv('TWILIO_AUTH_TOKEN', 'secret-is-not-returned')
+    monkeypatch.setenv('TWILIO_FROM_NUMBER', '+14155550100')
+    monkeypatch.setenv('TWILIO_WHATSAPP_FROM', 'whatsapp:+14155550100')
+    status = client.get('/api/notifications/provider-status', headers=admin_headers)
+    assert status.status_code == 200
+    assert status.json['channels']['sms']['configured'] is True
+    assert status.json['channels']['whatsapp']['configured'] is True
+    assert 'secret-is-not-returned' not in str(status.json)
+
+
 def test_automation_rules_can_be_toggled(client, admin_headers):
     rules = client.get('/api/business/automation/rules', headers=admin_headers)
     assert rules.status_code == 200
