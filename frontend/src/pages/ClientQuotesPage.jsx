@@ -41,7 +41,7 @@ export default function ClientQuotesPage() {
         <div className="client-quote-total"><span>Quotation total</span><strong>₹{Number(quote.amount || 0).toLocaleString('en-IN')}</strong></div>
         <p>{quote.items?.length ? `${quote.items.length} line items included.` : 'Commercial quotation ready for your review.'}</p>
         <textarea rows="3" placeholder="Add a comment or change request" value={comments[quote.id] || quote.client_access?.response_comment || ''} onChange={(e) => setComments({ ...comments, [quote.id]: e.target.value })} />
-        <div className="card-actions"><button className="button-link" onClick={() => downloadQuotePdf(quote)}>Download PDF</button>{actions.map((action) => <button className={action.value === 'Approved' ? 'button button-small' : 'button-link'} key={action.value} onClick={() => respond(quote, action.value)}>{action.label}</button>)}</div>
+        <div className="client-quote-actions"><button className="button button-ghost button-small" onClick={() => downloadQuotePdf(quote)}>Download PDF</button>{actions.map((action) => <button className={action.value === 'Approved' ? 'button button-small' : 'button button-ghost button-small'} key={action.value} onClick={() => respond(quote, action.value)}>{action.label}</button>)}</div>
       </article>)}
       {!quotes.length && <div className="empty-state panel"><h3>No quotations assigned yet</h3><p>Your sales team will share quotations here when they are ready.</p></div>}
     </section>

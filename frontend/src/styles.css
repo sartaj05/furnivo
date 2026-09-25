@@ -1270,6 +1270,11 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .button { min-height: 42px; padding: 11px 17px; border-radius: 11px; box-shadow: 0 5px 12px rgba(35,75,60,.08); }
 .button-small { min-height: 38px; padding: 9px 13px; }
 .button-ghost { box-shadow: none; }
+.client-quote-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 22px; padding-top: 18px; border-top: 1px solid var(--line); }
+.client-quote-actions .button { min-width: 132px; justify-content: center; }
+.client-quote-actions .button:first-child { margin-right: auto; }
+.client-quote-actions .button-ghost { border: 1px solid var(--line-strong); background: var(--surface-muted); color: var(--green); }
+.client-quote-actions .button-ghost:hover { border-color: var(--green-2); background: #eef3ee; }
 
 /* Cards, lists and tables share the same visual rhythm. */
 .product-card, .customer-card, .lead-card { overflow: hidden; transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease; }
@@ -1311,8 +1316,10 @@ tbody tr:hover { background: #faf9f3; }
   .metric-card { min-height: 124px; padding: 18px; }
   .table-wrap { margin-inline: -20px; width: calc(100% + 40px); }
   .table-panel .table-wrap { margin-inline: 0; width: 100%; }
-  .card-actions, .configurator-actions, .quote-builder-actions { align-items: stretch; flex-direction: column; }
+  .card-actions, .configurator-actions, .quote-builder-actions, .client-quote-actions { align-items: stretch; flex-direction: column; }
   .card-actions > *, .configurator-actions > *, .quote-builder-actions > * { width: 100%; }
+  .client-quote-actions > * { width: 100%; }
+  .client-quote-actions .button:first-child { margin-right: 0; }
 }
 
 @media (max-width: 520px) {
