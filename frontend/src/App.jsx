@@ -4,6 +4,7 @@ import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
 import ForgotPasswordPage from './pages/ForgotPasswordPage'
 import ResetPasswordPage from './pages/ResetPasswordPage'
+import AcceptInvitePage from './pages/AcceptInvitePage'
 import DashboardPage from './pages/DashboardPage'
 import CatalogPage from './pages/CatalogPage'
 import QuotesPage from './pages/QuotesPage'
@@ -29,6 +30,7 @@ import SecurityPage from './pages/SecurityEnhancedPage'
 import GstPage from './pages/GstPage'
 import DataAdminPage from './pages/DataAdminEnhancedPage'
 import AccessControlPage from './pages/AccessControlPage'
+import StaffManagementPage from './pages/StaffManagementPage'
 import ServicePage from './pages/ServicePage'
 import AnalyticsPage from './pages/AnalyticsEnhancedPage'
 import IntegrationsPage from './pages/IntegrationsPage'
@@ -66,6 +68,7 @@ export default function App() {
       <Route path="/register" element={<RegisterPage />} />
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       <Route path="/reset-password" element={<ResetPasswordPage />} />
+      <Route path="/accept-invite" element={<AcceptInvitePage />} />
       <Route path="/supplier-portal" element={<SupplierPortalPage />} />
 
       <Route element={<ProtectedRoute />}>
@@ -90,6 +93,7 @@ export default function App() {
         {workspaceRoute('/app/gst', <GstPage />)}
         {workspaceRoute('/app/data-admin', <DataAdminPage />)}
         {workspaceRoute('/app/access-control', <AccessControlPage />)}
+        {workspaceRoute('/app/staff-management', <StaffManagementPage />)}
         {workspaceRoute('/app/service', <ServicePage />)}
         {workspaceRoute('/app/analytics', <AnalyticsPage />)}
         {workspaceRoute('/app/business-control', <BusinessControlPage />)}

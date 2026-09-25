@@ -73,6 +73,7 @@ function getLocalDb() {
       eInvoices: parsed.eInvoices || demoEInvoices,
       backgroundJobs: parsed.backgroundJobs || demoBackgroundJobs,
       accessUsers: parsed.accessUsers || demoAccessUsers,
+      staffInvitations: parsed.staffInvitations || [],
       departments: parsed.departments || demoDepartments,
       approvals: parsed.approvals || demoApprovalRequests,
       projectOwnership: parsed.projectOwnership || demoProjectOwnership,
@@ -117,6 +118,7 @@ function getLocalDb() {
     eInvoices: demoEInvoices,
     backgroundJobs: demoBackgroundJobs,
     accessUsers: demoAccessUsers,
+    staffInvitations: [],
     departments: demoDepartments,
     approvals: demoApprovalRequests,
     projectOwnership: demoProjectOwnership,
@@ -1325,6 +1327,48 @@ export async function updateCustomer(id, payload) {
 export async function getAccessUsers() {
   try { return await backendRequest('/access/users') }
   catch (error) { if (error.status) throw error; await delay(); return { items: getLocalDb().accessUsers, mode: 'demo' } }
+}
+
+export async function inviteStaff(payload) {
+  try { return await backendRequest('/access/users', { method: 'POST', body: JSON.stringify(payload) }) }
+  catch (error) {
+    if (error.status) throw error
+    const db = getLocalDb()
+    const email = payload.email.trim().toLowerCase()
+    if (db.users.some((item) => item.email.toLowerCase() === email) || db.staffInvitations.some((item) => item.email === email && item.status === 'Pending')) throw new Error('An account or pending invitation already exists for this email.')
+    const token = `demo-invite-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
+    const item = { id: Date.now(), name: payload.name.trim(), email, role: payload.role, expires_at: new Date(Date.now() + 7 * 86400000).toISOString(), accepted_at: null, status: 'Pending', invite_token: token, invite_url: `/accept-invite?token=${token}` }
+    db.staffInvitations = [item, ...db.staffInvitations]; saveLocalDb(db)
+    return { item, mode: 'demo' }
+  }
+}
+
+export async function getStaffInvitations() {
+  try { return await backendRequest('/access/invitations') }
+  catch (error) { if (error.status) throw error; await delay(); return { items: getLocalDb().staffInvitations || [], mode: 'demo' } }
+}
+
+export async function updateStaff(userId, payload) {
+  try { return await backendRequest(`/access/users/${userId}`, { method: 'PATCH', body: JSON.stringify(payload) }) }
+  catch (error) {
+    if (error.status) throw error
+    const db = getLocalDb(); const entry = db.accessUsers.find((item) => Number(item.user.id) === Number(userId)); if (!entry) throw new Error('User not found.')
+    entry.user = { ...entry.user, ...payload }; db.users = db.users.map((item) => Number(item.id) === Number(userId) ? { ...item, ...payload } : item); saveLocalDb(db)
+    return { item: entry.user, mode: 'demo' }
+  }
+}
+
+export async function acceptStaffInvite(token, password) {
+  try { return await backendRequest('/auth/accept-invite', { method: 'POST', body: JSON.stringify({ token, password }) }) }
+  catch (error) {
+    if (error.status) throw error
+    const db = getLocalDb(); const invitation = (db.staffInvitations || []).find((item) => item.invite_token === token && item.status === 'Pending' && new Date(item.expires_at) > new Date())
+    if (!invitation) throw new Error('This staff invitation is invalid or expired.')
+    if (password.length < 10 || !/[A-Z]/.test(password) || !/[a-z]/.test(password) || !/[0-9]/.test(password)) throw new Error('Use a 10+ character password with upper, lower and numeric characters.')
+    const user = { id: Math.max(0, ...db.users.map((item) => Number(item.id) || 0)) + 1, name: invitation.name, email: invitation.email, password, role: invitation.role }
+    db.users.push(user); invitation.status = 'Accepted'; invitation.accepted_at = new Date().toISOString(); saveLocalDb(db)
+    return { message: 'Invitation accepted. You can now sign in.', user, mode: 'demo' }
+  }
 }
 
 export async function saveUserPermissions(userId, permissions) {

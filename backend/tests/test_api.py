@@ -89,6 +89,23 @@ def test_role_boundaries_keep_each_workspace_scoped(client):
     assert client.get('/api/invoices', headers=client_headers).status_code == 200
 
 
+def test_admin_can_invite_and_activate_staff_member(client, admin_headers):
+    invite = client.post('/api/access/users', headers=admin_headers, json={'name': 'Workshop Operator', 'email': 'operator@furnivo.test', 'role': 'workshop_operator'})
+    assert invite.status_code == 201
+    token = invite.json['item']['invite_token']
+    invitations = client.get('/api/access/invitations', headers=admin_headers)
+    assert invitations.status_code == 200
+    assert invitations.json['items'][0]['status'] == 'Pending'
+    accepted = client.post('/api/auth/accept-invite', json={'token': token, 'password': 'Workshop123'})
+    assert accepted.status_code == 200
+    assert accepted.json['user']['role'] == 'workshop_operator'
+    users = client.get('/api/access/users', headers=admin_headers)
+    operator = next(item['user'] for item in users.json['items'] if item['user']['email'] == 'operator@furnivo.test')
+    deactivated = client.patch(f"/api/access/users/{operator['id']}", headers=admin_headers, json={'is_active': False})
+    assert deactivated.status_code == 200
+    assert deactivated.json['item']['is_active'] is False
+
+
 def test_production_and_operations_endpoints(client, admin_headers):
     production = client.get('/api/production', headers=admin_headers)
     operations = client.get('/api/ops/health', headers=admin_headers)

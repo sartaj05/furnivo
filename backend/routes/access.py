@@ -1,12 +1,22 @@
 from decimal import Decimal, InvalidOperation
-from flask import Blueprint, jsonify, request
+from datetime import datetime, timedelta, timezone
+import secrets
+from flask import Blueprint, current_app, jsonify, request
+from sqlalchemy import func
+from werkzeug.security import generate_password_hash
 from ..extensions import db
-from ..models import AccessPermission, ApprovalRequest, Department, Order, ProjectOwnership, User, UserDepartment
+from ..models import AccessPermission, ApprovalRequest, Department, Order, ProjectOwnership, StaffInvitation, User, UserDepartment
 from ..services.audit import record_audit
 from ..utils import current_user, roles_required
 
 access_bp = Blueprint('access', __name__)
 APPROVAL_TYPES = {'Discount', 'Margin', 'Refund', 'Price override', 'Sensitive action'}
+STAFF_ROLES = {'sales', 'designer', 'workshop_operator', 'installer', 'accountant'}
+
+
+def _token_hash(value):
+    import hashlib
+    return hashlib.sha256(value.encode()).hexdigest()
 
 
 @access_bp.get('/users')
@@ -14,6 +24,56 @@ APPROVAL_TYPES = {'Discount', 'Margin', 'Refund', 'Price override', 'Sensitive a
 def list_access_users():
     users = db.session.scalars(db.select(User).where(User.is_active.is_(True)).order_by(User.name)).all()
     return jsonify({'items': [{'user': user.public_dict(), 'permissions': [item.to_dict() for item in db.session.scalars(db.select(AccessPermission).where(AccessPermission.user_id == user.id).order_by(AccessPermission.permission)).all()], 'departments': [item.to_dict() for item in db.session.scalars(db.select(UserDepartment).where(UserDepartment.user_id == user.id)).all()]} for user in users], 'mode': 'api'})
+
+
+@access_bp.post('/users')
+@roles_required('admin')
+def invite_staff():
+    payload = request.get_json(silent=True) or {}
+    name = str(payload.get('name', '')).strip()
+    email = str(payload.get('email', '')).strip().lower()
+    role = str(payload.get('role', 'sales')).strip().lower()
+    if len(name) < 2 or '@' not in email or role not in STAFF_ROLES:
+        return jsonify({'message': 'Name, valid email, and a supported staff role are required.'}), 400
+    if db.session.scalar(db.select(User).where(func.lower(User.email) == email)):
+        return jsonify({'message': 'An active account with this email already exists.'}), 409
+    pending = db.session.scalar(db.select(StaffInvitation).where(func.lower(StaffInvitation.email) == email, StaffInvitation.accepted_at.is_(None)))
+    if pending and pending.is_valid():
+        return jsonify({'message': 'A pending invitation already exists for this email.'}), 409
+    raw_token = secrets.token_urlsafe(32)
+    invitation = StaffInvitation(name=name, email=email, role=role, token_hash=_token_hash(raw_token), expires_at=datetime.now(timezone.utc) + timedelta(days=7), invited_by_id=current_user().id)
+    db.session.add(invitation); db.session.commit()
+    record_audit(current_user().id, 'Staff invitation created', 'staff_invitation', invitation.id, f'{email} as {role}'); db.session.commit()
+    result = invitation.to_dict()
+    result['invite_url'] = f'/accept-invite?token={raw_token}'
+    if current_app.config.get('ENVIRONMENT') != 'production': result['invite_token'] = raw_token
+    return jsonify({'item': result, 'mode': 'api'}), 201
+
+
+@access_bp.get('/invitations')
+@roles_required('admin')
+def list_staff_invitations():
+    items = db.session.scalars(db.select(StaffInvitation).order_by(StaffInvitation.id.desc()).limit(100)).all()
+    return jsonify({'items': [item.to_dict() for item in items], 'mode': 'api'})
+
+
+@access_bp.patch('/users/<int:user_id>')
+@roles_required('admin')
+def update_staff(user_id):
+    user = db.session.get(User, user_id)
+    if not user:
+        return jsonify({'message': 'User not found.'}), 404
+    payload = request.get_json(silent=True) or {}
+    if user.id == current_user().id and payload.get('is_active') is False:
+        return jsonify({'message': 'You cannot deactivate your own administrator account.'}), 400
+    role = str(payload.get('role', user.role)).strip().lower()
+    if role not in {'admin', *STAFF_ROLES, 'client'}:
+        return jsonify({'message': 'Unsupported role.'}), 400
+    user.role = role
+    if 'is_active' in payload: user.is_active = bool(payload['is_active'])
+    db.session.commit()
+    record_audit(current_user().id, 'Staff account updated', 'user', user.id, f'{user.email}: {user.role}, active={user.is_active}'); db.session.commit()
+    return jsonify({'item': user.public_dict(), 'mode': 'api'})
 
 
 @access_bp.put('/users/<int:user_id>/permissions')

@@ -37,6 +37,7 @@ const navItems = [
   { to: '/app/security', label: 'Security settings', shortLabel: 'Security', roles: ['admin', 'sales', 'designer', 'client'] },
   { to: '/app/data-admin', label: 'Data administration', shortLabel: 'Data', roles: ['admin'] },
   { to: '/app/access-control', label: 'Access & approvals', shortLabel: 'Access', roles: ['admin'] },
+  { to: '/app/staff-management', label: 'Staff management', shortLabel: 'Staff', roles: ['admin'] },
   { to: '/app/service', label: 'Warranty & service', shortLabel: 'Service', roles: ['admin', 'sales', 'designer', 'client'] },
   { to: '/app/analytics', label: 'Analytics & forecasting', shortLabel: 'Analytics', roles: ['admin', 'sales', 'designer'] },
   { to: '/app/business-control', label: 'Business control center', shortLabel: 'Control', roles: ['admin', 'sales', 'designer'] },

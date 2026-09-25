@@ -6,7 +6,7 @@ from flask_jwt_extended import create_access_token, jwt_required
 from sqlalchemy import func
 from werkzeug.security import check_password_hash, generate_password_hash
 from ..extensions import db
-from ..models import MfaChallenge, MfaSetting, PasswordResetToken, RefreshSession, User
+from ..models import MfaChallenge, MfaSetting, PasswordResetToken, RefreshSession, StaffInvitation, User
 from ..utils import current_user, roles_required
 
 auth_bp = Blueprint('auth', __name__)
@@ -75,6 +75,24 @@ def register():
     db.session.add(user)
     db.session.commit()
     return auth_payload(user, 201)
+
+
+@auth_bp.post('/accept-invite')
+def accept_invite():
+    payload = request.get_json(silent=True) or {}
+    raw_token = str(payload.get('token', '')).strip()
+    password = str(payload.get('password', ''))
+    invitation = db.session.scalar(db.select(StaffInvitation).where(StaffInvitation.token_hash == token_hash(raw_token))) if raw_token else None
+    if not invitation or not invitation.is_valid():
+        return jsonify({'message': 'This staff invitation is invalid or expired.'}), 400
+    if not valid_password(password):
+        return jsonify({'message': 'Use a 10+ character password with upper, lower and numeric characters.'}), 400
+    if db.session.scalar(db.select(User).where(func.lower(User.email) == invitation.email)):
+        return jsonify({'message': 'An account with this email already exists.'}), 409
+    user = User(name=invitation.name, email=invitation.email, password_hash=generate_password_hash(password), role=invitation.role)
+    invitation.accepted_at = datetime.now(timezone.utc)
+    db.session.add(user); db.session.commit()
+    return jsonify({'message': 'Invitation accepted. You can now sign in.', 'user': user.public_dict(), 'mode': 'api'})
 
 
 @auth_bp.post('/login')

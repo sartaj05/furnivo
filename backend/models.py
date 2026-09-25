@@ -30,6 +30,7 @@ class User(TimestampMixin, db.Model):
             'name': self.name,
             'email': self.email,
             'role': self.role,
+            'is_active': self.is_active,
             'active_tenant_id': self.active_tenant_id,
         }
 
@@ -47,6 +48,27 @@ class PasswordResetToken(TimestampMixin, db.Model):
     def is_valid(self):
         expiry = self.expires_at.replace(tzinfo=timezone.utc) if self.expires_at.tzinfo is None else self.expires_at
         return not self.used_at and expiry > utcnow()
+
+
+class StaffInvitation(TimestampMixin, db.Model):
+    __tablename__ = 'staff_invitations'
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(120), nullable=False)
+    email = db.Column(db.String(255), nullable=False, index=True)
+    role = db.Column(db.String(30), nullable=False, default='sales')
+    token_hash = db.Column(db.String(128), unique=True, nullable=False, index=True)
+    expires_at = db.Column(db.DateTime(timezone=True), nullable=False)
+    accepted_at = db.Column(db.DateTime(timezone=True))
+    invited_by_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    invited_by = db.relationship('User', foreign_keys=[invited_by_id])
+
+    def is_valid(self):
+        expiry = self.expires_at.replace(tzinfo=timezone.utc) if self.expires_at.tzinfo is None else self.expires_at
+        return not self.accepted_at and expiry > utcnow()
+
+    def to_dict(self):
+        return {'id': self.id, 'name': self.name, 'email': self.email, 'role': self.role, 'expires_at': self.expires_at.isoformat(), 'accepted_at': self.accepted_at.isoformat() if self.accepted_at else None, 'invited_by': self.invited_by.public_dict() if self.invited_by else None, 'status': 'Accepted' if self.accepted_at else ('Pending' if self.is_valid() else 'Expired')}
 
 
 class RefreshSession(TimestampMixin, db.Model):

@@ -46,6 +46,7 @@ const routeRoles = {
   '/app/security': ['sales', 'designer', 'client'],
   '/app/data-admin': [],
   '/app/access-control': [],
+  '/app/staff-management': [],
   '/app/service': ['sales', 'designer', 'client'],
   '/app/analytics': ['sales', 'designer'],
   '/app/business-control': ['sales'],
@@ -70,4 +71,3 @@ export function rolesFor(path) {
 export function canAccess(role, path) {
   return rolesFor(path).includes(role)
 }
-
