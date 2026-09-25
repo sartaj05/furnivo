@@ -135,6 +135,19 @@ def test_audit_dashboard_returns_filtered_summary(client, admin_headers):
     assert all(item['resource_type'] == 'staff_invitation' for item in filtered.json['items'])
 
 
+def test_dashboard_metrics_are_role_specific(client, admin_headers):
+    admin = client.get('/api/dashboard/metrics', headers=admin_headers)
+    assert admin.status_code == 200
+    assert admin.json['role'] == 'admin'
+    assert {item['key'] for item in admin.json['cards']} >= {'products', 'quotes', 'leads'}
+
+    designer_login = client.post('/api/auth/login', json={'email': 'designer@furnivo.demo', 'password': 'design123'})
+    designer = client.get('/api/dashboard/metrics', headers={'Authorization': f"Bearer {designer_login.json['token']}"})
+    assert designer.status_code == 200
+    assert designer.json['role'] == 'designer'
+    assert {item['key'] for item in designer.json['cards']} >= {'projects', 'production', 'quality'}
+
+
 def test_assigned_staff_records_are_scoped_to_their_projects(client):
     sales_login = client.post('/api/auth/login', json={'email': 'sales@furnivo.demo', 'password': 'sales123'})
     designer_login = client.post('/api/auth/login', json={'email': 'designer@furnivo.demo', 'password': 'design123'})

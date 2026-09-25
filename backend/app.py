@@ -169,6 +169,7 @@ def create_app(config_object=Config):
     from .routes.recommendations import recommendations_bp
     from .routes.design_assistant import design_bp
     from .routes.tenants import tenants_bp
+    from .routes.dashboard import dashboard_bp
     from .routes.live import live_bp
     from .routes.predictive import predictive_bp
 
@@ -207,6 +208,7 @@ def create_app(config_object=Config):
     app.register_blueprint(recommendations_bp, url_prefix='/api/recommendations')
     app.register_blueprint(design_bp, url_prefix='/api/design-assistant')
     app.register_blueprint(tenants_bp, url_prefix='/api/tenants')
+    app.register_blueprint(dashboard_bp, url_prefix='/api/dashboard')
     app.register_blueprint(live_bp, url_prefix='/api/live')
     app.register_blueprint(predictive_bp, url_prefix='/api/analytics/predictive')
 
