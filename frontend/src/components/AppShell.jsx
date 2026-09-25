@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { NavLink, useNavigate } from 'react-router-dom'
+import { NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useModal } from '../context/ModalContext'
 import { deliverNotification, getNotifications, logoutSession, markNotificationRead, retryNotificationDelivery } from '../lib/api'
@@ -54,6 +54,7 @@ const navItems = [
 export default function AppShell({ title, eyebrow, actions, children }) {
   const { user, signOut, mode } = useAuth()
   const { showModal } = useModal()
+  const location = useLocation()
   const navigate = useNavigate()
   const [notifications, setNotifications] = useState([])
   const [showNotifications, setShowNotifications] = useState(false)
@@ -69,6 +70,12 @@ export default function AppShell({ title, eyebrow, actions, children }) {
     const timer = window.setInterval(loadNotifications, 30000)
     return () => window.clearInterval(timer)
   }, [user.id])
+
+  useEffect(() => {
+    // Each workspace route should open at its own header, not at the previous page's scroll position.
+    document.documentElement.scrollTop = 0
+    document.body.scrollTop = 0
+  }, [location.pathname])
 
   async function readNotification(item) {
     if (!item.is_read) {
