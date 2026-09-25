@@ -19,9 +19,12 @@ export default function LoginPage() {
   const location = useLocation()
   const { signIn, verifyMfa } = useAuth()
   const { showModal } = useModal()
+  const cameFromRegistration = Boolean(location.state?.registered)
   const [form, setForm] = useState({
     email: location.state?.email || 'admin@furnivo.demo',
-    password: 'admin123',
+    // Never copy or carry a password through navigation. After registration,
+    // require the user to enter the password they just created.
+    password: location.state?.registered ? '' : 'admin123',
   })
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
@@ -86,6 +89,8 @@ export default function LoginPage() {
             <p>Use any demo account below or your Flask-backed credentials.</p>
           </div>
 
+          {cameFromRegistration && <div className="success-message">Account created. Enter the password you just created to continue.</div>}
+
           {!challenge && <><label>
             Email
             <input
@@ -101,6 +106,7 @@ export default function LoginPage() {
             Password
             <input
               type="password"
+              autoFocus={cameFromRegistration}
               value={form.password}
               onChange={(e) => setForm({ ...form, password: e.target.value })}
               placeholder="••••••••"

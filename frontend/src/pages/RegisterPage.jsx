@@ -29,7 +29,10 @@ export default function RegisterPage() {
     try {
       await signUp(form.name, form.email, form.password)
       showModal({ type: 'success', title: 'Account created', message: 'Your account was created. Please sign in to continue.' })
-      navigate('/login', { replace: true, state: { email: form.email.trim().toLowerCase() } })
+      navigate('/login', {
+        replace: true,
+        state: { email: form.email.trim().toLowerCase(), registered: true },
+      })
     } catch (err) {
       setError(err.message || 'Unable to create account')
     } finally {
