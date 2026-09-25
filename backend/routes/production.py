@@ -30,6 +30,14 @@ def access_allowed(job):
     return False
 
 
+def workshop_task_allowed(task):
+    user = current_user()
+    if user.role == 'admin': return True
+    if user.role == 'designer': return bool(task.production_job and staff_can_access_order(task.production_job.order_id, user.id))
+    if user.role != 'workshop_operator' or not task.production_job: return False
+    return staff_can_access_order(task.production_job.order_id, user.id)
+
+
 @production_bp.get('')
 @roles_required('admin', 'designer')
 def list_jobs():
@@ -168,19 +176,21 @@ def production_capacity():
 
 
 @production_bp.get('/mobile/tasks')
-@roles_required('admin', 'designer')
+@roles_required('admin', 'designer', 'workshop_operator')
 def mobile_tasks():
     code = str(request.args.get('code', '')).strip().lower()
     tasks = db.session.scalars(db.select(ProductionTask).order_by(ProductionTask.planned_start, ProductionTask.id)).all()
+    if current_user().role in {'designer', 'workshop_operator'}: tasks = [task for task in tasks if workshop_task_allowed(task)]
     if code:
         tasks = [task for task in tasks if code in str(task.id).lower() or code in str(task.name).lower() or code in str(task.production_job.job_number if task.production_job else '').lower()]
     return jsonify({'items': [task.to_dict() for task in tasks], 'scan_code': code, 'mode': 'api'})
 
 
 @production_bp.patch('/mobile/tasks/<int:task_id>')
-@roles_required('admin', 'designer')
+@roles_required('admin', 'designer', 'workshop_operator')
 def update_mobile_task(task_id):
     task = db.get_or_404(ProductionTask, task_id); payload = request.get_json(silent=True) or {}
+    if not workshop_task_allowed(task): return jsonify({'message': 'You do not have access to this workshop task.'}), 403
     if 'status' in payload and str(payload['status']) not in {'Planned', 'In progress', 'Blocked', 'Complete'}:
         return jsonify({'message': 'Mobile task status is invalid.'}), 400
     try:
@@ -195,9 +205,10 @@ def update_mobile_task(task_id):
 
 
 @production_bp.post('/mobile/tasks/<int:task_id>/materials')
-@roles_required('admin', 'designer')
+@roles_required('admin', 'designer', 'workshop_operator')
 def mobile_material_movement(task_id):
     task = db.get_or_404(ProductionTask, task_id); payload = request.get_json(silent=True) or {}; movement = str(payload.get('movement', 'issue')).lower()
+    if current_user().role == 'workshop_operator' and not workshop_task_allowed(task): return jsonify({'message': 'You do not have access to this workshop task.'}), 403
     if movement not in {'issue', 'return'}: return jsonify({'message': 'Movement must be issue or return.'}), 400
     try: quantity = Decimal(str(payload.get('quantity', 0)))
     except (InvalidOperation, ValueError): return jsonify({'message': 'Quantity must be a valid number.'}), 400
@@ -219,9 +230,11 @@ def list_inspections(job_id):
 
 
 @production_bp.post('/<int:job_id>/inspections')
-@roles_required('admin', 'designer')
+@roles_required('admin', 'designer', 'workshop_operator')
 def create_inspection(job_id):
     job = db.get_or_404(ProductionJob, job_id); payload = request.get_json(silent=True) or {}; status = str(payload.get('status', 'Pending')).strip()
+    if current_user().role == 'workshop_operator' and (not staff_can_access_order(job.order_id, current_user().id) or status != 'Pending'):
+        return jsonify({'message': 'Workshop operators can only submit a pending quality handoff for assigned work.'}), 403
     if status not in {'Pending', 'Passed', 'Failed', 'Rework'}: return jsonify({'message': 'Invalid inspection status.'}), 400
     checklist = payload.get('checklist') if isinstance(payload.get('checklist'), list) else []; defects = payload.get('defects') if isinstance(payload.get('defects'), list) else []
     try: rework_cost = Decimal(str(payload.get('rework_cost', 0) or 0))

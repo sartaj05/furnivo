@@ -1,7 +1,7 @@
 from pathlib import Path
 from flask import Blueprint, current_app, jsonify, request
 from ..extensions import db
-from ..models import MediaAsset
+from ..models import MediaAsset, ProductionTask
 from ..services.storage import delete_asset, save_asset, save_product_image
 from ..utils import current_user, roles_required
 
@@ -51,8 +51,13 @@ def upload_design_room():
 
 
 @uploads_bp.post('/production-task')
-@roles_required('admin', 'sales', 'designer')
+@roles_required('admin', 'sales', 'designer', 'workshop_operator')
 def upload_production_task_photo():
+    if current_user().role == 'workshop_operator':
+        task = db.session.get(ProductionTask, request.form.get('task_id')) if request.form.get('task_id') else None
+        from ..utils import staff_can_access_order
+        if not task or not task.production_job or not staff_can_access_order(task.production_job.order_id, current_user().id):
+            return jsonify({'message': 'You do not have access to this workshop task.'}), 403
     try:
         result = save_asset(request.files.get('file'), folder='furnivo/production-tasks')
     except ValueError as exc:

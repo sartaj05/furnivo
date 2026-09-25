@@ -1,6 +1,6 @@
 from flask import Blueprint, jsonify
 from ..extensions import db
-from ..models import Invoice, Lead, Order, ProductionJob, Product, Quote, QuoteClientAccess
+from ..models import Invoice, Lead, Order, ProductionJob, ProductionTask, Product, Quote, QuoteClientAccess
 from ..utils import assigned_order_ids, current_user, roles_required
 
 dashboard_bp = Blueprint('dashboard', __name__)
@@ -11,7 +11,7 @@ def card(key, label, value, helper, display=None):
 
 
 @dashboard_bp.get('/metrics')
-@roles_required('admin', 'sales', 'designer', 'client')
+@roles_required('admin', 'sales', 'designer', 'client', 'workshop_operator')
 def role_metrics():
     user = current_user()
     products = db.session.scalar(db.select(db.func.count(Product.id)).where(Product.is_active.is_(True))) or 0
@@ -39,6 +39,13 @@ def role_metrics():
         quality = sum(item.status == 'Quality check' for item in jobs)
         cards = [card('projects', 'Assigned projects', len(order_ids), 'Projects assigned to you'), card('production', 'Active production', active, 'Jobs in execution'), card('quality', 'Quality checks', quality, 'Jobs awaiting inspection'), card('products', 'Catalog products', products, 'Reference library')]
         focus = f'{quality} production job(s) are waiting for quality review.'
+    elif user.role == 'workshop_operator':
+        order_ids = assigned_order_ids(user.id)
+        tasks = db.session.scalars(db.select(ProductionTask).join(ProductionTask.production_job).where(ProductionJob.order_id.in_(order_ids or [-1]))).all()
+        open_tasks = sum(item.status not in {'Complete', 'Cancelled'} for item in tasks)
+        blocked = sum(item.status == 'Blocked' for item in tasks)
+        cards = [card('tasks', 'Assigned tasks', open_tasks, 'Tasks in your workshop queue'), card('blocked', 'Blocked tasks', blocked, 'Tasks needing help'), card('projects', 'Assigned projects', len(order_ids), 'Projects assigned to you'), card('products', 'Materials reference', products, 'Catalog reference only')]
+        focus = f'{blocked} task(s) are blocked and need attention.' if blocked else 'Keep production tasks moving and hand completed work to quality control.'
     else:
         quote_ids = db.session.scalars(db.select(QuoteClientAccess.quote_id).where(QuoteClientAccess.user_id == user.id)).all()
         orders = db.session.scalars(db.select(Order).where(Order.quote_id.in_(quote_ids or [-1]))).all()

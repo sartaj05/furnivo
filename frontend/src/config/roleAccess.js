@@ -3,6 +3,7 @@ export const ROLE_HOME = {
   sales: '/app/leads',
   designer: '/app/configurator',
   client: '/app/project-portal',
+  workshop_operator: '/app/mobile-workshop',
 }
 
 export const ROLE_LABELS = {
@@ -10,12 +11,13 @@ export const ROLE_LABELS = {
   sales: 'Sales workspace',
   designer: 'Design & production',
   client: 'Client portal',
+  workshop_operator: 'Workshop execution',
 }
 
 // The admin role is intentionally added by rolesFor so every workspace route
 // remains available to administrators, including customer-facing previews.
 const routeRoles = {
-  '/app': ['sales', 'designer', 'client'],
+  '/app': ['sales', 'designer', 'client', 'workshop_operator'],
   '/app/catalog': ['sales', 'designer', 'client'],
   '/app/quotes': ['sales', 'designer'],
   '/app/configurator': ['sales', 'designer'],
@@ -57,7 +59,7 @@ const routeRoles = {
   '/app/automation-builder': ['sales'],
   '/app/route-planning': [],
   '/app/field-operations': ['designer', 'client'],
-  '/app/mobile-workshop': ['designer'],
+  '/app/mobile-workshop': ['designer', 'workshop_operator'],
   '/app/schedules': ['sales', 'designer', 'client'],
   '/app/warehouses': ['designer'],
   '/app/returns': ['sales', 'client'],

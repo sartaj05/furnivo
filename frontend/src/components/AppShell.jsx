@@ -48,7 +48,7 @@ const navItems = [
   { to: '/app/automation-builder', label: 'Workflow automation', shortLabel: 'Automate', roles: ['admin', 'sales'] },
   { to: '/app/route-planning', label: 'Route planning', shortLabel: 'Routes', roles: ['admin', 'sales', 'designer'] },
   { to: '/app/field-operations', label: 'Field operations', shortLabel: 'Field', roles: ['admin', 'sales', 'designer', 'client'] },
-  { to: '/app/mobile-workshop', label: 'Mobile workshop', shortLabel: 'Workshop', roles: ['admin', 'designer'] },
+  { to: '/app/mobile-workshop', label: 'Mobile workshop', shortLabel: 'Workshop', roles: ['admin', 'designer', 'workshop_operator'] },
   { to: '/app/schedules', label: 'Delivery & installation', shortLabel: 'Schedule', roles: ['admin', 'sales', 'designer', 'client'] },
   { to: '/app/warehouses', label: 'Warehouses', shortLabel: 'Stock map', roles: ['admin', 'sales', 'designer'] },
   { to: '/app/returns', label: 'Returns & refunds', shortLabel: 'Returns', roles: ['admin', 'sales', 'client'] },

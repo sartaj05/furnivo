@@ -15,7 +15,7 @@ def provider_status():
 
 
 @notifications_bp.get('')
-@roles_required('admin', 'sales', 'designer', 'client')
+@roles_required('admin', 'sales', 'designer', 'client', 'workshop_operator')
 def list_notifications():
     items = db.session.scalars(
         db.select(Notification).where(Notification.user_id == current_user().id).order_by(Notification.id.desc()).limit(50)
@@ -24,7 +24,7 @@ def list_notifications():
 
 
 @notifications_bp.patch('/<int:notification_id>/read')
-@roles_required('admin', 'sales', 'designer', 'client')
+@roles_required('admin', 'sales', 'designer', 'client', 'workshop_operator')
 def mark_read(notification_id):
     item = db.session.scalar(db.select(Notification).where(Notification.id == notification_id, Notification.user_id == current_user().id))
     if not item:
@@ -35,7 +35,7 @@ def mark_read(notification_id):
 
 
 @notifications_bp.post('/<int:notification_id>/deliver')
-@roles_required('admin', 'sales', 'designer', 'client')
+@roles_required('admin', 'sales', 'designer', 'client', 'workshop_operator')
 def deliver(notification_id):
     item = db.session.scalar(db.select(Notification).where(Notification.id == notification_id, Notification.user_id == current_user().id))
     if not item:
@@ -51,7 +51,7 @@ def deliver(notification_id):
 
 
 @notifications_bp.post('/deliveries/<int:delivery_id>/retry')
-@roles_required('admin', 'sales', 'designer', 'client')
+@roles_required('admin', 'sales', 'designer', 'client', 'workshop_operator')
 def retry_delivery(delivery_id):
     delivery = db.session.get(NotificationDelivery, delivery_id)
     if not delivery:

@@ -14,6 +14,7 @@ DEMO_USERS = [
     ('Meera Sales', 'sales@furnivo.demo', 'sales123', 'sales'),
     ('Kabir Designer', 'designer@furnivo.demo', 'design123', 'designer'),
     ('Riya Client', 'client@furnivo.demo', 'client123', 'client'),
+    ('Neel Workshop', 'workshop@furnivo.demo', 'workshop123', 'workshop_operator'),
 ]
 
 
@@ -102,6 +103,7 @@ def seed_access_controls():
         'sales': [('quotes.create', 'team'), ('quotes.discount', 'approval'), ('customers.view', 'team'), ('orders.manage', 'team'), ('payments.manage', 'team'), ('reports.view', 'team')],
         'designer': [('catalog.configure', 'own'), ('production.manage', 'assigned'), ('inventory.view', 'assigned'), ('orders.view', 'assigned')],
         'client': [('portal.view', 'own'), ('quotes.respond', 'own'), ('payments.view', 'own'), ('service.create', 'own')],
+        'workshop_operator': [('production.execute', 'assigned'), ('inventory.issue', 'assigned'), ('quality.handoff', 'assigned')],
     }
     for role, permissions in permission_map.items():
         for user in db.session.scalars(db.select(User).where(User.role == role)).all():
@@ -112,7 +114,7 @@ def seed_access_controls():
             for permission, scope in permissions:
                 if not db.session.scalar(db.select(AccessPermission).where(AccessPermission.user_id == user.id, AccessPermission.permission == permission, AccessPermission.scope == scope)):
                     db.session.add(AccessPermission(user_id=user.id, permission=permission, scope=scope))
-            department_name = {'admin': 'Operations', 'sales': 'Sales', 'designer': 'Design'}.get(role)
+            department_name = {'admin': 'Operations', 'sales': 'Sales', 'designer': 'Design', 'workshop_operator': 'Operations'}.get(role)
             if department_name and not db.session.scalar(db.select(UserDepartment).where(UserDepartment.user_id == user.id, UserDepartment.department_id == departments[department_name].id)):
                 db.session.add(UserDepartment(user_id=user.id, department_id=departments[department_name].id, role_title='Administrator' if role == 'admin' else role.title()))
     db.session.commit()
@@ -121,9 +123,10 @@ def seed_access_controls():
     order = db.session.scalar(db.select(Order).where(Order.order_number == 'ORD-1001'))
     sales = db.session.scalar(db.select(User).where(User.role == 'sales'))
     designer = db.session.scalar(db.select(User).where(User.role == 'designer'))
+    workshop = db.session.scalar(db.select(User).where(User.role == 'workshop_operator'))
     admin = db.session.scalar(db.select(User).where(User.role == 'admin'))
     if order:
-        for owner in (sales, designer):
+        for owner in (sales, designer, workshop):
             if owner and not db.session.scalar(db.select(ProjectOwnership).where(ProjectOwnership.order_id == order.id, ProjectOwnership.user_id == owner.id)):
                 db.session.add(ProjectOwnership(order_id=order.id, user_id=owner.id, assigned_by_id=admin.id if admin else owner.id))
         db.session.commit()

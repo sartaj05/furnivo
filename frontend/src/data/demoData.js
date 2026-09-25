@@ -3,6 +3,7 @@ export const demoUsers = [
   { id: 2, name: 'Meera Sales', email: 'sales@furnivo.demo', password: 'sales123', role: 'sales' },
   { id: 3, name: 'Kabir Designer', email: 'designer@furnivo.demo', password: 'design123', role: 'designer' },
   { id: 4, name: 'Riya Client', email: 'client@furnivo.demo', password: 'client123', role: 'client' },
+  { id: 5, name: 'Neel Workshop', email: 'workshop@furnivo.demo', password: 'workshop123', role: 'workshop_operator' },
 ]
 
 const demoRolePermissions = {
@@ -20,6 +21,11 @@ const demoRolePermissions = {
     { permission: 'production.manage', scope: 'assigned', is_enabled: true },
     { permission: 'inventory.view', scope: 'assigned', is_enabled: true },
     { permission: 'orders.view', scope: 'assigned', is_enabled: true },
+  ],
+  workshop_operator: [
+    { permission: 'production.execute', scope: 'assigned', is_enabled: true },
+    { permission: 'inventory.issue', scope: 'assigned', is_enabled: true },
+    { permission: 'quality.handoff', scope: 'assigned', is_enabled: true },
   ],
   client: [
     { permission: 'portal.view', scope: 'own', is_enabled: true },

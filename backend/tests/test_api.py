@@ -148,6 +148,21 @@ def test_dashboard_metrics_are_role_specific(client, admin_headers):
     assert {item['key'] for item in designer.json['cards']} >= {'projects', 'production', 'quality'}
 
 
+def test_workshop_operator_has_only_execution_workspace_access(client):
+    login = client.post('/api/auth/login', json={'email': 'workshop@furnivo.demo', 'password': 'workshop123'})
+    assert login.status_code == 200
+    headers = {'Authorization': f"Bearer {login.json['token']}"}
+    dashboard = client.get('/api/dashboard/metrics', headers=headers)
+    tasks = client.get('/api/production/mobile/tasks', headers=headers)
+    quotes = client.get('/api/quotes', headers=headers)
+    inventory = client.get('/api/inventory', headers=headers)
+    assert dashboard.status_code == 200
+    assert {item['key'] for item in dashboard.json['cards']} >= {'tasks', 'blocked', 'projects'}
+    assert tasks.status_code == 200
+    assert quotes.status_code == 403
+    assert inventory.status_code == 403
+
+
 def test_assigned_staff_records_are_scoped_to_their_projects(client):
     sales_login = client.post('/api/auth/login', json={'email': 'sales@furnivo.demo', 'password': 'sales123'})
     designer_login = client.post('/api/auth/login', json={'email': 'designer@furnivo.demo', 'password': 'design123'})

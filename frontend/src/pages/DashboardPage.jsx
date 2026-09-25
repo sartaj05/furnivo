@@ -8,6 +8,7 @@ const roleCopy = {
   sales: { title: 'Sales workspace', subtitle: 'Sales pipeline', note: 'Focus on customer quotations, lead movement and current opportunity value.' },
   designer: { title: 'Design workspace', subtitle: 'Specification desk', note: 'Browse the product library and prepare quotation-ready selections.' },
   client: { title: 'Client workspace', subtitle: 'Project access', note: 'Browse curated products and keep the project experience simple.' },
+  workshop_operator: { title: 'Workshop workspace', subtitle: 'Production execution', note: 'Complete assigned tasks, record materials, and hand finished work to quality control.' },
 }
 
 export default function DashboardPage() {
