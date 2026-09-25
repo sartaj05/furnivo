@@ -76,11 +76,13 @@ export default function AppShell({ title, eyebrow, actions, children }) {
   }, [user.id])
 
   useEffect(() => {
-    // Each workspace route should open at its own header, not at the previous page's scroll position.
+    // Each workspace route opens at its own header, while the active menu item remains visible.
     document.documentElement.scrollTop = 0
     document.body.scrollTop = 0
-    const sidebar = document.querySelector('.sidebar')
-    if (sidebar) sidebar.scrollTop = 0
+    const frame = window.requestAnimationFrame(() => {
+      document.querySelector('.side-nav a.active')?.scrollIntoView({ block: 'nearest', inline: 'nearest' })
+    })
+    return () => window.cancelAnimationFrame(frame)
   }, [location.pathname])
 
   async function readNotification(item) {

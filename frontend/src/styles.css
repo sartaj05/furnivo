@@ -394,6 +394,7 @@ img { display: block; width: 100%; }
 .side-nav { display: grid; gap: 6px; padding: 22px 0; }
 .side-nav a { padding: 11px 12px; border-radius: 10px; color: rgba(255,255,255,.68); font-size: 13px; font-weight: 700; }
 .side-nav a:hover, .side-nav a.active { background: rgba(255,255,255,.1); color: white; }
+.side-nav a.active { scroll-margin-block: 18px; }
 .sidebar-bottom { margin-top: auto; display: grid; gap: 14px; align-items: start; padding: 14px 8px 0; }
 .text-button { padding: 0; text-align: left; border: 0; background: transparent; color: rgba(255,255,255,.66); cursor: pointer; }
 .mode-chip { display: inline-flex; width: fit-content; padding: 7px 9px; border-radius: 999px; background: #e1ebe3; color: var(--green); font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; }
