@@ -1309,3 +1309,22 @@ tbody tr:hover { background: #faf9f3; }
   .form-span-3 { grid-column: span 1; }
   .product-body, .customer-card, .lead-card { padding: 17px; }
 }
+
+/* Prevent the two-column shell from creating a page-level horizontal scroll. */
+html, body, #root { width: 100%; max-width: 100%; }
+body { overflow-x: hidden; }
+.app-shell {
+  width: 100%;
+  max-width: 100vw;
+  min-width: 0;
+  grid-template-columns: minmax(0, 250px) minmax(0, 1fr);
+  overflow-x: hidden;
+}
+.sidebar {
+  min-width: 0;
+  overflow-x: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,.24) transparent;
+  overscroll-behavior: contain;
+}
+.app-main { width: auto; max-width: none; min-width: 0; }
