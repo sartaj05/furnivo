@@ -102,7 +102,7 @@ export default function RegisterPage() {
                 autoComplete="new-password"
                 value={form.password}
                 onChange={(e) => setForm({ ...form, password: e.target.value })}
-                placeholder="Minimum 8 characters"
+                placeholder="10+ chars, upper/lower/number"
                 required
               />
             </label>

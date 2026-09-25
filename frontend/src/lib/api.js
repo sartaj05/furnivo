@@ -1,6 +1,8 @@
 import { demoAccessUsers, demoAnalytics, demoApprovalRequests, demoAuditLogs, demoAutomationTemplates, demoBackups, demoBackgroundJobs, demoContracts, demoCustomerPricing, demoCustomers, demoDepartments, demoEInvoices, demoFieldVisits, demoFurnitureConfigurations, demoIntegrations, demoInventory, demoInvoices, demoLeads, demoNotifications, demoOpsHealth, demoOrders, demoPaymentReconciliations, demoPlanning, demoProducts, demoProductionJobs, demoProjectOwnership, demoPurchaseOrders, demoQuotePresets, demoQuotes, demoReturns, demoSchedules, demoServiceTickets, demoStockMovements, demoSupportTickets, demoSuppliers, demoSyncRuns, demoUsers, demoWarehouseStock, demoWarehouses, demoWarranties } from '../data/demoData'
 
-const API_URL = import.meta.env.VITE_API_URL?.replace(/\/$/, '')
+// Use the local Flask API automatically during development. Production still
+// requires VITE_API_URL, while every request keeps the demo fallback below.
+const API_URL = (import.meta.env.VITE_API_URL || (import.meta.env.DEV ? 'http://localhost:5000/api' : '')).replace(/\/$/, '')
 const STORAGE_KEY = 'furnivo-demo-db'
 const REQUEST_TIMEOUT_MS = 8000
 
@@ -157,6 +159,24 @@ function saveLocalDb(db) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(db))
 }
 
+function localDemoLogin(email, password, { localOnly = false } = {}) {
+  const db = getLocalDb()
+  const normalizedEmail = String(email).trim().toLowerCase()
+  const seededDemoEmails = new Set(demoUsers.map((item) => item.email.toLowerCase()))
+  const user = db.users.find(
+    (item) => item.email.toLowerCase() === normalizedEmail
+      && item.password === password
+      && (!localOnly || item.local_only === true || !seededDemoEmails.has(item.email.toLowerCase())),
+  )
+  if (!user) throw new Error('Invalid email or password')
+
+  return {
+    token: `demo-token-${user.id}`,
+    user: { id: user.id, name: user.name, email: user.email, role: user.role },
+    mode: 'demo',
+  }
+}
+
 async function backendRequest(path, options = {}) {
   if (!API_URL) throw new Error('Backend URL not configured')
 
@@ -200,19 +220,13 @@ export async function login(email, password) {
       body: JSON.stringify({ email, password }),
     })
   } catch (apiError) {
-    if (apiError.status) throw apiError
-    await delay()
-    const db = getLocalDb()
-    const user = db.users.find(
-      (item) => item.email.toLowerCase() === email.toLowerCase() && item.password === password,
-    )
-    if (!user) throw new Error('Invalid email or password')
-
-    return {
-      token: `demo-token-${user.id}`,
-      user: { id: user.id, name: user.name, email: user.email, role: user.role },
-      mode: 'demo',
+    // A browser-only account may have been created while the API was offline.
+    // Keep that account usable if the API comes back before the next login.
+    if (apiError.status) {
+      try { return localDemoLogin(email, password, { localOnly: true }) } catch { throw apiError }
     }
+    await delay()
+    return localDemoLogin(email, password)
   }
 }
 
@@ -297,10 +311,12 @@ export async function register(name, email, password) {
       email: normalizedEmail,
       password,
       role: 'client',
+      local_only: true,
     }
 
     db.users.push(user)
     saveLocalDb(db)
+    setDataMode('demo')
 
     return {
       token: `demo-token-${user.id}`,
