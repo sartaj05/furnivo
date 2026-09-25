@@ -12,6 +12,8 @@ from ..utils import current_user, roles_required
 access_bp = Blueprint('access', __name__)
 APPROVAL_TYPES = {'Discount', 'Margin', 'Refund', 'Price override', 'Sensitive action'}
 STAFF_ROLES = {'sales', 'designer', 'workshop_operator', 'installer', 'accountant'}
+PERMISSION_OPTIONS = {'quotes.create', 'quotes.discount', 'orders.manage', 'orders.view', 'production.manage', 'customers.view', 'portal.view', 'payments.manage', 'reports.view', 'inventory.view'}
+PERMISSION_SCOPES = {'own', 'assigned', 'team', 'approval', 'global'}
 
 
 def _token_hash(value):
@@ -71,6 +73,14 @@ def update_staff(user_id):
         return jsonify({'message': 'Unsupported role.'}), 400
     user.role = role
     if 'is_active' in payload: user.is_active = bool(payload['is_active'])
+    if 'approval_limit' in payload:
+        try:
+            approval_limit = Decimal(str(payload['approval_limit'] or 0))
+        except (InvalidOperation, ValueError):
+            return jsonify({'message': 'Approval limit must be a valid number.'}), 400
+        if approval_limit < 0:
+            return jsonify({'message': 'Approval limit cannot be negative.'}), 400
+        user.approval_limit = approval_limit
     db.session.commit()
     record_audit(current_user().id, 'Staff account updated', 'user', user.id, f'{user.email}: {user.role}, active={user.is_active}'); db.session.commit()
     return jsonify({'item': user.public_dict(), 'mode': 'api'})
@@ -86,8 +96,9 @@ def replace_permissions(user_id):
     AccessPermission.query.filter_by(user_id=user_id).delete(synchronize_session=False)
     for item in payload.get('permissions', []):
         permission = str(item.get('permission', '')).strip()
-        if permission:
-            db.session.add(AccessPermission(user_id=user_id, permission=permission, scope=str(item.get('scope', 'own')).strip() or 'own', is_enabled=bool(item.get('is_enabled', True))))
+        scope = str(item.get('scope', 'own')).strip() or 'own'
+        if permission and permission in PERMISSION_OPTIONS and scope in PERMISSION_SCOPES:
+            db.session.add(AccessPermission(user_id=user_id, permission=permission, scope=scope, is_enabled=bool(item.get('is_enabled', True))))
     db.session.commit()
     record_audit(current_user().id, 'Permissions updated', 'user', user.id, f'Permissions replaced for {user.email}')
     db.session.commit()
@@ -151,6 +162,8 @@ def update_approval(approval_id):
     status = str((request.get_json(silent=True) or {}).get('status', '')).strip()
     if status not in {'Approved', 'Rejected'}:
         return jsonify({'message': 'Status must be Approved or Rejected.'}), 400
+    if current_user().role != 'admin' and item.amount > (current_user().approval_limit or 0):
+        return jsonify({'message': 'This approval exceeds your configured approval limit.'}), 403
     item.status = status; item.approved_by_id = current_user().id
     db.session.commit()
     record_audit(current_user().id, f'Approval {status.lower()}', 'approval', item.id, f'{item.request_type} for {item.resource_id}'); db.session.commit()

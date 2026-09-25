@@ -106,6 +106,25 @@ def test_admin_can_invite_and_activate_staff_member(client, admin_headers):
     assert deactivated.json['item']['is_active'] is False
 
 
+def test_admin_limits_approvals_and_validates_custom_permissions(client, admin_headers):
+    users = client.get('/api/access/users', headers=admin_headers)
+    sales = next(item['user'] for item in users.json['items'] if item['user']['email'] == 'sales@furnivo.demo')
+    limited = client.patch(f"/api/access/users/{sales['id']}", headers=admin_headers, json={'approval_limit': 1000})
+    assert limited.status_code == 200
+    assert limited.json['item']['approval_limit'] == 1000
+
+    invalid_permissions = client.put(f"/api/access/users/{sales['id']}/permissions", headers=admin_headers, json={'permissions': [{'permission': 'unknown.delete', 'scope': 'global'}]})
+    assert invalid_permissions.status_code == 200
+    assert invalid_permissions.json['item']['permissions'] == []
+
+    login = client.post('/api/auth/login', json={'email': 'sales@furnivo.demo', 'password': 'sales123'})
+    sales_headers = {'Authorization': f"Bearer {login.json['token']}"}
+    approval = client.post('/api/access/approvals', headers=sales_headers, json={'request_type': 'Discount', 'resource_type': 'quote', 'resource_id': 'Q-1042', 'amount': 50000, 'detail': 'Test approval limit'})
+    assert approval.status_code == 201
+    decision = client.patch(f"/api/access/approvals/{approval.json['item']['id']}", headers=sales_headers, json={'status': 'Approved'})
+    assert decision.status_code == 403
+
+
 def test_assigned_staff_records_are_scoped_to_their_projects(client):
     sales_login = client.post('/api/auth/login', json={'email': 'sales@furnivo.demo', 'password': 'sales123'})
     designer_login = client.post('/api/auth/login', json={'email': 'designer@furnivo.demo', 'password': 'design123'})

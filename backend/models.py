@@ -21,6 +21,7 @@ class User(TimestampMixin, db.Model):
     password_hash = db.Column(db.String(255), nullable=False)
     role = db.Column(db.String(30), nullable=False, default='client', index=True)
     is_active = db.Column(db.Boolean, nullable=False, default=True)
+    approval_limit = db.Column(db.Numeric(12, 2), nullable=False, default=0)
     active_tenant_id = db.Column(db.Integer, db.ForeignKey('tenants.id'), nullable=True, index=True)
     active_tenant = db.relationship('Tenant', foreign_keys=[active_tenant_id])
 
@@ -31,6 +32,7 @@ class User(TimestampMixin, db.Model):
             'email': self.email,
             'role': self.role,
             'is_active': self.is_active,
+            'approval_limit': float(self.approval_limit or 0),
             'active_tenant_id': self.active_tenant_id,
         }
 

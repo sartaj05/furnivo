@@ -105,6 +105,10 @@ def seed_access_controls():
     }
     for role, permissions in permission_map.items():
         for user in db.session.scalars(db.select(User).where(User.role == role)).all():
+            if role == 'admin' and not user.approval_limit:
+                user.approval_limit = 10000000
+            elif role == 'sales' and not user.approval_limit:
+                user.approval_limit = 150000
             for permission, scope in permissions:
                 if not db.session.scalar(db.select(AccessPermission).where(AccessPermission.user_id == user.id, AccessPermission.permission == permission, AccessPermission.scope == scope)):
                     db.session.add(AccessPermission(user_id=user.id, permission=permission, scope=scope))

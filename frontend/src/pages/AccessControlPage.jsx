@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import AppShell from '../components/AppShell'
 import { assignProjectOwner, createApprovalRequest, createDepartment, getAccessUsers, getApprovalRequests, getDepartments, getOrders, getProjectOwnership, saveUserPermissions, updateApprovalRequest } from '../lib/api'
 
-const permissionOptions = ['quotes.create', 'quotes.discount', 'orders.manage', 'orders.view', 'production.manage', 'customers.view', 'portal.view']
+const permissionOptions = ['quotes.create', 'quotes.discount', 'orders.manage', 'orders.view', 'production.manage', 'customers.view', 'portal.view', 'payments.manage', 'reports.view', 'inventory.view']
 
 export default function AccessControlPage() {
   const [users, setUsers] = useState([]); const [approvals, setApprovals] = useState([]); const [departments, setDepartments] = useState([]); const [ownership, setOwnership] = useState([]); const [orders, setOrders] = useState([]); const [message, setMessage] = useState(''); const [error, setError] = useState(''); const [selected, setSelected] = useState(null); const [permission, setPermission] = useState('quotes.create'); const [scope, setScope] = useState('own')
