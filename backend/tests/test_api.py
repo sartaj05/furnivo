@@ -3,9 +3,10 @@ import hmac
 import io
 import json
 import time
+from datetime import date
 
 from backend.extensions import db
-from backend.models import QuoteClientAccess, User
+from backend.models import Customer, Order, Quote, QuoteClientAccess, User
 from backend.routes.auth import _failed_logins
 
 
@@ -161,6 +162,20 @@ def test_workshop_operator_has_only_execution_workspace_access(client):
     assert tasks.status_code == 200
     assert quotes.status_code == 403
     assert inventory.status_code == 403
+
+
+def test_direct_record_mutations_cannot_bypass_project_assignment(client, app, admin_headers):
+    with app.app_context():
+        admin = db.session.scalar(db.select(User).where(User.email == 'admin@furnivo.demo'))
+        existing = db.session.scalar(db.select(Order).where(Order.order_number == 'ORD-1001'))
+        unassigned_quote = Quote(quote_number='Q-UNASSIGNED', customer_name=existing.customer_name, customer_id=existing.customer_id, quote_date=date.today(), status='Draft', created_by_id=admin.id)
+        unassigned = Order(order_number='ORD-UNASSIGNED', quote=unassigned_quote, customer_id=existing.customer_id, customer_name=existing.customer_name, status='Confirmed', created_by_id=admin.id)
+        db.session.add(unassigned); db.session.commit()
+        unassigned_id = unassigned.id
+    login = client.post('/api/auth/login', json={'email': 'sales@furnivo.demo', 'password': 'sales123'})
+    headers = {'Authorization': f"Bearer {login.json['token']}"}
+    update = client.patch(f'/api/orders/{unassigned_id}', headers=headers, json={'status': 'In progress'})
+    assert update.status_code == 403
 
 
 def test_assigned_staff_records_are_scoped_to_their_projects(client):

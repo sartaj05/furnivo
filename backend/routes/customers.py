@@ -51,6 +51,10 @@ def create_customer():
 @roles_required('admin', 'sales')
 def update_customer(customer_id):
     customer = db.get_or_404(Customer, customer_id)
+    if current_user().role == 'sales' and not db.session.scalar(db.select(Order.id).where(Order.customer_id == customer.id, Order.id.in_(assigned_order_ids() or [-1]))):
+        return jsonify({'message': 'You do not have access to this customer.'}), 403
+    if current_user().role == 'sales' and not db.session.scalar(db.select(Order.id).where(Order.customer_id == customer.id, Order.id.in_(assigned_order_ids() or [-1]))):
+        return jsonify({'message': 'You do not have access to this customer.'}), 403
     try:
         apply_payload(customer, request.get_json(silent=True) or {})
     except ValueError as exc:

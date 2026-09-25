@@ -6,7 +6,7 @@ from ..extensions import db
 from ..models import FieldVisit, Order, User
 from ..models import utcnow
 from ..services.audit import record_audit
-from ..utils import assigned_order_ids, client_quote_ids, current_user, roles_required
+from ..utils import assigned_order_ids, can_access_order, client_quote_ids, current_user, roles_required
 
 field_bp = Blueprint('field', __name__)
 
@@ -46,6 +46,7 @@ def create_field_visit():
 @roles_required('admin', 'designer')
 def update_field_visit(visit_id):
     item = db.get_or_404(FieldVisit, visit_id); payload = request.get_json(silent=True) or {}
+    if not can_access_order(item.order_id): return jsonify({'message': 'You do not have access to this field visit.'}), 403
     if 'status' in payload and payload['status'] not in {'Scheduled', 'En route', 'On site', 'Completed', 'Cancelled'}:
         return jsonify({'message': 'Invalid field visit status.'}), 400
     for key in ('status', 'assigned_to_id', 'notes', 'time_minutes'):
@@ -58,6 +59,7 @@ def update_field_visit(visit_id):
 @roles_required('admin', 'designer')
 def check_in_field_visit(visit_id):
     item = db.get_or_404(FieldVisit, visit_id); payload = request.get_json(silent=True) or {}
+    if not can_access_order(item.order_id): return jsonify({'message': 'You do not have access to this field visit.'}), 403
     item.check_in_at = utcnow(); item.status = 'On site'
     if payload.get('gps_lat') is not None: item.gps_lat = payload['gps_lat']
     if payload.get('gps_lng') is not None: item.gps_lng = payload['gps_lng']
@@ -69,6 +71,7 @@ def check_in_field_visit(visit_id):
 @roles_required('admin', 'designer')
 def check_out_field_visit(visit_id):
     item = db.get_or_404(FieldVisit, visit_id); payload = request.get_json(silent=True) or {}
+    if not can_access_order(item.order_id): return jsonify({'message': 'You do not have access to this field visit.'}), 403
     item.check_out_at = utcnow(); item.status = 'Completed'
     if item.check_in_at:
         started = item.check_in_at if item.check_in_at.tzinfo else item.check_in_at.replace(tzinfo=timezone.utc)
@@ -82,6 +85,7 @@ def check_out_field_visit(visit_id):
 @roles_required('admin', 'designer')
 def record_field_material(visit_id):
     item = db.get_or_404(FieldVisit, visit_id); payload = request.get_json(silent=True) or {}
+    if not can_access_order(item.order_id): return jsonify({'message': 'You do not have access to this field visit.'}), 403
     name = str(payload.get('name', '')).strip(); movement = str(payload.get('movement', 'issue')).lower()
     try: quantity = float(payload.get('quantity', 0))
     except (TypeError, ValueError): quantity = 0
@@ -98,6 +102,7 @@ def record_field_material(visit_id):
 @roles_required('admin', 'designer')
 def save_field_proof(visit_id):
     item = db.get_or_404(FieldVisit, visit_id); payload = request.get_json(silent=True) or {}
+    if not can_access_order(item.order_id): return jsonify({'message': 'You do not have access to this field visit.'}), 403
     item.proof_photo_url = str(payload.get('proof_photo_url', item.proof_photo_url)).strip(); item.customer_signature = str(payload.get('customer_signature', item.customer_signature)).strip(); item.notes = str(payload.get('notes', item.notes)).strip(); item.offline_synced = True
     if payload.get('gps_lat') is not None: item.gps_lat = payload['gps_lat']
     if payload.get('gps_lng') is not None: item.gps_lng = payload['gps_lng']

@@ -3,7 +3,7 @@ from flask import Blueprint, jsonify, request
 from ..extensions import db
 from ..models import Customer, Order, ServiceTicket, User, Warranty
 from ..services.audit import record_audit
-from ..utils import client_can_access_order, current_user, client_quote_ids, roles_required
+from ..utils import assigned_order_ids, can_access_order, client_can_access_order, current_user, client_quote_ids, roles_required
 
 service_bp = Blueprint('service', __name__)
 
@@ -23,6 +23,8 @@ def list_warranties():
     query = db.select(Warranty).order_by(Warranty.end_date)
     if current_user().role == 'client':
         query = query.join(Warranty.order).where(Order.quote_id.in_(client_quote_ids() or [-1]))
+    elif current_user().role in {'sales', 'designer'}:
+        query = query.where(Warranty.order_id.in_(assigned_order_ids() or [-1]))
     items = db.session.scalars(query).unique().all()
     return jsonify({'items': [item.to_dict() for item in items], 'mode': 'api'})
 
@@ -46,6 +48,8 @@ def list_service_tickets():
     query = db.select(ServiceTicket).order_by(ServiceTicket.id.desc())
     if current_user().role == 'client':
         query = query.join(ServiceTicket.order).where(Order.quote_id.in_(client_quote_ids() or [-1]))
+    elif current_user().role in {'sales', 'designer'}:
+        query = query.where(ServiceTicket.order_id.in_(assigned_order_ids() or [-1]))
     items = db.session.scalars(query).all()
     return jsonify({'items': [item.to_dict() for item in items], 'mode': 'api'})
 
@@ -59,6 +63,7 @@ def create_service_ticket():
         return jsonify({'message': 'Project, subject, and description are required.'}), 400
     if current_user().role == 'client' and not client_can_access_order(order.id):
         return jsonify({'message': 'You do not have access to this project.'}), 403
+    if current_user().role != 'client' and not can_access_order(order.id): return jsonify({'message': 'You do not have access to this project.'}), 403
     item = ServiceTicket(ticket_number=f'SVC-{8000 + (db.session.scalar(db.select(db.func.count(ServiceTicket.id))) or 0) + 1}', warranty_id=payload.get('warranty_id'), order_id=order.id, customer_id=order.customer_id, subject=subject, description=description, priority=str(payload.get('priority', 'Normal')), sla_due=parse_date(payload.get('sla_due')), visit_date=parse_date(payload.get('visit_date')), parts_used=str(payload.get('parts_used', '')).strip(), assigned_to_id=payload.get('assigned_to_id'))
     db.session.add(item); db.session.commit(); record_audit(current_user().id, 'Service ticket created', 'service_ticket', item.id, item.subject); db.session.commit()
     return jsonify({'item': item.to_dict(), 'mode': 'api'}), 201
@@ -68,6 +73,7 @@ def create_service_ticket():
 @roles_required('admin', 'sales', 'designer')
 def update_service_ticket(ticket_id):
     item = db.get_or_404(ServiceTicket, ticket_id); payload = request.get_json(silent=True) or {}
+    if not can_access_order(item.order_id): return jsonify({'message': 'You do not have access to this service ticket.'}), 403
     if 'status' in payload and payload['status'] not in {'Open', 'Assigned', 'In progress', 'Waiting for customer', 'Resolved', 'Closed'}:
         return jsonify({'message': 'Invalid service status.'}), 400
     for key in ('status', 'priority', 'resolution', 'assigned_to_id', 'parts_used', 'technician_minutes'):
@@ -83,6 +89,7 @@ def update_service_ticket(ticket_id):
 def add_service_feedback(ticket_id):
     item = db.get_or_404(ServiceTicket, ticket_id); payload = request.get_json(silent=True) or {}
     if current_user().role == 'client' and not client_can_access_order(item.order_id): return jsonify({'message': 'You do not have access to this project.'}), 403
+    if current_user().role != 'client' and not can_access_order(item.order_id): return jsonify({'message': 'You do not have access to this service ticket.'}), 403
     try: rating = int(payload.get('rating', 0))
     except (TypeError, ValueError): rating = 0
     if rating < 1 or rating > 5: return jsonify({'message': 'Rating must be between 1 and 5.'}), 400

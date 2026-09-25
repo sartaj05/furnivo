@@ -2,7 +2,7 @@ from datetime import date
 from flask import Blueprint, jsonify, request
 from ..extensions import db
 from ..models import Order, ProjectUpdate, Quote, QuoteClientAccess
-from ..utils import assigned_order_ids, current_user, roles_required
+from ..utils import assigned_order_ids, can_access_order, current_user, roles_required
 from ..services.notifications import create_notification, notify_quote_client
 
 orders_bp = Blueprint('orders', __name__)
@@ -63,6 +63,7 @@ def create_order():
 @roles_required('admin', 'sales')
 def update_order(order_id):
     order = db.get_or_404(Order, order_id)
+    if not can_access_order(order.id): return jsonify({'message': 'You do not have access to this project.'}), 403
     payload = request.get_json(silent=True) or {}
     for field in ['status', 'production_status', 'installation_status', 'notes']:
         if field in payload:
@@ -79,6 +80,7 @@ def update_order(order_id):
 @roles_required('admin', 'sales', 'designer')
 def add_update(order_id):
     order = db.get_or_404(Order, order_id)
+    if not can_access_order(order.id): return jsonify({'message': 'You do not have access to this project.'}), 403
     body = str((request.get_json(silent=True) or {}).get('body', '')).strip()
     if not body:
         return jsonify({'message': 'Project update cannot be empty.'}), 400

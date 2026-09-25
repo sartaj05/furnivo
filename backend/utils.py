@@ -45,6 +45,14 @@ def staff_can_access_order(order_id, user_id=None):
     return order_id in assigned_order_ids(user_id)
 
 
+def can_access_order(order_id, user_id=None):
+    return bool(staff_can_access_order(order_id, user_id))
+
+
+def can_access_order(order_id, user_id=None):
+    return bool(staff_can_access_order(order_id, user_id))
+
+
 def roles_required(*roles):
     def decorator(fn):
         @wraps(fn)

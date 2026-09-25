@@ -3,7 +3,7 @@ from decimal import Decimal, InvalidOperation
 from flask import Blueprint, jsonify, request
 from ..extensions import db
 from ..models import Invoice, Order, Payment, QuoteClientAccess
-from ..utils import assigned_order_ids, current_user, roles_required
+from ..utils import assigned_order_ids, can_access_order, current_user, roles_required
 from ..services.audit import record_audit
 from ..services.conversion import activate_order_after_payment
 
@@ -53,6 +53,7 @@ def create_invoice():
 @roles_required('admin', 'sales')
 def record_payment(invoice_id):
     invoice = db.get_or_404(Invoice, invoice_id)
+    if not can_access_order(invoice.order_id): return jsonify({'message': 'You do not have access to this invoice.'}), 403
     payload = request.get_json(silent=True) or {}
     try: amount = Decimal(str(payload.get('amount', 0)))
     except (InvalidOperation, ValueError): return jsonify({'message': 'Payment amount must be valid.'}), 400

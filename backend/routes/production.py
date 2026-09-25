@@ -71,6 +71,7 @@ def create_job():
 @roles_required('admin', 'designer')
 def update_job(job_id):
     job = db.get_or_404(ProductionJob, job_id); payload = request.get_json(silent=True) or {}
+    if not access_allowed(job): return jsonify({'message': 'You do not have access to this production job.'}), 403
     if 'status' in payload and payload['status'] not in {'Planned', 'Cutting', 'Assembly', 'Quality check', 'Ready', 'Complete', 'On hold'}: return jsonify({'message': 'Invalid production status.'}), 400
     if payload.get('status') == 'Complete' and not db.session.scalar(db.select(QualityInspection.id).where(QualityInspection.production_job_id == job.id, QualityInspection.status == 'Passed')):
         return jsonify({'message': 'A passed quality inspection is required before production can be completed.'}), 409
@@ -112,6 +113,7 @@ def schedule_conflicts(tasks):
 @roles_required('admin', 'designer')
 def list_production_schedule():
     tasks = db.session.scalars(db.select(ProductionTask).order_by(ProductionTask.planned_start, ProductionTask.id)).all()
+    if current_user().role == 'designer': tasks = [task for task in tasks if task.production_job and staff_can_access_order(task.production_job.order_id, current_user().id)]
     return jsonify({'items': [task.to_dict() for task in tasks], 'conflicts': schedule_conflicts(tasks), 'mode': 'api'})
 
 
@@ -133,6 +135,7 @@ def create_production_task():
 @roles_required('admin', 'designer')
 def update_production_task(task_id):
     task = db.get_or_404(ProductionTask, task_id); payload = request.get_json(silent=True) or {}
+    if not task.production_job or not access_allowed(task.production_job): return jsonify({'message': 'You do not have access to this production task.'}), 403
     for field in ('name', 'stage', 'assigned_worker', 'machine', 'status'):
         if field in payload: setattr(task, field, str(payload[field]).strip())
     if 'dependency_id' in payload:

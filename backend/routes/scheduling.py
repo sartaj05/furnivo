@@ -4,7 +4,7 @@ from ..extensions import db
 from ..models import DeliverySchedule, Order, QuoteClientAccess
 from ..services.audit import record_audit
 from ..services.notifications import notify_quote_client
-from ..utils import assigned_order_ids, current_user, roles_required
+from ..utils import assigned_order_ids, can_access_order, current_user, roles_required
 
 scheduling_bp = Blueprint('scheduling', __name__)
 
@@ -42,6 +42,7 @@ def create_schedule():
 @roles_required('admin', 'sales')
 def update_schedule(schedule_id):
     item = db.get_or_404(DeliverySchedule, schedule_id); payload = request.get_json(silent=True) or {}
+    if not can_access_order(item.order_id): return jsonify({'message': 'You do not have access to this schedule.'}), 403
     for field in ['time_slot', 'assigned_team', 'status', 'proof_url', 'notes', 'eta', 'driver_name', 'driver_phone']:
         if field in payload: setattr(item, field, str(payload[field]).strip())
     if 'route_order' in payload: item.route_order = int(payload['route_order'] or 0)
@@ -79,6 +80,7 @@ def confirm_schedule(schedule_id):
     if current_user().role == 'client':
         allowed = db.session.scalar(db.select(QuoteClientAccess.id).where(QuoteClientAccess.user_id == current_user().id, QuoteClientAccess.quote_id == item.order.quote_id))
         if not allowed: return jsonify({'message': 'You cannot confirm this schedule.'}), 403
+    elif not can_access_order(item.order_id): return jsonify({'message': 'You do not have access to this schedule.'}), 403
     item.customer_confirmed = True; db.session.commit(); notify_quote_client(item.order.quote, 'Delivery confirmed', f'{item.schedule_type} on {item.scheduled_date.isoformat()} is confirmed.', 'order'); record_audit(current_user().id, 'Schedule confirmed by customer', 'schedule', item.id, item.schedule_type); db.session.commit()
     return jsonify({'item': item.to_dict(), 'mode': 'api'})
 
@@ -87,6 +89,7 @@ def confirm_schedule(schedule_id):
 @roles_required('admin', 'sales')
 def save_schedule_proof(schedule_id):
     item = db.get_or_404(DeliverySchedule, schedule_id); payload = request.get_json(silent=True) or {}
+    if not can_access_order(item.order_id): return jsonify({'message': 'You do not have access to this schedule.'}), 403
     item.proof_url = str(payload.get('proof_url', item.proof_url)).strip(); item.notes = str(payload.get('notes', item.notes)).strip(); item.status = 'Completed'
     db.session.commit(); notify_quote_client(item.order.quote, 'Delivery completed', f'{item.schedule_type} completion proof is available.', 'order'); record_audit(current_user().id, 'Schedule proof captured', 'schedule', item.id, item.proof_url); db.session.commit()
     return jsonify({'item': item.to_dict(), 'mode': 'api'})

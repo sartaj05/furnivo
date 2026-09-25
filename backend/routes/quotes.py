@@ -4,7 +4,7 @@ from flask import Blueprint, jsonify, request
 from sqlalchemy import or_
 from ..extensions import db
 from ..models import Customer, FurnitureConfiguration, Order, Product, ProductVariant, Quote, QuoteClientAccess, QuoteItem, QuoteRevision
-from ..utils import assigned_order_ids, current_user, roles_required
+from ..utils import assigned_order_ids, can_access_order, current_user, roles_required
 from ..services.notifications import create_notification, notify_quote_client
 from ..services.audit import record_audit
 from ..services.conversion import ensure_contract_for_approved_quote
@@ -96,6 +96,7 @@ def list_client_quotes():
 @roles_required('admin', 'sales', 'designer')
 def get_quote(quote_id):
     quote = db.get_or_404(Quote, quote_id)
+    if current_user().role != 'admin' and quote.created_by_id != current_user().id and not db.session.scalar(db.select(Order.id).where(Order.quote_id == quote.id).where(Order.id.in_(assigned_order_ids() or [-1]))): return jsonify({'message': 'You do not have access to this quotation.'}), 403
     return jsonify({'item': quote.to_dict(), 'mode': 'api'})
 
 
@@ -153,6 +154,7 @@ def create_quote():
 @roles_required('admin', 'sales')
 def update_quote_status(quote_id):
     quote = db.get_or_404(Quote, quote_id)
+    if current_user().role != 'admin' and quote.created_by_id != current_user().id and not db.session.scalar(db.select(Order.id).where(Order.quote_id == quote.id).where(Order.id.in_(assigned_order_ids() or [-1]))): return jsonify({'message': 'You do not have access to this quotation.'}), 403
     status = str((request.get_json(silent=True) or {}).get('status', '')).strip()
     if status not in {'Draft', 'Sent', 'Approved', 'Rejected', 'Change Requested'}:
         return jsonify({'message': 'Invalid quote status.'}), 400
@@ -175,6 +177,8 @@ def quote_history(quote_id):
         ))
         if not access:
             return jsonify({'message': 'You do not have access to this quotation.'}), 403
+    elif current_user().role != 'admin' and quote.created_by_id != current_user().id and not db.session.scalar(db.select(Order.id).where(Order.quote_id == quote.id).where(Order.id.in_(assigned_order_ids() or [-1]))):
+        return jsonify({'message': 'You do not have access to this quotation.'}), 403
     revisions = db.session.scalars(
         db.select(QuoteRevision).where(QuoteRevision.quote_id == quote.id).order_by(QuoteRevision.version.desc())
     ).all()
@@ -193,6 +197,8 @@ def quote_pdf(quote_id):
         ))
         if not access:
             return jsonify({'message': 'You do not have access to this quotation.'}), 403
+    elif current_user().role != 'admin' and quote.created_by_id != current_user().id and not db.session.scalar(db.select(Order.id).where(Order.quote_id == quote.id).where(Order.id.in_(assigned_order_ids() or [-1]))):
+        return jsonify({'message': 'You do not have access to this quotation.'}), 403
     return send_file(
         build_quote_pdf(quote),
         mimetype='application/pdf',
