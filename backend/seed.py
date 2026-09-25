@@ -119,8 +119,9 @@ def seed_access_controls():
                 if not db.session.scalar(db.select(AccessPermission).where(AccessPermission.user_id == user.id, AccessPermission.permission == permission, AccessPermission.scope == scope)):
                     db.session.add(AccessPermission(user_id=user.id, permission=permission, scope=scope))
             department_name = {'admin': 'Operations', 'sales': 'Sales', 'designer': 'Design', 'workshop_operator': 'Operations', 'installer': 'Operations', 'accountant': 'Finance'}.get(role)
-            if department_name and not db.session.scalar(db.select(UserDepartment).where(UserDepartment.user_id == user.id, UserDepartment.department_id == departments[department_name].id)):
-                db.session.add(UserDepartment(user_id=user.id, department_id=departments[department_name].id, role_title='Administrator' if role == 'admin' else role.title()))
+            department = departments.get(department_name) if department_name else None
+            if department and not db.session.scalar(db.select(UserDepartment).where(UserDepartment.user_id == user.id, UserDepartment.department_id == department.id)):
+                db.session.add(UserDepartment(user_id=user.id, department_id=department.id, role_title='Administrator' if role == 'admin' else role.title()))
     db.session.commit()
 
     quote = db.session.scalar(db.select(Quote).where(Quote.quote_number == 'Q-1042'))

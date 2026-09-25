@@ -69,6 +69,16 @@ def test_login_and_protected_catalog(client, admin_headers):
     assert len(response.json['items']) >= 3
 
 
+def test_registered_client_can_sign_in_with_backend_credentials(client):
+    email = 'new-client-auth@example.com'
+    registered = client.post('/api/auth/register', json={'name': 'New Client', 'email': email, 'password': 'Client1234'})
+    assert registered.status_code == 201
+    login = client.post('/api/auth/login', json={'email': email, 'password': 'Client1234'})
+    assert login.status_code == 200
+    assert login.json['user']['email'] == email
+    assert login.json['user']['role'] == 'client'
+
+
 def test_client_cannot_access_admin_quotes(client):
     login = client.post('/api/auth/login', json={'email': 'client@furnivo.demo', 'password': 'client123'})
     response = client.get('/api/quotes', headers={'Authorization': f"Bearer {login.json['token']}"})

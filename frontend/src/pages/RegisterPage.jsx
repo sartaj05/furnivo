@@ -15,8 +15,8 @@ export default function RegisterPage() {
     event.preventDefault()
     setError('')
 
-    if (form.password.length < 8) {
-      setError('Password must be at least 8 characters.')
+    if (form.password.length < 10 || !/[A-Z]/.test(form.password) || !/[a-z]/.test(form.password) || !/[0-9]/.test(form.password)) {
+      setError('Password must be 10+ characters and include uppercase, lowercase, and a number.')
       return
     }
 

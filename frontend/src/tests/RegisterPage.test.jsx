@@ -31,12 +31,12 @@ describe('RegisterPage', () => {
 
     fireEvent.change(screen.getByLabelText('Full name'), { target: { value: 'New Client' } })
     fireEvent.change(screen.getByLabelText('Email'), { target: { value: 'new-client@example.com' } })
-    fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'Client123' } })
-    fireEvent.change(screen.getByLabelText('Confirm password'), { target: { value: 'Client123' } })
+    fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'Client1234' } })
+    fireEvent.change(screen.getByLabelText('Confirm password'), { target: { value: 'Client1234' } })
     fireEvent.click(screen.getByRole('button', { name: 'Create account' }))
 
     await waitFor(() => expect(screen.getByText('Login page')).toBeInTheDocument())
-    expect(mocks.signUp).toHaveBeenCalledWith('New Client', 'new-client@example.com', 'Client123')
+    expect(mocks.signUp).toHaveBeenCalledWith('New Client', 'new-client@example.com', 'Client1234')
     expect(mocks.showModal).toHaveBeenCalledWith({
       type: 'success',
       title: 'Account created',
