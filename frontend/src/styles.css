@@ -1328,3 +1328,31 @@ body { overflow-x: hidden; }
   overscroll-behavior: contain;
 }
 .app-main { width: auto; max-width: none; min-width: 0; }
+
+/* Delivery actions should read as actions, not unstyled text links. */
+.delivery-execution-panel .schedule-card { gap: 16px; }
+.delivery-execution-panel .schedule-card > p { margin: 0; color: var(--muted); }
+.delivery-execution-panel .order-meta { align-items: center; flex-wrap: wrap; gap: 12px; }
+.delivery-execution-panel .order-meta > span { flex: 1 1 180px; }
+.delivery-execution-panel button.button-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 38px;
+  padding: 9px 14px;
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--green);
+  font-size: 12px;
+  box-shadow: 0 4px 10px rgba(35,75,60,.07);
+  transition: transform .18s ease, background .18s ease, color .18s ease, border-color .18s ease;
+}
+.delivery-execution-panel button.button-link:hover { transform: translateY(-1px); border-color: #9eb1a5; background: var(--surface-muted); }
+.delivery-execution-panel button.button-link:last-child { border-color: var(--green); background: var(--green); color: white; }
+.delivery-execution-panel button.button-link:last-child:hover { background: var(--green-2); }
+
+@media (max-width: 620px) {
+  .delivery-execution-panel .order-meta { align-items: stretch; }
+  .delivery-execution-panel button.button-link { flex: 1 1 160px; }
+}
