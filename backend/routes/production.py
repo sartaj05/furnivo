@@ -30,14 +30,14 @@ def access_allowed(job):
 
 
 @production_bp.get('')
-@roles_required('admin', 'sales', 'designer', 'client')
+@roles_required('admin', 'designer')
 def list_jobs():
     jobs = db.session.scalars(db.select(ProductionJob).order_by(ProductionJob.id.desc())).unique().all()
     return jsonify({'items': [job.to_dict() for job in jobs if access_allowed(job)], 'mode': 'api'})
 
 
 @production_bp.post('')
-@roles_required('admin', 'sales', 'designer')
+@roles_required('admin', 'designer')
 def create_job():
     payload = request.get_json(silent=True) or {}
     order = db.session.get(Order, int(payload.get('order_id'))) if payload.get('order_id') else None
@@ -59,7 +59,7 @@ def create_job():
 
 
 @production_bp.patch('/<int:job_id>')
-@roles_required('admin', 'sales', 'designer')
+@roles_required('admin', 'designer')
 def update_job(job_id):
     job = db.get_or_404(ProductionJob, job_id); payload = request.get_json(silent=True) or {}
     if 'status' in payload and payload['status'] not in {'Planned', 'Cutting', 'Assembly', 'Quality check', 'Ready', 'Complete', 'On hold'}: return jsonify({'message': 'Invalid production status.'}), 400
@@ -100,14 +100,14 @@ def schedule_conflicts(tasks):
 
 
 @production_bp.get('/schedule')
-@roles_required('admin', 'sales', 'designer')
+@roles_required('admin', 'designer')
 def list_production_schedule():
     tasks = db.session.scalars(db.select(ProductionTask).order_by(ProductionTask.planned_start, ProductionTask.id)).all()
     return jsonify({'items': [task.to_dict() for task in tasks], 'conflicts': schedule_conflicts(tasks), 'mode': 'api'})
 
 
 @production_bp.post('/schedule')
-@roles_required('admin', 'sales', 'designer')
+@roles_required('admin', 'designer')
 def create_production_task():
     payload = request.get_json(silent=True) or {}; job = db.session.get(ProductionJob, payload.get('production_job_id')) if payload.get('production_job_id') else None
     name = str(payload.get('name', '')).strip()
@@ -121,7 +121,7 @@ def create_production_task():
 
 
 @production_bp.patch('/schedule/<int:task_id>')
-@roles_required('admin', 'sales', 'designer')
+@roles_required('admin', 'designer')
 def update_production_task(task_id):
     task = db.get_or_404(ProductionTask, task_id); payload = request.get_json(silent=True) or {}
     for field in ('name', 'stage', 'assigned_worker', 'machine', 'status'):
@@ -152,7 +152,7 @@ def update_production_task(task_id):
 
 
 @production_bp.get('/capacity')
-@roles_required('admin', 'sales', 'designer')
+@roles_required('admin', 'designer')
 def production_capacity():
     tasks = db.session.scalars(db.select(ProductionTask)).all(); workers = {}; machines = {}
     for task in tasks:
@@ -167,7 +167,7 @@ def production_capacity():
 
 
 @production_bp.get('/mobile/tasks')
-@roles_required('admin', 'sales', 'designer')
+@roles_required('admin', 'designer')
 def mobile_tasks():
     code = str(request.args.get('code', '')).strip().lower()
     tasks = db.session.scalars(db.select(ProductionTask).order_by(ProductionTask.planned_start, ProductionTask.id)).all()
@@ -177,7 +177,7 @@ def mobile_tasks():
 
 
 @production_bp.patch('/mobile/tasks/<int:task_id>')
-@roles_required('admin', 'sales', 'designer')
+@roles_required('admin', 'designer')
 def update_mobile_task(task_id):
     task = db.get_or_404(ProductionTask, task_id); payload = request.get_json(silent=True) or {}
     if 'status' in payload and str(payload['status']) not in {'Planned', 'In progress', 'Blocked', 'Complete'}:
@@ -194,7 +194,7 @@ def update_mobile_task(task_id):
 
 
 @production_bp.post('/mobile/tasks/<int:task_id>/materials')
-@roles_required('admin', 'sales', 'designer')
+@roles_required('admin', 'designer')
 def mobile_material_movement(task_id):
     task = db.get_or_404(ProductionTask, task_id); payload = request.get_json(silent=True) or {}; movement = str(payload.get('movement', 'issue')).lower()
     if movement not in {'issue', 'return'}: return jsonify({'message': 'Movement must be issue or return.'}), 400
@@ -210,7 +210,7 @@ def mobile_material_movement(task_id):
 
 
 @production_bp.get('/<int:job_id>/inspections')
-@roles_required('admin', 'sales', 'designer', 'client')
+@roles_required('admin', 'designer')
 def list_inspections(job_id):
     job = db.get_or_404(ProductionJob, job_id)
     if not access_allowed(job): return jsonify({'message': 'You do not have access to this production job.'}), 403
@@ -218,7 +218,7 @@ def list_inspections(job_id):
 
 
 @production_bp.post('/<int:job_id>/inspections')
-@roles_required('admin', 'sales', 'designer')
+@roles_required('admin', 'designer')
 def create_inspection(job_id):
     job = db.get_or_404(ProductionJob, job_id); payload = request.get_json(silent=True) or {}; status = str(payload.get('status', 'Pending')).strip()
     if status not in {'Pending', 'Passed', 'Failed', 'Rework'}: return jsonify({'message': 'Invalid inspection status.'}), 400

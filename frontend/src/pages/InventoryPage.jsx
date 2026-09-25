@@ -7,7 +7,7 @@ const emptyForm = { product_id: '', quantity: 0, reserved_quantity: 0, reorder_l
 
 export default function InventoryPage() {
   const { user } = useAuth()
-  const canEdit = ['admin', 'sales'].includes(user.role)
+  const canEdit = user.role === 'admin'
   const canCreate = user.role === 'admin'
   const [items, setItems] = useState([])
   const [products, setProducts] = useState([])

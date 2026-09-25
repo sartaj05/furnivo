@@ -74,6 +74,21 @@ def test_client_cannot_access_admin_quotes(client):
     assert response.status_code == 403
 
 
+def test_role_boundaries_keep_each_workspace_scoped(client):
+    sales_login = client.post('/api/auth/login', json={'email': 'sales@furnivo.demo', 'password': 'sales123'})
+    designer_login = client.post('/api/auth/login', json={'email': 'designer@furnivo.demo', 'password': 'design123'})
+    client_login = client.post('/api/auth/login', json={'email': 'client@furnivo.demo', 'password': 'client123'})
+    sales_headers = {'Authorization': f"Bearer {sales_login.json['token']}"}
+    designer_headers = {'Authorization': f"Bearer {designer_login.json['token']}"}
+    client_headers = {'Authorization': f"Bearer {client_login.json['token']}"}
+
+    assert client.get('/api/production', headers=sales_headers).status_code == 403
+    assert client.get('/api/inventory', headers=client_headers).status_code == 403
+    assert client.get('/api/procurement/purchase-orders', headers=sales_headers).status_code == 403
+    assert client.get('/api/procurement/purchase-orders', headers=designer_headers).status_code == 200
+    assert client.get('/api/invoices', headers=client_headers).status_code == 200
+
+
 def test_production_and_operations_endpoints(client, admin_headers):
     production = client.get('/api/production', headers=admin_headers)
     operations = client.get('/api/ops/health', headers=admin_headers)

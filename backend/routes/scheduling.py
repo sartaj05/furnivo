@@ -49,7 +49,7 @@ def update_schedule(schedule_id):
 
 
 @scheduling_bp.get('/route-plan')
-@roles_required('admin', 'sales', 'designer')
+@roles_required('admin')
 def route_plan():
     date_filter = request.args.get('date')
     query = db.select(DeliverySchedule).where(DeliverySchedule.status.not_in(['Completed', 'Cancelled'])).order_by(DeliverySchedule.scheduled_date, DeliverySchedule.route_order, DeliverySchedule.id)

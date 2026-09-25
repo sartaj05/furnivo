@@ -1,5 +1,6 @@
 import pytest
 from pathlib import Path
+import tempfile
 from backend.app import create_app
 
 TEST_ROOT = Path(__file__).resolve().parent
@@ -20,8 +21,10 @@ class TestConfig:
     REFRESH_TOKEN_DAYS = 30
     JWT_ACCESS_TOKEN_EXPIRES = __import__('datetime').timedelta(hours=1)
     JWT_TOKEN_LOCATION = ['headers', 'cookies']
-    BACKUP_FOLDER = str(TEST_ROOT / '.backups')
-    UPLOAD_FOLDER = str(TEST_ROOT / '.uploads')
+    # Keep generated test artifacts out of the repository. This also avoids
+    # Windows file-lock/permission issues when the test suite is rerun.
+    BACKUP_FOLDER = str(Path(tempfile.gettempdir()) / 'furnivo-test-backups')
+    UPLOAD_FOLDER = str(Path(tempfile.gettempdir()) / 'furnivo-test-uploads')
 
 
 @pytest.fixture()

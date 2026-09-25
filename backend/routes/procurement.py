@@ -40,7 +40,7 @@ def next_po_number():
 
 
 @procurement_bp.get('/suppliers')
-@roles_required('admin', 'sales', 'designer')
+@roles_required('admin', 'designer')
 def list_suppliers():
     items = db.session.scalars(db.select(Supplier).where(Supplier.is_active.is_(True)).order_by(Supplier.name)).all()
     return jsonify({'items': [item.to_dict() for item in items], 'mode': 'api'})
@@ -58,14 +58,14 @@ def create_supplier():
 
 
 @procurement_bp.get('/purchase-orders')
-@roles_required('admin', 'sales', 'designer')
+@roles_required('admin', 'designer')
 def list_purchase_orders():
     items = db.session.scalars(db.select(PurchaseOrder).order_by(PurchaseOrder.id.desc())).unique().all()
     return jsonify({'items': [item.to_dict() for item in items], 'mode': 'api'})
 
 
 @procurement_bp.post('/purchase-orders')
-@roles_required('admin', 'sales')
+@roles_required('admin')
 def create_purchase_order():
     payload = request.get_json(silent=True) or {}
     supplier = db.session.get(Supplier, int(payload.get('supplier_id'))) if payload.get('supplier_id') else None
@@ -87,7 +87,7 @@ def create_purchase_order():
 
 
 @procurement_bp.patch('/purchase-orders/<int:po_id>')
-@roles_required('admin', 'sales')
+@roles_required('admin')
 def update_purchase_order(po_id):
     item = db.get_or_404(PurchaseOrder, po_id); payload = request.get_json(silent=True) or {}
     if 'status' in payload: item.status = str(payload['status']).strip()
@@ -100,7 +100,7 @@ def update_purchase_order(po_id):
 
 
 @procurement_bp.post('/purchase-orders/from-planning')
-@roles_required('admin', 'sales')
+@roles_required('admin')
 def create_purchase_order_from_planning():
     payload = request.get_json(silent=True) or {}; suggestions = payload.get('items') or []
     supplier = db.session.get(Supplier, int(payload.get('supplier_id'))) if payload.get('supplier_id') else None
@@ -120,7 +120,7 @@ def create_purchase_order_from_planning():
 
 
 @procurement_bp.get('/supplier-performance')
-@roles_required('admin', 'sales', 'designer')
+@roles_required('admin', 'designer')
 def supplier_performance():
     suppliers = db.session.scalars(db.select(Supplier).order_by(Supplier.name)).all()
     items = []

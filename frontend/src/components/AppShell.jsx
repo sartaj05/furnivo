@@ -3,6 +3,7 @@ import { NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useModal } from '../context/ModalContext'
 import { deliverNotification, getNotifications, logoutSession, markNotificationRead, retryNotificationDelivery } from '../lib/api'
+import { rolesFor } from '../config/roleAccess'
 
 const navItems = [
   { to: '/app', label: 'Overview', shortLabel: 'Home', roles: ['admin', 'sales', 'designer', 'client'], end: true },
@@ -43,8 +44,10 @@ const navItems = [
   { to: '/app/accounting-center', label: 'Accounting control center', shortLabel: 'Accounts', roles: ['admin', 'sales'] },
   { to: '/app/branch-security', label: 'Branches & security', shortLabel: 'Branches', roles: ['admin'] },
   { to: '/app/notification-automation', label: 'Notification automation', shortLabel: 'Notify', roles: ['admin', 'sales'] },
+  { to: '/app/automation-builder', label: 'Workflow automation', shortLabel: 'Automate', roles: ['admin', 'sales'] },
   { to: '/app/route-planning', label: 'Route planning', shortLabel: 'Routes', roles: ['admin', 'sales', 'designer'] },
   { to: '/app/field-operations', label: 'Field operations', shortLabel: 'Field', roles: ['admin', 'sales', 'designer', 'client'] },
+  { to: '/app/mobile-workshop', label: 'Mobile workshop', shortLabel: 'Workshop', roles: ['admin', 'designer'] },
   { to: '/app/schedules', label: 'Delivery & installation', shortLabel: 'Schedule', roles: ['admin', 'sales', 'designer', 'client'] },
   { to: '/app/warehouses', label: 'Warehouses', shortLabel: 'Stock map', roles: ['admin', 'sales', 'designer'] },
   { to: '/app/returns', label: 'Returns & refunds', shortLabel: 'Returns', roles: ['admin', 'sales', 'client'] },
@@ -58,7 +61,7 @@ export default function AppShell({ title, eyebrow, actions, children }) {
   const navigate = useNavigate()
   const [notifications, setNotifications] = useState([])
   const [showNotifications, setShowNotifications] = useState(false)
-  const allowedItems = navItems.filter((item) => item.roles.includes(user.role))
+  const allowedItems = navItems.filter((item) => rolesFor(item.to).includes(user.role))
 
   async function loadNotifications() {
     const result = await getNotifications().catch(() => ({ items: [] }))

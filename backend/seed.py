@@ -99,9 +99,9 @@ def seed_access_controls():
 
     permission_map = {
         'admin': [('*', 'global')],
-        'sales': [('quotes.create', 'team'), ('quotes.discount', 'approval'), ('orders.manage', 'team'), ('customers.view', 'team')],
-        'designer': [('quotes.create', 'own'), ('production.manage', 'team'), ('orders.view', 'assigned')],
-        'client': [('portal.view', 'own')],
+        'sales': [('quotes.create', 'team'), ('quotes.discount', 'approval'), ('customers.view', 'team'), ('orders.manage', 'team'), ('payments.manage', 'team'), ('reports.view', 'team')],
+        'designer': [('catalog.configure', 'own'), ('production.manage', 'assigned'), ('inventory.view', 'assigned'), ('orders.view', 'assigned')],
+        'client': [('portal.view', 'own'), ('quotes.respond', 'own'), ('payments.view', 'own'), ('service.create', 'own')],
     }
     for role, permissions in permission_map.items():
         for user in db.session.scalars(db.select(User).where(User.role == role)).all():

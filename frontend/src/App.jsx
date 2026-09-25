@@ -52,6 +52,11 @@ import LiveCollaborationPage from './pages/LiveCollaborationPage'
 import PredictiveAnalyticsPage from './pages/PredictiveAnalyticsPage'
 import TenantWorkspacePage from './pages/TenantWorkspaceEnhancedPage'
 import ProtectedRoute from './components/ProtectedRoute'
+import { rolesFor } from './config/roleAccess'
+
+function workspaceRoute(path, element) {
+  return <Route path={path} element={<ProtectedRoute allowedRoles={rolesFor(path)}>{element}</ProtectedRoute>} />
+}
 
 export default function App() {
   return (
@@ -64,59 +69,52 @@ export default function App() {
       <Route path="/supplier-portal" element={<SupplierPortalPage />} />
 
       <Route element={<ProtectedRoute />}>
-        <Route path="/app" element={<DashboardPage />} />
-        <Route path="/app/catalog" element={<CatalogPage />} />
-        <Route path="/app/quotes" element={<ProtectedRoute allowedRoles={['admin', 'sales', 'designer']}><QuotesPage /></ProtectedRoute>} />
-        <Route path="/app/configurator" element={<ProtectedRoute allowedRoles={['admin', 'sales', 'designer']}><QuoteConfiguratorPage /></ProtectedRoute>} />
-        <Route path="/app/production" element={<ProtectedRoute allowedRoles={['admin', 'sales', 'designer']}><ProductionPage /></ProtectedRoute>} />
-        <Route path="/app/production-scheduling" element={<ProtectedRoute allowedRoles={['admin', 'sales', 'designer']}><ProductionSchedulingPage /></ProtectedRoute>} />
-        <Route path="/app/ai-design-assistant" element={<AIDesignAssistantPage />} />
-        <Route path="/app/production-gantt" element={<ProtectedRoute allowedRoles={['admin', 'sales', 'designer']}><ProductionGanttPage /></ProtectedRoute>} />
-        <Route path="/app/live-collaboration" element={<LiveCollaborationPage />} />
-        <Route path="/app/predictive-analytics" element={<ProtectedRoute allowedRoles={['admin', 'sales', 'designer']}><PredictiveAnalyticsPage /></ProtectedRoute>} />
-        <Route path="/app/tenant-workspaces" element={<ProtectedRoute allowedRoles={['admin']}><TenantWorkspacePage /></ProtectedRoute>} />
-        <Route path="/app/quality-control" element={<ProtectedRoute allowedRoles={['admin', 'sales', 'designer']}><QualityControlPage /></ProtectedRoute>} />
-        <Route path="/app/payment-reconciliation" element={<ProtectedRoute allowedRoles={['admin', 'sales', 'client']}><PaymentReconciliationPage /></ProtectedRoute>} />
-        <Route path="/app/contracts" element={<ContractsPage />} />
-        <Route path="/app/project-portal" element={<ProtectedRoute allowedRoles={['client']}><ProjectPortalPage /></ProtectedRoute>} />
-        <Route path="/app/mobile-portal" element={<ProtectedRoute allowedRoles={['client']}><MobilePortalPage /></ProtectedRoute>} />
-        <Route path="/app/operations" element={<ProtectedRoute allowedRoles={['admin']}><OpsPage /></ProtectedRoute>} />
-        <Route path="/app/security" element={<SecurityPage />} />
-        <Route path="/app/gst" element={<ProtectedRoute allowedRoles={['admin', 'sales', 'client']}><GstPage /></ProtectedRoute>} />
-        <Route path="/app/data-admin" element={<ProtectedRoute allowedRoles={['admin']}><DataAdminPage /></ProtectedRoute>} />
-        <Route path="/app/access-control" element={<ProtectedRoute allowedRoles={['admin']}><AccessControlPage /></ProtectedRoute>} />
-        <Route path="/app/service" element={<ServicePage />} />
-        <Route path="/app/analytics" element={<ProtectedRoute allowedRoles={['admin', 'sales', 'designer']}><AnalyticsPage /></ProtectedRoute>} />
-        <Route path="/app/business-control" element={<ProtectedRoute allowedRoles={['admin', 'sales', 'designer']}><BusinessControlPage /></ProtectedRoute>} />
-        <Route path="/app/accounting-center" element={<ProtectedRoute allowedRoles={['admin', 'sales']}><AccountingCenterPage /></ProtectedRoute>} />
-        <Route path="/app/branch-security" element={<ProtectedRoute allowedRoles={['admin']}><BranchSecurityPage /></ProtectedRoute>} />
-        <Route path="/app/notification-automation" element={<ProtectedRoute allowedRoles={['admin', 'sales']}><NotificationAutomationPage /></ProtectedRoute>} />
-        <Route path="/app/automation-builder" element={<ProtectedRoute allowedRoles={['admin', 'sales']}><AutomationBuilderPage /></ProtectedRoute>} />
-        <Route path="/app/route-planning" element={<ProtectedRoute allowedRoles={['admin', 'sales', 'designer']}><RoutePlanningPage /></ProtectedRoute>} />
-        <Route path="/app/integrations" element={<ProtectedRoute allowedRoles={['admin']}><IntegrationsPage /></ProtectedRoute>} />
-        <Route path="/app/field-operations" element={<FieldOperationsPage />} />
-        <Route path="/app/mobile-workshop" element={<ProtectedRoute allowedRoles={['admin', 'sales', 'designer']}><MobileWorkshopPage /></ProtectedRoute>} />
-        <Route path="/app/customers" element={<ProtectedRoute allowedRoles={['admin', 'sales']}><CustomersPage /></ProtectedRoute>} />
-        <Route
-          path="/app/leads"
-          element={
-            <ProtectedRoute allowedRoles={['admin', 'sales']}>
-              <LeadsPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route path="/app/client-quotes" element={<ProtectedRoute allowedRoles={['client']}><ClientQuotesPage /></ProtectedRoute>} />
-        <Route path="/app/orders" element={<OrdersPage />} />
-        <Route path="/app/inventory" element={<InventoryPage />} />
-        <Route path="/app/inventory-forecast" element={<ProtectedRoute allowedRoles={['admin', 'sales', 'designer']}><InventoryForecastPage /></ProtectedRoute>} />
-        <Route path="/app/recommendations" element={<RecommendationsPage />} />
-        <Route path="/app/invoices" element={<InvoicesPage />} />
-        <Route path="/app/procurement" element={<ProcurementPage />} />
-        <Route path="/app/reports" element={<ProtectedRoute allowedRoles={['admin', 'sales']}><CustomReportsPage /></ProtectedRoute>} />
-        <Route path="/app/audit" element={<ProtectedRoute allowedRoles={['admin']}><AuditPage /></ProtectedRoute>} />
-        <Route path="/app/schedules" element={<SchedulesPage />} />
-        <Route path="/app/warehouses" element={<WarehousesPage />} />
-        <Route path="/app/returns" element={<ReturnsPage />} />
+        {workspaceRoute('/app', <DashboardPage />)}
+        {workspaceRoute('/app/catalog', <CatalogPage />)}
+        {workspaceRoute('/app/quotes', <QuotesPage />)}
+        {workspaceRoute('/app/configurator', <QuoteConfiguratorPage />)}
+        {workspaceRoute('/app/production', <ProductionPage />)}
+        {workspaceRoute('/app/production-scheduling', <ProductionSchedulingPage />)}
+        {workspaceRoute('/app/ai-design-assistant', <AIDesignAssistantPage />)}
+        {workspaceRoute('/app/production-gantt', <ProductionGanttPage />)}
+        {workspaceRoute('/app/live-collaboration', <LiveCollaborationPage />)}
+        {workspaceRoute('/app/predictive-analytics', <PredictiveAnalyticsPage />)}
+        {workspaceRoute('/app/tenant-workspaces', <TenantWorkspacePage />)}
+        {workspaceRoute('/app/quality-control', <QualityControlPage />)}
+        {workspaceRoute('/app/payment-reconciliation', <PaymentReconciliationPage />)}
+        {workspaceRoute('/app/contracts', <ContractsPage />)}
+        {workspaceRoute('/app/project-portal', <ProjectPortalPage />)}
+        {workspaceRoute('/app/mobile-portal', <MobilePortalPage />)}
+        {workspaceRoute('/app/operations', <OpsPage />)}
+        {workspaceRoute('/app/security', <SecurityPage />)}
+        {workspaceRoute('/app/gst', <GstPage />)}
+        {workspaceRoute('/app/data-admin', <DataAdminPage />)}
+        {workspaceRoute('/app/access-control', <AccessControlPage />)}
+        {workspaceRoute('/app/service', <ServicePage />)}
+        {workspaceRoute('/app/analytics', <AnalyticsPage />)}
+        {workspaceRoute('/app/business-control', <BusinessControlPage />)}
+        {workspaceRoute('/app/accounting-center', <AccountingCenterPage />)}
+        {workspaceRoute('/app/branch-security', <BranchSecurityPage />)}
+        {workspaceRoute('/app/notification-automation', <NotificationAutomationPage />)}
+        {workspaceRoute('/app/automation-builder', <AutomationBuilderPage />)}
+        {workspaceRoute('/app/route-planning', <RoutePlanningPage />)}
+        {workspaceRoute('/app/integrations', <IntegrationsPage />)}
+        {workspaceRoute('/app/field-operations', <FieldOperationsPage />)}
+        {workspaceRoute('/app/mobile-workshop', <MobileWorkshopPage />)}
+        {workspaceRoute('/app/customers', <CustomersPage />)}
+        {workspaceRoute('/app/leads', <LeadsPage />)}
+        {workspaceRoute('/app/client-quotes', <ClientQuotesPage />)}
+        {workspaceRoute('/app/orders', <OrdersPage />)}
+        {workspaceRoute('/app/inventory', <InventoryPage />)}
+        {workspaceRoute('/app/inventory-forecast', <InventoryForecastPage />)}
+        {workspaceRoute('/app/recommendations', <RecommendationsPage />)}
+        {workspaceRoute('/app/invoices', <InvoicesPage />)}
+        {workspaceRoute('/app/procurement', <ProcurementPage />)}
+        {workspaceRoute('/app/reports', <CustomReportsPage />)}
+        {workspaceRoute('/app/audit', <AuditPage />)}
+        {workspaceRoute('/app/schedules', <SchedulesPage />)}
+        {workspaceRoute('/app/warehouses', <WarehousesPage />)}
+        {workspaceRoute('/app/returns', <ReturnsPage />)}
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />

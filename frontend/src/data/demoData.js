@@ -5,11 +5,33 @@ export const demoUsers = [
   { id: 4, name: 'Riya Client', email: 'client@furnivo.demo', password: 'client123', role: 'client' },
 ]
 
+const demoRolePermissions = {
+  admin: [{ permission: '*', scope: 'global', is_enabled: true }],
+  sales: [
+    { permission: 'quotes.create', scope: 'team', is_enabled: true },
+    { permission: 'quotes.discount', scope: 'approval', is_enabled: true },
+    { permission: 'customers.view', scope: 'team', is_enabled: true },
+    { permission: 'orders.manage', scope: 'team', is_enabled: true },
+    { permission: 'payments.manage', scope: 'team', is_enabled: true },
+    { permission: 'reports.view', scope: 'team', is_enabled: true },
+  ],
+  designer: [
+    { permission: 'catalog.configure', scope: 'own', is_enabled: true },
+    { permission: 'production.manage', scope: 'assigned', is_enabled: true },
+    { permission: 'inventory.view', scope: 'assigned', is_enabled: true },
+    { permission: 'orders.view', scope: 'assigned', is_enabled: true },
+  ],
+  client: [
+    { permission: 'portal.view', scope: 'own', is_enabled: true },
+    { permission: 'quotes.respond', scope: 'own', is_enabled: true },
+    { permission: 'payments.view', scope: 'own', is_enabled: true },
+    { permission: 'service.create', scope: 'own', is_enabled: true },
+  ],
+}
+
 export const demoAccessUsers = demoUsers.map((user) => ({
   user,
-  permissions: user.role === 'admin'
-    ? [{ id: 1, permission: '*', scope: 'global', is_enabled: true }]
-    : [{ id: 2, permission: user.role === 'sales' ? 'quotes.discount' : 'portal.view', scope: user.role === 'sales' ? 'approval' : 'own', is_enabled: true }],
+  permissions: demoRolePermissions[user.role].map((permission, index) => ({ id: `${user.id}-${index + 1}`, ...permission })),
   departments: user.role === 'admin' ? [{ department: 'Operations', role_title: 'Administrator' }] : [{ department: user.role === 'sales' ? 'Sales' : user.role === 'designer' ? 'Design' : 'Client', role_title: user.role }],
 }))
 

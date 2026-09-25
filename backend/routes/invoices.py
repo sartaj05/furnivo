@@ -19,7 +19,7 @@ def next_invoice_number():
 
 
 @invoices_bp.get('')
-@roles_required('admin', 'sales', 'designer', 'client')
+@roles_required('admin', 'sales', 'client')
 def list_invoices():
     query = db.select(Invoice).order_by(Invoice.id.desc())
     if current_user().role == 'client':

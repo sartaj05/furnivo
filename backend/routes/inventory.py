@@ -26,7 +26,7 @@ def apply_payload(item, payload):
 
 
 @inventory_bp.get('')
-@roles_required('admin', 'sales', 'designer', 'client')
+@roles_required('admin', 'sales', 'designer')
 def list_inventory():
     items = db.session.scalars(db.select(InventoryItem).order_by(InventoryItem.id)).all()
     return jsonify({'items': [item.to_dict() for item in items], 'mode': 'api'})
@@ -57,7 +57,7 @@ def create_inventory():
 
 
 @inventory_bp.patch('/<int:item_id>')
-@roles_required('admin', 'sales')
+@roles_required('admin')
 def update_inventory(item_id):
     item = db.get_or_404(InventoryItem, item_id)
     try:
@@ -71,7 +71,7 @@ def update_inventory(item_id):
 
 
 @inventory_bp.get('/forecast')
-@roles_required('admin', 'sales', 'designer')
+@roles_required('admin', 'designer')
 def inventory_forecast():
     try:
         horizon_days = min(max(int(request.args.get('days', 30)), 7), 365)

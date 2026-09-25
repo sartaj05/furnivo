@@ -20,9 +20,11 @@ function LegacyProcurementPage() {
 }
 
 function ProcurementAutomationPanel() {
+  const { user } = useAuth()
   const [suggestions, setSuggestions] = useState([]); const [suppliers, setSuppliers] = useState([]); const [performance, setPerformance] = useState([]); const [supplierId, setSupplierId] = useState(''); const [message, setMessage] = useState('')
   useEffect(() => { Promise.all([getBusinessPlanning(), getSuppliers(), getSupplierPerformance()]).then(([planning, supplierResult, performanceResult]) => { setSuggestions((planning.planning?.purchase_suggestions || []).filter((item) => Number(item.shortage_quantity) > 0)); setSuppliers(supplierResult.items || []); setPerformance(performanceResult.items || []) }) }, [])
   async function createFromPlanning() { if (!supplierId || !suggestions.length) return setMessage('Choose a supplier and ensure planning has shortages.'); await createPurchaseOrderFromPlanning({ supplier_id: Number(supplierId), items: suggestions, notes: 'Created from planning shortage suggestions.' }); setMessage('Purchase order created from shortage suggestions.') }
+  if (user.role !== 'admin') return null
   return <section className="panel procurement-automation-panel"><div className="panel-heading"><div><p className="eyebrow">Automation</p><h3>Planning shortage → purchase order</h3></div></div><div className="order-meta"><span>{suggestions.length} shortage item(s) ready</span><select value={supplierId} onChange={(event) => setSupplierId(event.target.value)}><option value="">Choose supplier</option>{suppliers.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select><button className="button button-small" onClick={createFromPlanning}>Create PO</button></div><p className="muted-copy">{performance.slice(0, 3).map((item) => `${item.supplier}: ${item.orders} orders · ${item.on_time_rate}% on time`).join(' · ') || 'Supplier performance will appear after purchase orders are tracked.'}</p>{message && <div className="success-message">{message}</div>}</section>
 }
 
