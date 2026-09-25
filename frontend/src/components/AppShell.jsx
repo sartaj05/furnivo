@@ -75,6 +75,8 @@ export default function AppShell({ title, eyebrow, actions, children }) {
     // Each workspace route should open at its own header, not at the previous page's scroll position.
     document.documentElement.scrollTop = 0
     document.body.scrollTop = 0
+    const sidebar = document.querySelector('.sidebar')
+    if (sidebar) sidebar.scrollTop = 0
   }, [location.pathname])
 
   async function readNotification(item) {

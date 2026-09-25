@@ -1322,6 +1322,8 @@ body { overflow-x: hidden; }
 }
 .sidebar {
   min-width: 0;
+  align-self: start;
+  z-index: 20;
   overflow-x: hidden;
   scrollbar-width: thin;
   scrollbar-color: rgba(255,255,255,.24) transparent;
