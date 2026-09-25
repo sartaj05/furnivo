@@ -2,12 +2,14 @@ import { useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useModal } from '../context/ModalContext'
+import { ROLE_HOME } from '../config/roleAccess'
 
 const demoAccounts = [
   ['Admin', 'admin@furnivo.demo', 'admin123'],
   ['Sales', 'sales@furnivo.demo', 'sales123'],
   ['Designer', 'designer@furnivo.demo', 'design123'],
   ['Client', 'client@furnivo.demo', 'client123'],
+  ['Workshop operator', 'workshop@furnivo.demo', 'workshop123'],
 ]
 
 export default function LoginPage() {
@@ -32,7 +34,7 @@ export default function LoginPage() {
       const result = await signIn(form.email, form.password)
       if (result?.mfa_required) { setChallenge(result); return }
       showModal({ type: 'success', title: 'Welcome back', message: 'You are signed in to your Furnivo workspace.' })
-      navigate('/app')
+      navigate(ROLE_HOME[result?.role] || '/app')
     } catch (err) {
       setError(err.message || 'Unable to sign in')
     } finally {
@@ -42,7 +44,7 @@ export default function LoginPage() {
 
   async function submitMfa(event) {
     event.preventDefault(); setError(''); setLoading(true)
-    try { await verifyMfa(challenge.challenge_id, mfaCode); showModal({ type: 'success', title: 'Welcome back', message: 'Verification complete. Your workspace is ready.' }); navigate('/app') } catch (err) { setError(err.message || 'Invalid MFA code') } finally { setLoading(false) }
+    try { const user = await verifyMfa(challenge.challenge_id, mfaCode); showModal({ type: 'success', title: 'Welcome back', message: 'Verification complete. Your workspace is ready.' }); navigate(ROLE_HOME[user?.role] || '/app') } catch (err) { setError(err.message || 'Invalid MFA code') } finally { setLoading(false) }
   }
 
   function useAccount(email, password) {

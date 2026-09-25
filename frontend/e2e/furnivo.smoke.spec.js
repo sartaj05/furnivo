@@ -23,3 +23,14 @@ test('demo login reaches the protected workspace', async ({ page }) => {
   await expect(page).toHaveURL(/#\/app$/)
   await expect(page.getByText(/commercial movement|workspace/i).first()).toBeVisible()
 })
+
+test('workshop operator is routed to the execution-only workspace', async ({ page }) => {
+  await page.goto('/#/login')
+  await page.getByLabel('Email').fill('workshop@furnivo.demo')
+  await page.getByLabel('Password').fill('workshop123')
+  await page.getByRole('button', { name: 'Sign in' }).click()
+  await expect(page).toHaveURL(/#\/app\/mobile-workshop$/)
+  await expect(page.getByRole('heading', { name: /mobile workshop execution/i })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Quotations' })).toHaveCount(0)
+  await expect(page.getByRole('link', { name: /material issue|mobile workshop/i }).first()).toBeVisible()
+})
