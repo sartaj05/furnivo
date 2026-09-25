@@ -6,7 +6,7 @@ from ..extensions import db
 from ..models import FieldVisit, Order, User
 from ..models import utcnow
 from ..services.audit import record_audit
-from ..utils import client_quote_ids, current_user, roles_required
+from ..utils import assigned_order_ids, client_quote_ids, current_user, roles_required
 
 field_bp = Blueprint('field', __name__)
 
@@ -19,18 +19,20 @@ def visit_date(value):
 
 
 @field_bp.get('')
-@roles_required('admin', 'sales', 'designer', 'client')
+@roles_required('admin', 'designer', 'client')
 def list_field_visits():
     query = db.select(FieldVisit).order_by(FieldVisit.scheduled_date, FieldVisit.id.desc())
     if current_user().role == 'client':
         from ..models import Order
         query = query.join(FieldVisit.order).where(Order.quote_id.in_(client_quote_ids() or [-1]))
+    elif current_user().role == 'designer':
+        query = query.where(FieldVisit.order_id.in_(assigned_order_ids() or [-1]))
     items = db.session.scalars(query).unique().all()
     return jsonify({'items': [item.to_dict() for item in items], 'mode': 'api'})
 
 
 @field_bp.post('')
-@roles_required('admin', 'sales', 'designer')
+@roles_required('admin', 'designer')
 def create_field_visit():
     payload = request.get_json(silent=True) or {}; order = db.session.get(Order, payload.get('order_id')) if payload.get('order_id') else None; scheduled = visit_date(payload.get('scheduled_date'))
     if not order or not scheduled:
@@ -41,7 +43,7 @@ def create_field_visit():
 
 
 @field_bp.patch('/<int:visit_id>')
-@roles_required('admin', 'sales', 'designer')
+@roles_required('admin', 'designer')
 def update_field_visit(visit_id):
     item = db.get_or_404(FieldVisit, visit_id); payload = request.get_json(silent=True) or {}
     if 'status' in payload and payload['status'] not in {'Scheduled', 'En route', 'On site', 'Completed', 'Cancelled'}:
@@ -53,7 +55,7 @@ def update_field_visit(visit_id):
 
 
 @field_bp.post('/<int:visit_id>/check-in')
-@roles_required('admin', 'sales', 'designer')
+@roles_required('admin', 'designer')
 def check_in_field_visit(visit_id):
     item = db.get_or_404(FieldVisit, visit_id); payload = request.get_json(silent=True) or {}
     item.check_in_at = utcnow(); item.status = 'On site'
@@ -64,7 +66,7 @@ def check_in_field_visit(visit_id):
 
 
 @field_bp.post('/<int:visit_id>/check-out')
-@roles_required('admin', 'sales', 'designer')
+@roles_required('admin', 'designer')
 def check_out_field_visit(visit_id):
     item = db.get_or_404(FieldVisit, visit_id); payload = request.get_json(silent=True) or {}
     item.check_out_at = utcnow(); item.status = 'Completed'
@@ -77,7 +79,7 @@ def check_out_field_visit(visit_id):
 
 
 @field_bp.post('/<int:visit_id>/materials')
-@roles_required('admin', 'sales', 'designer')
+@roles_required('admin', 'designer')
 def record_field_material(visit_id):
     item = db.get_or_404(FieldVisit, visit_id); payload = request.get_json(silent=True) or {}
     name = str(payload.get('name', '')).strip(); movement = str(payload.get('movement', 'issue')).lower()
@@ -93,7 +95,7 @@ def record_field_material(visit_id):
 
 
 @field_bp.post('/<int:visit_id>/proof')
-@roles_required('admin', 'sales', 'designer')
+@roles_required('admin', 'designer')
 def save_field_proof(visit_id):
     item = db.get_or_404(FieldVisit, visit_id); payload = request.get_json(silent=True) or {}
     item.proof_photo_url = str(payload.get('proof_photo_url', item.proof_photo_url)).strip(); item.customer_signature = str(payload.get('customer_signature', item.customer_signature)).strip(); item.notes = str(payload.get('notes', item.notes)).strip(); item.offline_synced = True

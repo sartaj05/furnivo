@@ -106,6 +106,35 @@ def test_admin_can_invite_and_activate_staff_member(client, admin_headers):
     assert deactivated.json['item']['is_active'] is False
 
 
+def test_assigned_staff_records_are_scoped_to_their_projects(client):
+    sales_login = client.post('/api/auth/login', json={'email': 'sales@furnivo.demo', 'password': 'sales123'})
+    designer_login = client.post('/api/auth/login', json={'email': 'designer@furnivo.demo', 'password': 'design123'})
+    sales_headers = {'Authorization': f"Bearer {sales_login.json['token']}"}
+    designer_headers = {'Authorization': f"Bearer {designer_login.json['token']}"}
+
+    sales_orders = client.get('/api/orders', headers=sales_headers)
+    sales_quotes = client.get('/api/quotes', headers=sales_headers)
+    sales_customers = client.get('/api/customers', headers=sales_headers)
+    sales_invoices = client.get('/api/invoices', headers=sales_headers)
+    designer_orders = client.get('/api/orders', headers=designer_headers)
+    designer_quotes = client.get('/api/quotes', headers=designer_headers)
+    designer_customers = client.get('/api/customers', headers=designer_headers)
+    designer_production = client.get('/api/production', headers=designer_headers)
+    designer_schedules = client.get('/api/schedules', headers=designer_headers)
+
+    for response in (sales_orders, sales_quotes, sales_customers, sales_invoices, designer_orders, designer_quotes, designer_customers, designer_production, designer_schedules):
+        assert response.status_code == 200
+    assert all(item['order_number'] == 'ORD-1001' for item in sales_orders.json['items'])
+    assert all(item['id'] == 'Q-1042' for item in sales_quotes.json['items'])
+    assert all(item['company'] == 'Northline Studio' for item in sales_customers.json['items'])
+    assert all(item['order_number'] == 'ORD-1001' for item in sales_invoices.json['items'])
+    assert all(item['order_number'] == 'ORD-1001' for item in designer_orders.json['items'])
+    assert all(item['id'] == 'Q-1042' for item in designer_quotes.json['items'])
+    assert all(item['company'] == 'Northline Studio' for item in designer_customers.json['items'])
+    assert all(item['order_number'] == 'ORD-1001' for item in designer_production.json['items'])
+    assert all(item['order_number'] == 'ORD-1001' for item in designer_schedules.json['items'])
+
+
 def test_production_and_operations_endpoints(client, admin_headers):
     production = client.get('/api/production', headers=admin_headers)
     operations = client.get('/api/ops/health', headers=admin_headers)

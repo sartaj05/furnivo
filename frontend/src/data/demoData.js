@@ -47,6 +47,7 @@ export const demoApprovalRequests = [
 
 export const demoProjectOwnership = [
   { id: 1, order_id: 1, order_number: 'ORD-1001', customer: 'Northline Studio', user_id: 2, owner: demoUsers[1], assigned_by: 'Aarav Admin' },
+  { id: 2, order_id: 1, order_number: 'ORD-1001', customer: 'Northline Studio', user_id: 3, owner: demoUsers[2], assigned_by: 'Aarav Admin' },
 ]
 
 export const demoProducts = [

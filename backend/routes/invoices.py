@@ -3,7 +3,7 @@ from decimal import Decimal, InvalidOperation
 from flask import Blueprint, jsonify, request
 from ..extensions import db
 from ..models import Invoice, Order, Payment, QuoteClientAccess
-from ..utils import current_user, roles_required
+from ..utils import assigned_order_ids, current_user, roles_required
 from ..services.audit import record_audit
 from ..services.conversion import activate_order_after_payment
 
@@ -25,6 +25,8 @@ def list_invoices():
     if current_user().role == 'client':
         quote_ids = db.session.scalars(db.select(QuoteClientAccess.quote_id).where(QuoteClientAccess.user_id == current_user().id)).all()
         query = query.join(Invoice.order).where(Order.quote_id.in_(quote_ids or [-1]))
+    elif current_user().role == 'sales':
+        query = query.where(Invoice.order_id.in_(assigned_order_ids() or [-1]))
     items = db.session.scalars(query).unique().all()
     for item in items: item.refresh_status()
     db.session.commit()

@@ -5,7 +5,7 @@ from flask import Blueprint, jsonify, request
 from ..extensions import db
 from ..models import BomItem, InventoryItem, Order, ProductionJob, ProductionTask, QualityInspection, QuoteClientAccess, StockMovement, utcnow
 from ..services.audit import record_audit
-from ..utils import current_user, roles_required
+from ..utils import staff_can_access_order, current_user, roles_required
 
 production_bp = Blueprint('production', __name__)
 
@@ -25,8 +25,9 @@ def parse_date(value):
 
 
 def access_allowed(job):
-    if current_user().role != 'client': return True
-    return bool(db.session.scalar(db.select(QuoteClientAccess).where(QuoteClientAccess.quote_id == job.order.quote_id, QuoteClientAccess.user_id == current_user().id)))
+    if current_user().role in {'admin', 'designer'}:
+        return staff_can_access_order(job.order_id)
+    return False
 
 
 @production_bp.get('')

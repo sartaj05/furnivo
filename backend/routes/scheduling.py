@@ -4,7 +4,7 @@ from ..extensions import db
 from ..models import DeliverySchedule, Order, QuoteClientAccess
 from ..services.audit import record_audit
 from ..services.notifications import notify_quote_client
-from ..utils import current_user, roles_required
+from ..utils import assigned_order_ids, current_user, roles_required
 
 scheduling_bp = Blueprint('scheduling', __name__)
 
@@ -16,6 +16,8 @@ def list_schedules():
     if current_user().role == 'client':
         quote_ids = db.session.scalars(db.select(QuoteClientAccess.quote_id).where(QuoteClientAccess.user_id == current_user().id)).all()
         query = query.join(DeliverySchedule.order).where(Order.quote_id.in_(quote_ids or [-1]))
+    elif current_user().role == 'designer':
+        query = query.join(DeliverySchedule.order).where(Order.id.in_(assigned_order_ids() or [-1]))
     items = db.session.scalars(query).all()
     return jsonify({'items': [item.to_dict() for item in items], 'mode': 'api'})
 

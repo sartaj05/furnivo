@@ -135,6 +135,24 @@ function getLocalDb() {
   return initial
 }
 
+function demoAssignedOrderIds(db) {
+  const user = JSON.parse(localStorage.getItem('furnivo-user') || 'null')
+  if (!user || user.role === 'admin' || user.role === 'client') return null
+  return new Set((db.projectOwnership || []).filter((item) => Number(item.user_id) === Number(user.id)).map((item) => Number(item.order_id)))
+}
+
+function filterDemoAssigned(items, db, key = 'order_id') {
+  const assigned = demoAssignedOrderIds(db)
+  return assigned ? items.filter((item) => assigned.has(Number(item[key]))) : items
+}
+
+function filterDemoAssignedQuotes(items, db) {
+  const assigned = demoAssignedOrderIds(db)
+  if (!assigned) return items
+  const assignedQuotes = new Set(db.orders.filter((order) => assigned.has(Number(order.id))).map((order) => Number(order.quote_id)).filter(Boolean))
+  return items.filter((quote) => assignedQuotes.has(Number(quote.database_id || quote.id)))
+}
+
 function saveLocalDb(db) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(db))
 }
@@ -366,7 +384,7 @@ export async function getQuotes() {
   } catch (error) {
     if (error.status) throw error
     await delay()
-    return { items: getLocalDb().quotes, mode: 'demo' }
+    const db = getLocalDb(); return { items: filterDemoAssignedQuotes(db.quotes, db), mode: 'demo' }
   }
 }
 
@@ -648,7 +666,7 @@ export async function updateLeadTask(leadId, taskId, payload) {
 
 export async function getOrders() {
   try { return await backendRequest('/orders') }
-  catch (error) { if (error.status) throw error; await delay(); return { items: getLocalDb().orders, mode: 'demo' } }
+  catch (error) { if (error.status) throw error; await delay(); const db = getLocalDb(); return { items: filterDemoAssigned(db.orders, db), mode: 'demo' } }
 }
 
 export async function createOrder(payload) {
@@ -738,7 +756,7 @@ export async function retryNotificationDelivery(deliveryId) {
 
 export async function getInvoices() {
   try { return await backendRequest('/invoices') }
-  catch (error) { if (error.status) throw error; await delay(); return { items: getLocalDb().invoices, mode: 'demo' } }
+  catch (error) { if (error.status) throw error; await delay(); const db = getLocalDb(); return { items: filterDemoAssigned(db.invoices, db), mode: 'demo' } }
 }
 
 export async function createInvoice(payload) {
@@ -840,7 +858,7 @@ export async function getAuditLogs(resource = '') {
 
 export async function getSchedules() {
   try { return await backendRequest('/schedules') }
-  catch (error) { if (error.status) throw error; await delay(); return { items: getLocalDb().schedules, mode: 'demo' } }
+  catch (error) { if (error.status) throw error; await delay(); const db = getLocalDb(); return { items: filterDemoAssigned(db.schedules, db), mode: 'demo' } }
 }
 
 export async function createSchedule(payload) {
@@ -904,7 +922,7 @@ export async function updateReturn(id, payload) {
 
 export async function getProductionJobs() {
   try { return await backendRequest('/production') }
-  catch (error) { if (error.status) throw error; await delay(); return { items: getLocalDb().productionJobs, mode: 'demo' } }
+  catch (error) { if (error.status) throw error; await delay(); const db = getLocalDb(); return { items: filterDemoAssigned(db.productionJobs, db), mode: 'demo' } }
 }
 
 export async function createProductionJob(payload) {
@@ -1302,7 +1320,7 @@ export async function downloadQuotePdf(quote) {
 export async function getCustomers(options = {}) {
   const query = new URLSearchParams(Object.entries(options).filter(([, value]) => value !== undefined && value !== ''))
   try { return await backendRequest(`/customers${query.toString() ? `?${query}` : ''}`) }
-  catch (error) { if (error.status) throw error; const all = getLocalDb().customers.filter((item) => options.include_archived === 'true' || item.is_active !== false).filter((item) => !options.q || `${item.company} ${item.contact_name} ${item.email}`.toLowerCase().includes(String(options.q).toLowerCase())); return { items: all, pagination: { page: 1, page_size: all.length, total: all.length, pages: 1 }, mode: 'demo' } }
+  catch (error) { if (error.status) throw error; const db = getLocalDb(); const assigned = demoAssignedOrderIds(db); const assignedCustomers = assigned ? new Set(db.orders.filter((order) => assigned.has(Number(order.id))).map((order) => order.customer)) : null; const all = db.customers.filter((item) => !assignedCustomers || assignedCustomers.has(item.company)).filter((item) => options.include_archived === 'true' || item.is_active !== false).filter((item) => !options.q || `${item.company} ${item.contact_name} ${item.email}`.toLowerCase().includes(String(options.q).toLowerCase())); return { items: all, pagination: { page: 1, page_size: all.length, total: all.length, pages: 1 }, mode: 'demo' } }
 }
 
 export async function createCustomer(payload) {

@@ -2,7 +2,7 @@ from datetime import date
 from flask import Blueprint, jsonify, request
 from ..extensions import db
 from ..models import Order, ProjectUpdate, Quote, QuoteClientAccess
-from ..utils import current_user, roles_required
+from ..utils import assigned_order_ids, current_user, roles_required
 from ..services.notifications import create_notification, notify_quote_client
 
 orders_bp = Blueprint('orders', __name__)
@@ -25,6 +25,8 @@ def list_orders():
     if current_user().role == 'client':
         quote_ids = db.session.scalars(db.select(QuoteClientAccess.quote_id).where(QuoteClientAccess.user_id == current_user().id)).all()
         query = query.where(Order.quote_id.in_(quote_ids or [-1]))
+    elif current_user().role in {'sales', 'designer'}:
+        query = query.where(Order.id.in_(assigned_order_ids() or [-1]))
     items = db.session.scalars(query).unique().all()
     return jsonify({'items': [item.to_dict() for item in items], 'mode': 'api'})
 

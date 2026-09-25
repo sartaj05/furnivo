@@ -1,8 +1,8 @@
 from flask import Blueprint, jsonify, request
 from sqlalchemy import or_
 from ..extensions import db
-from ..models import Customer
-from ..utils import current_user, roles_required
+from ..models import Customer, Order
+from ..utils import assigned_order_ids, current_user, roles_required
 
 customers_bp = Blueprint('customers', __name__)
 
@@ -23,6 +23,9 @@ def apply_payload(customer, payload):
 def list_customers():
     query = db.select(Customer).order_by(Customer.company); search = request.args.get('q', '').strip(); include_archived = request.args.get('include_archived', '').lower() == 'true' and current_user().role == 'admin'
     if not include_archived: query = query.where(Customer.is_active.is_(True))
+    if current_user().role in {'sales', 'designer'}:
+        assigned_customers = db.select(Order.customer_id).where(Order.id.in_(assigned_order_ids() or [-1]))
+        query = query.where(Customer.id.in_(assigned_customers))
     if search:
         like = f'%{search}%'; query = query.where(or_(Customer.company.ilike(like), Customer.contact_name.ilike(like), Customer.email.ilike(like)))
     try: page = max(int(request.args.get('page', 1)), 1); page_size = min(max(int(request.args.get('page_size', 50)), 1), 100)

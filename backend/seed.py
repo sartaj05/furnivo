@@ -114,7 +114,15 @@ def seed_access_controls():
     db.session.commit()
 
     quote = db.session.scalar(db.select(Quote).where(Quote.quote_number == 'Q-1042'))
+    order = db.session.scalar(db.select(Order).where(Order.order_number == 'ORD-1001'))
     sales = db.session.scalar(db.select(User).where(User.role == 'sales'))
+    designer = db.session.scalar(db.select(User).where(User.role == 'designer'))
+    admin = db.session.scalar(db.select(User).where(User.role == 'admin'))
+    if order:
+        for owner in (sales, designer):
+            if owner and not db.session.scalar(db.select(ProjectOwnership).where(ProjectOwnership.order_id == order.id, ProjectOwnership.user_id == owner.id)):
+                db.session.add(ProjectOwnership(order_id=order.id, user_id=owner.id, assigned_by_id=admin.id if admin else owner.id))
+        db.session.commit()
     if quote and sales and not db.session.scalar(db.select(ApprovalRequest).where(ApprovalRequest.resource_id == quote.quote_number)):
         db.session.add(ApprovalRequest(request_type='Discount', resource_type='quote', resource_id=quote.quote_number, amount=186400, detail='Approval required for a customer discount above the sales threshold.', requested_by_id=sales.id))
         db.session.commit()

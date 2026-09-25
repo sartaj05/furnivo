@@ -1,9 +1,10 @@
 from datetime import date, datetime, timezone
 from decimal import Decimal, InvalidOperation
 from flask import Blueprint, jsonify, request
+from sqlalchemy import or_
 from ..extensions import db
-from ..models import Customer, FurnitureConfiguration, Product, ProductVariant, Quote, QuoteClientAccess, QuoteItem, QuoteRevision
-from ..utils import current_user, roles_required
+from ..models import Customer, FurnitureConfiguration, Order, Product, ProductVariant, Quote, QuoteClientAccess, QuoteItem, QuoteRevision
+from ..utils import assigned_order_ids, current_user, roles_required
 from ..services.notifications import create_notification, notify_quote_client
 from ..services.audit import record_audit
 from ..services.conversion import ensure_contract_for_approved_quote
@@ -69,7 +70,11 @@ def build_item(payload):
 @quotes_bp.get('')
 @roles_required('admin', 'sales', 'designer')
 def list_quotes():
-    items = db.session.scalars(db.select(Quote).order_by(Quote.id.desc())).unique().all()
+    query = db.select(Quote).order_by(Quote.id.desc())
+    if current_user().role in {'sales', 'designer'}:
+        assigned_quotes = db.select(Order.quote_id).where(Order.id.in_(assigned_order_ids() or [-1]))
+        query = query.where(or_(Quote.created_by_id == current_user().id, Quote.id.in_(assigned_quotes)))
+    items = db.session.scalars(query).unique().all()
     return jsonify({'items': [item.to_dict() for item in items], 'mode': 'api'})
 
 
