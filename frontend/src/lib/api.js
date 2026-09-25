@@ -851,9 +851,9 @@ export async function getCustomReport(metrics = ['quotes', 'orders', 'invoices',
   catch (error) { if (error.status) throw error; const summary = await getReportSummary(); return { report: { metrics: Object.fromEntries(metrics.filter((key) => summary.data[key]).map((key) => [key, summary.data[key]])), selected_metrics: metrics, period_days: Number(periodDays), filters: { scope: 'demo workspace' }, generated_at: new Date().toISOString(), export_formats: ['csv', 'pdf', 'xlsx'] }, mode: 'demo' } }
 }
 
-export async function getAuditLogs(resource = '') {
-  try { return await backendRequest(`/audit-logs${resource ? `?resource=${encodeURIComponent(resource)}` : ''}`) }
-  catch (error) { if (error.status) throw error; await delay(); return { items: getLocalDb().auditLogs, mode: 'demo' } }
+export async function getAuditLogs(resource = '', action = '') {
+  try { const params = new URLSearchParams(); if (resource) params.set('resource', resource); if (action) params.set('action', action); return await backendRequest(`/audit-logs${params.toString() ? `?${params.toString()}` : ''}`) }
+  catch (error) { if (error.status) throw error; await delay(); const all = getLocalDb().auditLogs; const items = all.filter((item) => (!resource || item.resource_type === resource) && (!action || item.action === action)); const resources = {}; const actions = {}; items.forEach((item) => { resources[item.resource_type] = (resources[item.resource_type] || 0) + 1; actions[item.action] = (actions[item.action] || 0) + 1 }); return { items, summary: { total: items.length, resources, actions, last_activity: items[0]?.created_at || null }, mode: 'demo' } }
 }
 
 export async function getSchedules() {

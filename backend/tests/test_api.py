@@ -125,6 +125,16 @@ def test_admin_limits_approvals_and_validates_custom_permissions(client, admin_h
     assert decision.status_code == 403
 
 
+def test_audit_dashboard_returns_filtered_summary(client, admin_headers):
+    response = client.get('/api/audit-logs', headers=admin_headers)
+    assert response.status_code == 200
+    assert response.json['summary']['total'] >= 1
+    assert response.json['summary']['resources']
+    filtered = client.get('/api/audit-logs?resource=staff_invitation', headers=admin_headers)
+    assert filtered.status_code == 200
+    assert all(item['resource_type'] == 'staff_invitation' for item in filtered.json['items'])
+
+
 def test_assigned_staff_records_are_scoped_to_their_projects(client):
     sales_login = client.post('/api/auth/login', json={'email': 'sales@furnivo.demo', 'password': 'sales123'})
     designer_login = client.post('/api/auth/login', json={'email': 'designer@furnivo.demo', 'password': 'design123'})
