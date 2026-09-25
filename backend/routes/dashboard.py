@@ -1,6 +1,6 @@
 from flask import Blueprint, jsonify
 from ..extensions import db
-from ..models import Invoice, Lead, Order, ProductionJob, ProductionTask, Product, Quote, QuoteClientAccess
+from ..models import FieldVisit, Invoice, Lead, Order, ProductionJob, ProductionTask, Product, Quote, QuoteClientAccess
 from ..utils import assigned_order_ids, current_user, roles_required
 
 dashboard_bp = Blueprint('dashboard', __name__)
@@ -11,7 +11,7 @@ def card(key, label, value, helper, display=None):
 
 
 @dashboard_bp.get('/metrics')
-@roles_required('admin', 'sales', 'designer', 'client', 'workshop_operator')
+@roles_required('admin', 'sales', 'designer', 'client', 'workshop_operator', 'installer', 'accountant')
 def role_metrics():
     user = current_user()
     products = db.session.scalar(db.select(db.func.count(Product.id)).where(Product.is_active.is_(True))) or 0
@@ -46,6 +46,17 @@ def role_metrics():
         blocked = sum(item.status == 'Blocked' for item in tasks)
         cards = [card('tasks', 'Assigned tasks', open_tasks, 'Tasks in your workshop queue'), card('blocked', 'Blocked tasks', blocked, 'Tasks needing help'), card('projects', 'Assigned projects', len(order_ids), 'Projects assigned to you'), card('products', 'Materials reference', products, 'Catalog reference only')]
         focus = f'{blocked} task(s) are blocked and need attention.' if blocked else 'Keep production tasks moving and hand completed work to quality control.'
+    elif user.role == 'installer':
+        order_ids = assigned_order_ids(user.id)
+        visits = db.session.scalars(db.select(FieldVisit).where(FieldVisit.order_id.in_(order_ids or [-1]))).all()
+        cards = [card('visits', 'Assigned visits', sum(item.status not in {'Completed', 'Cancelled'} for item in visits), 'Delivery and installation queue'), card('onsite', 'On-site tasks', sum(item.status == 'On site' for item in visits), 'Currently on site'), card('projects', 'Assigned projects', len(order_ids), 'Projects assigned to you')]
+        focus = 'Capture GPS, proof photos, and customer sign-off for each assigned visit.'
+    elif user.role == 'accountant':
+        invoices = db.session.scalars(db.select(Invoice)).all()
+        outstanding = sum(float(item.balance or 0) for item in invoices)
+        collected = sum(float(item.amount_paid or 0) for item in invoices)
+        cards = [card('invoices', 'Invoices', len(invoices), 'Workspace invoices'), card('outstanding', 'Outstanding', outstanding, 'Open receivables', f'₹{outstanding:,.0f}'), card('collected', 'Collected', collected, 'Payments recorded', f'₹{collected:,.0f}')]
+        focus = 'Keep invoices, GST records, reconciliation, and exports up to date.'
     else:
         quote_ids = db.session.scalars(db.select(QuoteClientAccess.quote_id).where(QuoteClientAccess.user_id == user.id)).all()
         orders = db.session.scalars(db.select(Order).where(Order.quote_id.in_(quote_ids or [-1]))).all()

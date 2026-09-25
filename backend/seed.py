@@ -15,6 +15,8 @@ DEMO_USERS = [
     ('Kabir Designer', 'designer@furnivo.demo', 'design123', 'designer'),
     ('Riya Client', 'client@furnivo.demo', 'client123', 'client'),
     ('Neel Workshop', 'workshop@furnivo.demo', 'workshop123', 'workshop_operator'),
+    ('Arjun Installer', 'installer@furnivo.demo', 'install123', 'installer'),
+    ('Diya Accountant', 'accountant@furnivo.demo', 'account123', 'accountant'),
 ]
 
 
@@ -89,7 +91,7 @@ def seed_tenants():
 
 
 def seed_access_controls():
-    department_data = [('Sales', 'Quotations, customer relationships, and approvals.'), ('Design', 'Design delivery and project specifications.'), ('Operations', 'Production, delivery, and service execution.')]
+    department_data = [('Sales', 'Quotations, customer relationships, and approvals.'), ('Design', 'Design delivery and project specifications.'), ('Operations', 'Production, delivery, and service execution.'), ('Finance', 'Invoices, payments, GST, and accounting exports.')]
     departments = {}
     for name, description in department_data:
         department = db.session.scalar(db.select(Department).where(Department.name == name))
@@ -104,6 +106,8 @@ def seed_access_controls():
         'designer': [('catalog.configure', 'own'), ('production.manage', 'assigned'), ('inventory.view', 'assigned'), ('orders.view', 'assigned')],
         'client': [('portal.view', 'own'), ('quotes.respond', 'own'), ('payments.view', 'own'), ('service.create', 'own')],
         'workshop_operator': [('production.execute', 'assigned'), ('inventory.issue', 'assigned'), ('quality.handoff', 'assigned')],
+        'installer': [('delivery.execute', 'assigned'), ('installation.proof', 'assigned'), ('customer.signoff', 'assigned')],
+        'accountant': [('invoices.view', 'global'), ('payments.manage', 'global'), ('gst.manage', 'global'), ('accounting.export', 'global')],
     }
     for role, permissions in permission_map.items():
         for user in db.session.scalars(db.select(User).where(User.role == role)).all():
@@ -114,7 +118,7 @@ def seed_access_controls():
             for permission, scope in permissions:
                 if not db.session.scalar(db.select(AccessPermission).where(AccessPermission.user_id == user.id, AccessPermission.permission == permission, AccessPermission.scope == scope)):
                     db.session.add(AccessPermission(user_id=user.id, permission=permission, scope=scope))
-            department_name = {'admin': 'Operations', 'sales': 'Sales', 'designer': 'Design', 'workshop_operator': 'Operations'}.get(role)
+            department_name = {'admin': 'Operations', 'sales': 'Sales', 'designer': 'Design', 'workshop_operator': 'Operations', 'installer': 'Operations', 'accountant': 'Finance'}.get(role)
             if department_name and not db.session.scalar(db.select(UserDepartment).where(UserDepartment.user_id == user.id, UserDepartment.department_id == departments[department_name].id)):
                 db.session.add(UserDepartment(user_id=user.id, department_id=departments[department_name].id, role_title='Administrator' if role == 'admin' else role.title()))
     db.session.commit()
@@ -124,9 +128,10 @@ def seed_access_controls():
     sales = db.session.scalar(db.select(User).where(User.role == 'sales'))
     designer = db.session.scalar(db.select(User).where(User.role == 'designer'))
     workshop = db.session.scalar(db.select(User).where(User.role == 'workshop_operator'))
+    installer = db.session.scalar(db.select(User).where(User.role == 'installer'))
     admin = db.session.scalar(db.select(User).where(User.role == 'admin'))
     if order:
-        for owner in (sales, designer, workshop):
+        for owner in (sales, designer, workshop, installer):
             if owner and not db.session.scalar(db.select(ProjectOwnership).where(ProjectOwnership.order_id == order.id, ProjectOwnership.user_id == owner.id)):
                 db.session.add(ProjectOwnership(order_id=order.id, user_id=owner.id, assigned_by_id=admin.id if admin else owner.id))
         db.session.commit()

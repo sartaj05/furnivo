@@ -19,7 +19,7 @@ def next_invoice_number():
 
 
 @invoices_bp.get('')
-@roles_required('admin', 'sales', 'client')
+@roles_required('admin', 'sales', 'client', 'accountant')
 def list_invoices():
     query = db.select(Invoice).order_by(Invoice.id.desc())
     if current_user().role == 'client':
@@ -34,7 +34,7 @@ def list_invoices():
 
 
 @invoices_bp.post('')
-@roles_required('admin', 'sales')
+@roles_required('admin', 'sales', 'accountant')
 def create_invoice():
     payload = request.get_json(silent=True) or {}
     order = db.session.get(Order, int(payload.get('order_id'))) if payload.get('order_id') else None
@@ -50,7 +50,7 @@ def create_invoice():
 
 
 @invoices_bp.post('/<int:invoice_id>/payments')
-@roles_required('admin', 'sales')
+@roles_required('admin', 'sales', 'accountant')
 def record_payment(invoice_id):
     invoice = db.get_or_404(Invoice, invoice_id)
     if not can_access_order(invoice.order_id): return jsonify({'message': 'You do not have access to this invoice.'}), 403

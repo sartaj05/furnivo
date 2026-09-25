@@ -4,6 +4,8 @@ export const ROLE_HOME = {
   designer: '/app/configurator',
   client: '/app/project-portal',
   workshop_operator: '/app/mobile-workshop',
+  installer: '/app/field-operations',
+  accountant: '/app/accounting-center',
 }
 
 export const ROLE_LABELS = {
@@ -12,6 +14,8 @@ export const ROLE_LABELS = {
   designer: 'Design & production',
   client: 'Client portal',
   workshop_operator: 'Workshop execution',
+  installer: 'Installer & driver',
+  accountant: 'Accounting workspace',
 }
 
 // The admin role is intentionally added by rolesFor so every workspace route
@@ -37,9 +41,9 @@ const routeRoles = {
   '/app/inventory-forecast': ['designer'],
   '/app/predictive-analytics': ['designer'],
   '/app/recommendations': ['sales', 'designer', 'client'],
-  '/app/invoices': ['sales', 'client'],
-  '/app/gst': ['sales', 'client'],
-  '/app/payment-reconciliation': ['sales', 'client'],
+  '/app/invoices': ['sales', 'client', 'accountant'],
+  '/app/gst': ['sales', 'client', 'accountant'],
+  '/app/payment-reconciliation': ['sales', 'client', 'accountant'],
   '/app/contracts': ['sales', 'designer', 'client'],
   '/app/procurement': ['designer'],
   '/app/reports': ['sales'],
@@ -53,14 +57,14 @@ const routeRoles = {
   '/app/analytics': ['sales', 'designer'],
   '/app/business-control': ['sales'],
   '/app/integrations': [],
-  '/app/accounting-center': ['sales'],
+  '/app/accounting-center': ['sales', 'accountant'],
   '/app/branch-security': [],
   '/app/notification-automation': ['sales'],
   '/app/automation-builder': ['sales'],
   '/app/route-planning': [],
-  '/app/field-operations': ['designer', 'client'],
+  '/app/field-operations': ['designer', 'client', 'installer'],
   '/app/mobile-workshop': ['designer', 'workshop_operator'],
-  '/app/schedules': ['sales', 'designer', 'client'],
+  '/app/schedules': ['sales', 'designer', 'client', 'installer'],
   '/app/warehouses': ['designer'],
   '/app/returns': ['sales', 'client'],
   '/app/tenant-workspaces': [],

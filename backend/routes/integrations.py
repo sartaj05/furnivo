@@ -65,7 +65,7 @@ def _export_records(entity):
 
 
 @integrations_bp.get('')
-@roles_required('admin')
+@roles_required('admin', 'accountant')
 def list_integrations():
     connections = db.session.scalars(db.select(IntegrationConnection).order_by(IntegrationConnection.id)).all()
     runs = db.session.scalars(db.select(SyncRun).order_by(SyncRun.id.desc()).limit(50)).all()
@@ -73,13 +73,13 @@ def list_integrations():
 
 
 @integrations_bp.get('/accounting-status')
-@roles_required('admin')
+@roles_required('admin', 'accountant')
 def accounting_status():
     return jsonify({'status': _accounting_status(), 'mode': 'api'})
 
 
 @integrations_bp.post('')
-@roles_required('admin')
+@roles_required('admin', 'accountant')
 def create_integration():
     payload = request.get_json(silent=True) or {}; provider = str(payload.get('provider', '')).strip()
     if provider not in PROVIDERS:

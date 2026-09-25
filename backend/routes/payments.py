@@ -13,7 +13,7 @@ payments_bp = Blueprint('payments', __name__)
 
 
 @payments_bp.get('/provider-status')
-@roles_required('admin', 'sales')
+@roles_required('admin', 'sales', 'accountant')
 def provider_status():
     return jsonify({'provider': payment_provider_status(), 'mode': 'api'})
 
@@ -63,7 +63,7 @@ def webhook(provider):
 
 
 @payments_bp.post('/reconciliation/<int:reconciliation_id>/refund')
-@roles_required('admin', 'sales')
+@roles_required('admin', 'sales', 'accountant')
 def refund_reconciliation(reconciliation_id):
     item = db.get_or_404(PaymentReconciliation, reconciliation_id); payload = request.get_json(silent=True) or {}
     try: amount = Decimal(str(payload.get('amount', item.amount - item.refunded_amount)))
@@ -82,7 +82,7 @@ def refund_reconciliation(reconciliation_id):
 
 
 @payments_bp.get('/reconciliation/<int:reconciliation_id>/receipt')
-@roles_required('admin', 'sales', 'client')
+@roles_required('admin', 'sales', 'client', 'accountant')
 def refund_receipt(reconciliation_id):
     item = db.get_or_404(PaymentReconciliation, reconciliation_id)
     if current_user().role == 'client':

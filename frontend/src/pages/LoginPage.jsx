@@ -10,6 +10,8 @@ const demoAccounts = [
   ['Designer', 'designer@furnivo.demo', 'design123'],
   ['Client', 'client@furnivo.demo', 'client123'],
   ['Workshop operator', 'workshop@furnivo.demo', 'workshop123'],
+  ['Installer / Driver', 'installer@furnivo.demo', 'install123'],
+  ['Accountant', 'accountant@furnivo.demo', 'account123'],
 ]
 
 export default function LoginPage() {

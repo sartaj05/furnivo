@@ -16,14 +16,14 @@ def client_can_view(item):
 
 
 @reconciliation_bp.get('')
-@roles_required('admin', 'sales', 'client')
+@roles_required('admin', 'sales', 'client', 'accountant')
 def list_reconciliations():
     items = db.session.scalars(db.select(PaymentReconciliation).order_by(PaymentReconciliation.id.desc())).unique().all()
     return jsonify({'items': [item.to_dict() for item in items if client_can_view(item)], 'mode': 'api'})
 
 
 @reconciliation_bp.post('')
-@roles_required('admin', 'sales')
+@roles_required('admin', 'sales', 'accountant')
 def reconcile_payment():
     payload = request.get_json(silent=True) or {}
     invoice = db.session.get(Invoice, int(payload.get('invoice_id'))) if payload.get('invoice_id') else None
@@ -46,7 +46,7 @@ def reconcile_payment():
 
 
 @reconciliation_bp.post('/<int:reconciliation_id>/refund')
-@roles_required('admin', 'sales')
+@roles_required('admin', 'sales', 'accountant')
 def refund_payment(reconciliation_id):
     item = db.get_or_404(PaymentReconciliation, reconciliation_id); payload = request.get_json(silent=True) or {}
     try: amount = Decimal(str(payload.get('amount', item.amount - item.refunded_amount)))
@@ -60,7 +60,7 @@ def refund_payment(reconciliation_id):
 
 
 @reconciliation_bp.get('/summary')
-@roles_required('admin', 'sales')
+@roles_required('admin', 'sales', 'accountant')
 def accounting_summary():
     invoices = db.session.scalars(db.select(Invoice)).all(); reconciliations = db.session.scalars(db.select(PaymentReconciliation)).all()
     overdue = [item for item in invoices if item.status == 'Overdue']
@@ -68,7 +68,7 @@ def accounting_summary():
 
 
 @reconciliation_bp.post('/reminders')
-@roles_required('admin', 'sales')
+@roles_required('admin', 'sales', 'accountant')
 def send_payment_reminders():
     invoices = db.session.scalars(db.select(Invoice).where(Invoice.status.in_(['Sent', 'Partially Paid', 'Overdue']))).all(); sent = []
     for invoice in invoices:

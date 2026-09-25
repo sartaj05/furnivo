@@ -10,13 +10,15 @@ scheduling_bp = Blueprint('scheduling', __name__)
 
 
 @scheduling_bp.get('')
-@roles_required('admin', 'sales', 'designer', 'client')
+@roles_required('admin', 'sales', 'designer', 'client', 'installer')
 def list_schedules():
     query = db.select(DeliverySchedule).order_by(DeliverySchedule.scheduled_date)
     if current_user().role == 'client':
         quote_ids = db.session.scalars(db.select(QuoteClientAccess.quote_id).where(QuoteClientAccess.user_id == current_user().id)).all()
         query = query.join(DeliverySchedule.order).where(Order.quote_id.in_(quote_ids or [-1]))
     elif current_user().role == 'designer':
+        query = query.join(DeliverySchedule.order).where(Order.id.in_(assigned_order_ids() or [-1]))
+    elif current_user().role == 'installer':
         query = query.join(DeliverySchedule.order).where(Order.id.in_(assigned_order_ids() or [-1]))
     items = db.session.scalars(query).all()
     return jsonify({'items': [item.to_dict() for item in items], 'mode': 'api'})
@@ -39,7 +41,7 @@ def create_schedule():
 
 
 @scheduling_bp.patch('/<int:schedule_id>')
-@roles_required('admin', 'sales')
+@roles_required('admin', 'sales', 'installer')
 def update_schedule(schedule_id):
     item = db.get_or_404(DeliverySchedule, schedule_id); payload = request.get_json(silent=True) or {}
     if not can_access_order(item.order_id): return jsonify({'message': 'You do not have access to this schedule.'}), 403
@@ -86,7 +88,7 @@ def confirm_schedule(schedule_id):
 
 
 @scheduling_bp.post('/<int:schedule_id>/proof')
-@roles_required('admin', 'sales')
+@roles_required('admin', 'sales', 'installer')
 def save_schedule_proof(schedule_id):
     item = db.get_or_404(DeliverySchedule, schedule_id); payload = request.get_json(silent=True) or {}
     if not can_access_order(item.order_id): return jsonify({'message': 'You do not have access to this schedule.'}), 403

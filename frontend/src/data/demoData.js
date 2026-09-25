@@ -4,6 +4,8 @@ export const demoUsers = [
   { id: 3, name: 'Kabir Designer', email: 'designer@furnivo.demo', password: 'design123', role: 'designer' },
   { id: 4, name: 'Riya Client', email: 'client@furnivo.demo', password: 'client123', role: 'client' },
   { id: 5, name: 'Neel Workshop', email: 'workshop@furnivo.demo', password: 'workshop123', role: 'workshop_operator' },
+  { id: 6, name: 'Arjun Installer', email: 'installer@furnivo.demo', password: 'install123', role: 'installer' },
+  { id: 7, name: 'Diya Accountant', email: 'accountant@furnivo.demo', password: 'account123', role: 'accountant' },
 ]
 
 const demoRolePermissions = {
@@ -26,6 +28,17 @@ const demoRolePermissions = {
     { permission: 'production.execute', scope: 'assigned', is_enabled: true },
     { permission: 'inventory.issue', scope: 'assigned', is_enabled: true },
     { permission: 'quality.handoff', scope: 'assigned', is_enabled: true },
+  ],
+  installer: [
+    { permission: 'delivery.execute', scope: 'assigned', is_enabled: true },
+    { permission: 'installation.proof', scope: 'assigned', is_enabled: true },
+    { permission: 'customer.signoff', scope: 'assigned', is_enabled: true },
+  ],
+  accountant: [
+    { permission: 'invoices.view', scope: 'global', is_enabled: true },
+    { permission: 'payments.manage', scope: 'global', is_enabled: true },
+    { permission: 'gst.manage', scope: 'global', is_enabled: true },
+    { permission: 'accounting.export', scope: 'global', is_enabled: true },
   ],
   client: [
     { permission: 'portal.view', scope: 'own', is_enabled: true },

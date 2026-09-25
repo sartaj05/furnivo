@@ -16,14 +16,14 @@ def client_can_view(item):
 
 
 @gst_bp.get('')
-@roles_required('admin', 'sales', 'client')
+@roles_required('admin', 'sales', 'client', 'accountant')
 def list_einvoices():
     items = db.session.scalars(db.select(EInvoice).order_by(EInvoice.id.desc())).unique().all()
     return jsonify({'items': [item.to_dict() for item in items if client_can_view(item)], 'mode': 'api'})
 
 
 @gst_bp.post('/invoices/<int:invoice_id>/generate')
-@roles_required('admin', 'sales')
+@roles_required('admin', 'sales', 'accountant')
 def generate_einvoice(invoice_id):
     invoice = db.get_or_404(Invoice, invoice_id); existing = db.session.scalar(db.select(EInvoice).where(EInvoice.invoice_id == invoice.id))
     if existing: return jsonify({'item': existing.to_dict(), 'mode': 'api', 'existing': True})
@@ -39,7 +39,7 @@ def generate_einvoice(invoice_id):
 
 
 @gst_bp.post('/<int:e_invoice_id>/eway-bill')
-@roles_required('admin', 'sales')
+@roles_required('admin', 'sales', 'accountant')
 def generate_eway_bill(e_invoice_id):
     item = db.get_or_404(EInvoice, e_invoice_id)
     if not item.eway_bill_number: item.eway_bill_number = f'EWB-{uuid4().hex[:12].upper()}'; item.status = 'E-way bill generated'; db.session.commit(); record_audit(current_user().id, 'E-way bill generated', 'e_invoice', item.id, item.eway_bill_number); db.session.commit()

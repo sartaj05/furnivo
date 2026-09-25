@@ -19,13 +19,15 @@ def visit_date(value):
 
 
 @field_bp.get('')
-@roles_required('admin', 'designer', 'client')
+@roles_required('admin', 'designer', 'client', 'installer')
 def list_field_visits():
     query = db.select(FieldVisit).order_by(FieldVisit.scheduled_date, FieldVisit.id.desc())
     if current_user().role == 'client':
         from ..models import Order
         query = query.join(FieldVisit.order).where(Order.quote_id.in_(client_quote_ids() or [-1]))
     elif current_user().role == 'designer':
+        query = query.where(FieldVisit.order_id.in_(assigned_order_ids() or [-1]))
+    elif current_user().role == 'installer':
         query = query.where(FieldVisit.order_id.in_(assigned_order_ids() or [-1]))
     items = db.session.scalars(query).unique().all()
     return jsonify({'items': [item.to_dict() for item in items], 'mode': 'api'})
@@ -43,7 +45,7 @@ def create_field_visit():
 
 
 @field_bp.patch('/<int:visit_id>')
-@roles_required('admin', 'designer')
+@roles_required('admin', 'designer', 'installer')
 def update_field_visit(visit_id):
     item = db.get_or_404(FieldVisit, visit_id); payload = request.get_json(silent=True) or {}
     if not can_access_order(item.order_id): return jsonify({'message': 'You do not have access to this field visit.'}), 403
@@ -56,7 +58,7 @@ def update_field_visit(visit_id):
 
 
 @field_bp.post('/<int:visit_id>/check-in')
-@roles_required('admin', 'designer')
+@roles_required('admin', 'designer', 'installer')
 def check_in_field_visit(visit_id):
     item = db.get_or_404(FieldVisit, visit_id); payload = request.get_json(silent=True) or {}
     if not can_access_order(item.order_id): return jsonify({'message': 'You do not have access to this field visit.'}), 403
@@ -68,7 +70,7 @@ def check_in_field_visit(visit_id):
 
 
 @field_bp.post('/<int:visit_id>/check-out')
-@roles_required('admin', 'designer')
+@roles_required('admin', 'designer', 'installer')
 def check_out_field_visit(visit_id):
     item = db.get_or_404(FieldVisit, visit_id); payload = request.get_json(silent=True) or {}
     if not can_access_order(item.order_id): return jsonify({'message': 'You do not have access to this field visit.'}), 403
@@ -82,7 +84,7 @@ def check_out_field_visit(visit_id):
 
 
 @field_bp.post('/<int:visit_id>/materials')
-@roles_required('admin', 'designer')
+@roles_required('admin', 'designer', 'installer')
 def record_field_material(visit_id):
     item = db.get_or_404(FieldVisit, visit_id); payload = request.get_json(silent=True) or {}
     if not can_access_order(item.order_id): return jsonify({'message': 'You do not have access to this field visit.'}), 403
@@ -99,7 +101,7 @@ def record_field_material(visit_id):
 
 
 @field_bp.post('/<int:visit_id>/proof')
-@roles_required('admin', 'designer')
+@roles_required('admin', 'designer', 'installer')
 def save_field_proof(visit_id):
     item = db.get_or_404(FieldVisit, visit_id); payload = request.get_json(silent=True) or {}
     if not can_access_order(item.order_id): return jsonify({'message': 'You do not have access to this field visit.'}), 403

@@ -164,6 +164,22 @@ def test_workshop_operator_has_only_execution_workspace_access(client):
     assert inventory.status_code == 403
 
 
+def test_installer_and_accountant_workspaces_are_role_scoped(client):
+    installer_login = client.post('/api/auth/login', json={'email': 'installer@furnivo.demo', 'password': 'install123'})
+    accountant_login = client.post('/api/auth/login', json={'email': 'accountant@furnivo.demo', 'password': 'account123'})
+    installer_headers = {'Authorization': f"Bearer {installer_login.json['token']}"}
+    accountant_headers = {'Authorization': f"Bearer {accountant_login.json['token']}"}
+    assert installer_login.status_code == 200
+    assert accountant_login.status_code == 200
+    assert client.get('/api/field', headers=installer_headers).status_code == 200
+    assert client.get('/api/schedules', headers=installer_headers).status_code == 200
+    assert client.get('/api/quotes', headers=installer_headers).status_code == 403
+    assert client.get('/api/invoices', headers=accountant_headers).status_code == 200
+    assert client.get('/api/gst', headers=accountant_headers).status_code == 200
+    assert client.get('/api/payment-reconciliation/summary', headers=accountant_headers).status_code == 200
+    assert client.get('/api/production', headers=accountant_headers).status_code == 403
+
+
 def test_direct_record_mutations_cannot_bypass_project_assignment(client, app, admin_headers):
     with app.app_context():
         admin = db.session.scalar(db.select(User).where(User.email == 'admin@furnivo.demo'))
